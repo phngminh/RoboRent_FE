@@ -8,6 +8,11 @@ export default {
   ],
   theme: {
   	extend: {
+		fontFamily: {
+        	helvetica: ['"Helvetica Neue"', 'system-ui', '-apple-system', 'sans-serif'],
+			orbitron: ['"Orbitron"', 'sans-serif'],
+			bbh: ['"BBH Sans Hegarty"', 'sans-serif'],
+      	},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
