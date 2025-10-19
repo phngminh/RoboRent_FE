@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import HomePage from './pages/home/homePage'
+import AuthCallback from './pages/auth/callback'
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <div className='App'>
           <Routes>
             <Route path='/' element={<HomePage />} />
+            <Route path='/callback' element={<AuthCallback />} />
             
             <Route 
               path='/admin'
