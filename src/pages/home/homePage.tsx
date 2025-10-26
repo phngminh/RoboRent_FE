@@ -4,6 +4,7 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '../..
 import Header from '../../components/header'
 import Autoplay from 'embla-carousel-autoplay'
 import Footer from '../../components/footer'
+import HowItWorks from './howItWorks'
 
 interface Slide {
   id: number
@@ -53,7 +54,7 @@ export default function Home() {
   }
 
   return (
-    <div className='min-h-screen bg-white w-full'>
+    <div className='min-h-screen bg-white w-full overflow-hidden'>
       <Header />
       <Carousel
         setApi={setApi}
@@ -119,44 +120,116 @@ export default function Home() {
         </div>
       </Carousel>
 
-      <div className='relative bg-white py-20 px-6 overflow-hidden'>
-        <div className='pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-blue-200 opacity-30 blur-3xl' />
-        <div className='pointer-events-none absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-emerald-200 opacity-30 blur-3xl' />
+      {/* <div className='relative bg-gradient-to-b from-gray-50 via-white to-gray-50 py-20 px-6 overflow-hidden'>
         <div className='relative max-w-6xl mx-auto text-center -mt-8'>
-          <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1'>
+          <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1 bg-white'>
             HOW IT WORKS
           </p>
           <h1 className='text-[2.5rem] font-bold text-gray-700 mb-12'>
-            Get your robot ready in <span className='text-emerald-500'>three</span> simple steps
+            Get your robot ready in <span className='text-emerald-500'>four</span> simple steps
           </h1>
 
-          {/* <div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
-            <div className='group relative rounded-3xl bg-white/70 backdrop-blur p-8 shadow-sm ring-1 ring-gray-200 transition-all duration-300 hover:shadow-xl hover:-translate-y-1'>
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8'>
+            <div
+              className={`group relative rounded-3xl bg-white backdrop-blur p-8 shadow-md ring-1 ring-gray-200 transition-all duration-300 ${
+                activeCard === 0 ? 'ring-4 ring-blue-300 ring-offset-white shadow-xl scale-105 -translate-y-2' : ''
+              }`}
+              onMouseEnter={() => setActiveCard(0)}
+            >
               <div className='absolute -top-0.5 left-8 right-8 h-1 rounded-b-full bg-gradient-to-r from-blue-500 via-emerald-400 to-blue-500' />
-              <div className='w-14 h-14 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-blue-600 to-emerald-500 text-white flex items-center justify-center text-xl font-bold shadow-md'>1</div>
-              <h3 className='text-xl font-semibold text-gray-900 mb-2'>Browse & Select</h3>
-              <p className='text-gray-600'>Choose from our catalog. Filter by category, price, and availability to find your perfect match.</p>
+              <div className='w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-blue-600 to-emerald-500 text-white flex items-center justify-center shadow-lg'>
+                <Calendar className='w-8 h-8' />
+              </div>
+              <h3 className='text-xl font-bold text-gray-900 mb-3'>Booking & Rental</h3>
+              <p className='text-gray-600 text-sm leading-relaxed mb-3'>
+                Browse and reserve your preferred robot. Select the best package and schedule that fits your event.
+              </p>
+              <ul className='text-sm text-gray-700 space-y-1 text-left'>
+                <li className='flex items-center gap-2'>
+                  <Check className='text-green-400' />
+                  <span>100+ Robots Available</span>
+                </li>
+                <li className='flex items-center gap-2'>
+                  <Check className='text-green-400' />
+                  <span>Suggestions From Staff</span>
+                </li>
+              </ul>
             </div>
 
-            <div className='group relative rounded-3xl bg-white/70 backdrop-blur p-8 shadow-sm ring-1 ring-gray-200 transition-all duration-300 hover:shadow-xl hover:-translate-y-1'>
-              <div className='absolute -top-0.5 left-8 right-8 h-1 rounded-b-full bg-gradient-to-r from-blue-500 via-emerald-400 to-blue-500' />
-              <div className='w-14 h-14 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-blue-600 to-emerald-500 text-white flex items-center justify-center text-xl font-bold shadow-md'>2</div>
-              <h3 className='text-xl font-semibold text-gray-900 mb-2'>Book & Pay</h3>
-              <p className='text-gray-600'>Select rental period, add accessories, and complete your booking with our secure payment system.</p>
+            <div
+              className={`group relative rounded-3xl bg-white backdrop-blur p-8 shadow-md ring-1 ring-gray-200 transition-all duration-300 ${
+                activeCard === 1 ? 'ring-4 ring-blue-300 ring-offset-white shadow-xl scale-105 -translate-y-2' : ''
+              }`}
+              onMouseEnter={() => setActiveCard(1)}
+            >
+              <div className='absolute -top-0.5 left-8 right-8 h-1 rounded-b-full bg-gradient-to-r from-emerald-500 via-blue-400 to-emerald-500' />
+              <div className='w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-600 to-blue-500 text-white flex items-center justify-center shadow-lg'>
+                <Settings className='w-8 h-8' />
+              </div>
+              <h3 className='text-xl font-bold text-gray-900 mb-3'>Customization Features</h3>
+              <p className='text-gray-600 text-sm leading-relaxed mb-3'>
+                Personalize your robot's look and behavior for your event.
+              </p>
+              <ul className='text-sm text-gray-700 space-y-1 text-left'>
+                <li className='flex items-center gap-2'>
+                  <Check className='text-green-400' />
+                  <span>Demo Videos From Staff</span>
+                </li>
+              </ul>
             </div>
 
-            <div className='group relative rounded-3xl bg-white/70 backdrop-blur p-8 shadow-sm ring-1 ring-gray-200 transition-all duration-300 hover:shadow-xl hover:-translate-y-1'>
+            <div
+              className={`group relative rounded-3xl bg-white backdrop-blur p-8 shadow-md ring-1 ring-gray-200 transition-all duration-300 ${
+                activeCard === 2 ? 'ring-4 ring-blue-300 ring-offset-white shadow-xl scale-105 -translate-y-2' : ''
+              }`}
+              onMouseEnter={() => setActiveCard(2)}
+            >
               <div className='absolute -top-0.5 left-8 right-8 h-1 rounded-b-full bg-gradient-to-r from-blue-500 via-emerald-400 to-blue-500' />
-              <div className='w-14 h-14 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-blue-600 to-emerald-500 text-white flex items-center justify-center text-xl font-bold shadow-md'>3</div>
-              <h3 className='text-xl font-semibold text-gray-900 mb-2'>Deploy & Use</h3>
-              <p className='text-gray-600'>Receive your robot with full setup and training. 24/7 support throughout your rental.</p>
+              <div className='w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-blue-600 to-emerald-500 text-white flex items-center justify-center shadow-lg'>
+                <CreditCard className='w-8 h-8' />
+              </div>
+              <h3 className='text-xl font-bold text-gray-900 mb-3'>Payment Processing</h3>
+              <p className='text-gray-600 text-sm leading-relaxed mb-3'>
+                Pay securely and track every transaction with ease.
+              </p>
+              <ul className='text-sm text-gray-700 space-y-1 text-left'>
+                <li className='flex items-center gap-2'>
+                  <Check className='text-green-400' />
+                  <span>Payment History</span>
+                </li>
+              </ul>
             </div>
-          </div> */}
+
+            <div
+              className={`group relative rounded-3xl bg-white backdrop-blur p-8 shadow-md ring-1 ring-gray-200 transition-all duration-300 ${
+                activeCard === 3 ? 'ring-4 ring-blue-300 ring-offset-white shadow-xl scale-105 -translate-y-2' : ''
+              }`}
+              onMouseEnter={() => setActiveCard(3)}
+            >
+              <div className='absolute -top-0.5 left-8 right-8 h-1 rounded-b-full bg-gradient-to-r from-emerald-500 via-blue-400 to-emerald-500' />
+              <div className='w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-600 to-blue-500 text-white flex items-center justify-center shadow-lg'>
+                <Truck className='w-8 h-8' />
+              </div>
+              <h3 className='text-xl font-bold text-gray-900 mb-3'>Delivery Management</h3>
+              <p className='text-gray-600 text-sm leading-relaxed mb-3'>
+                Track your delivery in real time with simple verification steps.
+              </p>
+              <ul className='text-sm text-gray-700 space-y-1 text-left'>
+                <li className='flex items-center gap-2'>
+                  <Check className='text-green-400' />
+                  <span>Live GPS Tracking</span>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
-      </div>
+      </div> */}
 
-      <div className='bg-gradient-to-b from-gray-50 via-white to-gray-50 py-20 px-6'>
-        <div className='max-w-6xl mx-auto'>
+      <HowItWorks />
+
+
+      <div className='bg-white py-20 px-6'>
+        <div className='max-w-6xl mx-auto -mt-8'>
           <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1'>
             POPULAR ROBOTS
           </p>
@@ -218,10 +291,10 @@ export default function Home() {
         </div>
       </div>
 
-      <div className='min-h-screen bg-white p-8'>
-        <div className='max-w-6xl mx-auto'>
+      <div className='min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 p-8'>
+        <div className='max-w-6xl mx-auto mt-4'>
           <div className='mb-6'>
-            <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1'>
+            <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1 bg-white'>
               WHY CHOOSE US
             </p>
             <h1 className='text-[2.5rem] font-bold text-gray-700'>
@@ -231,52 +304,52 @@ export default function Home() {
 
           <div className='grid grid-cols-[1.3fr_0.7fr] gap-6 mt-12 mb-10'>
             <div className='flex flex-col gap-6'>
-              <div className='grid grid-cols-2 gap-6'>
-                <div className='bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in duration-700'>
-                  <div className='flex items-center gap-3 mb-4'>
-                    <div className='w-11 h-11 flex-shrink-0 rounded-full border-2 border-gray-900 flex items-center justify-center'>
-                      <Sparkles className='w-6 h-6 text-gray-900' />
+                <div className='grid grid-cols-2 gap-6'>
+                  <div className='group bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in transition-all duration-150 hover:shadow-xl hover:-translate-y-1 border-2 border-gray-200 hover:border-gray-500'>
+                    <div className='flex items-center gap-3 mb-4'>
+                      <div className='w-11 h-11 flex-shrink-0 rounded-full border-2 border-gray-900 flex items-center justify-center'>
+                        <Sparkles className='w-6 h-6 text-gray-900' />
+                      </div>
+                      <h2 className='text-2xl font-semibold text-gray-900 whitespace-nowrap'>
+                        Tailored Experiences
+                      </h2>
                     </div>
-                    <h2 className='text-2xl font-semibold text-gray-900 whitespace-nowrap'>
-                      Tailored Experiences
-                    </h2>
+                    <p className='text-gray-600 leading-relaxed text-left'>
+                      Design your dream robot setup — from appearance and voice style to performance features. 
+                      Our platform lets you personalize every detail so your event feels truly unique and unforgettable.
+                    </p>
                   </div>
-                  <p className='text-gray-600 leading-relaxed text-left'>
-                    Design your dream robot setup — from appearance and voice style to performance features. 
-                    Our platform lets you personalize every detail so your event feels truly unique and unforgettable.
-                  </p>
+
+                  <div className='group bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in delay-200 transition-all duration-150 hover:shadow-xl hover:-translate-y-1 border-2 border-gray-200 hover:border-gray-500'>
+                    <div className='flex items-center gap-3 mb-4'>
+                      <div className='w-11 h-11 flex-shrink-0 rounded-full border-2 border-gray-900 flex items-center justify-center'>
+                        <Zap className='w-6 h-6 text-gray-900' />
+                      </div>
+                      <h2 className='text-2xl font-semibold text-gray-900 whitespace-nowrap'>
+                        Real-Time Assistance
+                      </h2>
+                    </div>
+                    <p className='text-gray-600 leading-relaxed text-left'>
+                      Every rental includes a dedicated RoboRent staff member who chats with you to fine-tune 
+                      your order and provides live support during the event — ensuring your robot performs flawlessly.
+                    </p>
+                  </div>
                 </div>
 
-                <div className='bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in duration-700 delay-200'>
+                <div className='group bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in delay-300 transition-all duration-150 hover:shadow-xl hover:-translate-y-1 border-2 border-gray-200 hover:border-gray-500'>
                   <div className='flex items-center gap-3 mb-4'>
-                    <div className='w-11 h-11 flex-shrink-0 rounded-full border-2 border-gray-900 flex items-center justify-center'>
-                      <Zap className='w-6 h-6 text-gray-900' />
+                    <div className='w-11 h-11 rounded-full border-2 border-gray-900 flex items-center justify-center'>
+                      <Monitor className='w-6 h-6 text-gray-900' />
                     </div>
-                    <h2 className='text-2xl font-semibold text-gray-900 whitespace-nowrap'>
-                      Real-Time Assistance
+                    <h2 className='text-2xl font-semibold text-gray-900'>
+                      24/7 Event Monitoring
                     </h2>
                   </div>
-                  <p className='text-gray-600 leading-relaxed text-left'>
-                    Every rental includes a dedicated RoboRent staff member who chats with you to fine-tune 
-                    your order and provides live support during the event — ensuring your robot performs flawlessly.
+                  <p className='text-gray-600 leading-relaxed text-left pl-8 pr-2'>
+                    During your event, our support team monitors your robot remotely to handle 
+                    updates, ensure smooth operation, and step in instantly if any technical issue occurs.
                   </p>
                 </div>
-              </div>
-
-              <div className='bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in duration-700 delay-300'>
-                <div className='flex items-center gap-3 mb-4'>
-                  <div className='w-11 h-11 rounded-full border-2 border-gray-900 flex items-center justify-center'>
-                    <Monitor className='w-6 h-6 text-gray-900' />
-                  </div>
-                  <h2 className='text-2xl font-semibold text-gray-900'>
-                    24/7 Event Monitoring
-                  </h2>
-                </div>
-                <p className='text-gray-600 leading-relaxed text-left pl-8 pr-2'>
-                  During your event, our support team monitors your robot remotely to handle 
-                  updates, ensure smooth operation, and step in instantly if any technical issue occurs.
-                </p>
-              </div>
             </div>
 
             <div className='bg-blue-900 max-w-[400px] w-full mx-auto rounded-3xl p-8 text-white animate-in slide-in-from-right-8 fade-in duration-700 delay-100'>
@@ -304,19 +377,19 @@ export default function Home() {
         </div>
       </div>
 
-      <div className='bg-gradient-to-b from-gray-50 via-white to-gray-50 py-12 px-6'>
+      <div className='bg-gray-800 py-12 px-6'>
         <div className='max-w-3xl mx-auto text-center'>
-          <h2 className='text-3xl md:text-4xl font-bold text-gray-700 mb-3'>
+          <h2 className='text-3xl md:text-4xl font-bold text-gray-100 mb-3'>
             Ready to Get Started?
           </h2>
-          <p className='text-gray-600 text-base mb-8 max-w-xl mx-auto'>
+          <p className='text-gray-300 text-base mb-8 max-w-xl mx-auto'>
             Join thousands of businesses and individuals who trust RoboRent for their automation needs.
           </p>
           <div className='flex flex-col sm:flex-row gap-3 justify-center'>
-            <button className='bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 rounded-lg transition-colors'>
+            <button className='bg-green-500 hover:bg-green-600 border-black text-gray-00 font-semibold px-6 py-3 rounded-lg transition-colors'>
               Browse All Robots
             </button>
-            <button className='bg-transparent border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white font-semibold px-6 py-3 rounded-lg transition-colors'>
+            <button className='bg-gray-200 border-2 border-gray-800 text-gray-900 hover:bg-gray-700 hover:text-white font-semibold px-6 py-3 rounded-lg transition-colors'>
               Contact Sales
             </button>
           </div>
