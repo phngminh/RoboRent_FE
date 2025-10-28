@@ -32,7 +32,7 @@ const AuthCallback = () => {
         if (!urlToken) {
           throw new Error('No token provided in URL. Ensure backend redirects with ?token=your_jwt_here')
         }
-
+        console.log('Received token from URL:', urlToken)
         const decoded: JwtPayload = jwtDecode(urlToken)
 
         if (!decoded.sub) {
@@ -42,10 +42,10 @@ const AuthCallback = () => {
         const user = {
           userId: decoded.sub,
           email: decoded.email,
-          userName: decoded.name || decoded.preferred_username || decoded.unique_name || 'User',
-          accountId: decoded.accountId || null,
-          accountStatus: decoded.accountStatus || 'Active',
-          emailConfirmed: true,
+          userName: decoded.name,
+          accountId: decoded.accountId,
+          accountStatus: decoded.accountStatus,
+          role: 'customer',
         }
 
         console.log('User from decoded token:', user)

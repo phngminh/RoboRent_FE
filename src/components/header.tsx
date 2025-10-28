@@ -87,7 +87,7 @@ const Header = () => {
               <div className='hidden md:flex items-center space-x-4'>
                 {isAuthenticated ? (
                   <div className='flex items-center space-x-4'>
-                    <div className='flex items-center space-x-2'>
+                    <Link to='/profile' className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'>
                       <div className='h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center'>
                         <span className='text-white text-lg font-medium'>
                           {(user?.name || user?.userName || '?').charAt(0)}
@@ -98,7 +98,7 @@ const Header = () => {
                       >
                         {user?.name || user?.userName || 'User'}
                       </span>
-                    </div>
+                    </Link>
 
                     <button
                       onClick={handleLogout}

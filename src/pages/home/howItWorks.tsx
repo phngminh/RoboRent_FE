@@ -129,18 +129,16 @@ const HowItWorks = () => {
 
           <button
             onClick={prevSlide}
-            className='absolute left-4 top-1/3 -translate-y-1/2 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center hover:bg-gray-100 transition-all hover:scale-110 z-30'
-            aria-label='Previous slide'
+            className='absolute left-4 top-1/2 transform -translate-y-1/2 text-white p-3 hover:bg-black/20 transition-all duration-300 z-10'
           >
-            <ChevronLeft className='w-6 h-6 text-gray-800' />
+            <ChevronLeft size={24} />
           </button>
 
           <button
             onClick={nextSlide}
-            className='absolute right-4 top-1/3 -translate-y-1/2 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center hover:bg-gray-100 transition-all hover:scale-110 z-30'
-            aria-label='Next slide'
+            className='absolute right-4 top-1/2 transform -translate-y-1/2 text-white p-3 hover:bg-black/20 transition-all duration-300 z-10'
           >
-            <ChevronRight className='w-6 h-6 text-gray-800' />
+            <ChevronRight size={24} />
           </button>
 
           <div className='flex justify-center gap-2 mt-8'>

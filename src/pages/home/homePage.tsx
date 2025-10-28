@@ -5,6 +5,7 @@ import Header from '../../components/header'
 import Autoplay from 'embla-carousel-autoplay'
 import Footer from '../../components/footer'
 import HowItWorks from './howItWorks'
+import RobotCarousel from './robotCarousel'
 
 interface Slide {
   id: number
@@ -227,8 +228,7 @@ export default function Home() {
 
       <HowItWorks />
 
-
-      <div className='bg-white py-20 px-6'>
+      {/* <div className='bg-white py-20 px-6'>
         <div className='max-w-6xl mx-auto -mt-8'>
           <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1'>
             POPULAR ROBOTS
@@ -237,7 +237,7 @@ export default function Home() {
             Our <span className='text-emerald-500'>most requested</span> robots, trusted by thousands of customers
           </h1>
 
-          {/* <div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
             <div className='group relative rounded-3xl overflow-hidden bg-white ring-1 ring-gray-200 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl'>
               <div className='relative'>
                 <img className='w-full h-56 object-cover' src='https://images.pexels.com/photos/256839/pexels-photo-256839.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1' alt='CleanBot Pro' />
@@ -287,9 +287,11 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </div> */}
+          </div>
         </div>
-      </div>
+      </div> */}
+
+      <RobotCarousel />
 
       <div className='min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 p-8'>
         <div className='max-w-6xl mx-auto mt-4'>
