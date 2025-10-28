@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import HomePage from './pages/home/homePage'
 import AuthCallback from './pages/auth/callback'
+import Profile from './pages/customer/profile/profile'
 
 function App() {
   return (
@@ -15,6 +16,14 @@ function App() {
           <Routes>
             <Route path='/' element={<HomePage />} />
             <Route path='/callback' element={<AuthCallback />} />
+            <Route 
+              path='/profile'
+              element={
+                <ProtectedRoute allowedRoles={['customer', 'admin', 'staff']}>
+                  <Profile />
+                </ProtectedRoute>
+              } 
+            />
             
             <Route 
               path='/admin'
