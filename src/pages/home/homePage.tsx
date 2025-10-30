@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowRight, Calendar, ChevronLeft, ChevronRight, Monitor, Sparkles, Zap } from 'lucide-react'
+import { ArrowRight, Calendar, ChevronLeft, ChevronRight, Monitor, Sparkles, X, Zap } from 'lucide-react'
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '../../components/ui/carousel'
 import Header from '../../components/header'
 import Autoplay from 'embla-carousel-autoplay'
@@ -17,6 +17,15 @@ interface Slide {
 export default function Home() {
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
+  const [showVerifyModal, setShowVerifyModal] = useState(false)
+
+  useEffect(() => {
+    const flag = localStorage.getItem('showVerifyModal')
+    if (flag === 'true') {
+      setShowVerifyModal(true)
+      localStorage.removeItem('showVerifyModal')
+    }
+  }, [])
 
   const slides: Slide[] = [
     {
@@ -399,6 +408,40 @@ export default function Home() {
       </div>
 
       <Footer />
+      
+      {showVerifyModal && (
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+          <div className='bg-white p-8 rounded-xl shadow-2xl text-center max-w-xl mx-4 relative'>
+            <button
+              onClick={() => setShowVerifyModal(false)}
+              className='absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors'
+              aria-label='Close'
+            >
+              <X size={24} />
+            </button>
+
+            <div className='mb-2 flex justify-center'>
+              <img 
+                src='https://img.freepik.com/premium-vector/opened-envelope-document-with-green-check-mark-line-icon-official-confirmation-message-mail-sent-successfully-email-delivery-verification-email-flat-design-vector_662353-720.jpg?w=360'
+                alt='Email verification'
+                className='w-52 h-52 object-contain'
+              />
+            </div>
+
+            <h2 className='text-2xl font-bold font-orbitron mb-2 text-gray-800'>
+              Verify Your Account!
+            </h2>
+            
+            <p className='text-gray-600 mb-6 leading-relaxed text-base px-10'>
+              We’ve sent a verification link to your email to complete your registration for 
+              <span className='font-bold text-blue-800'> RoboRent</span>
+              . If you don’t see the email, check your spam folder or 
+              <span className='font-bold hover:underline cursor-pointer'> request a new link.</span>
+            </p>
+          </div>
+        </div>
+      )}
     </div>
+    
   )
 }

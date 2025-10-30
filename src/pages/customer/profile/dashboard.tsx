@@ -3,7 +3,7 @@ import { CreditCard, Download } from 'lucide-react'
 
 const DashboardContent: React.FC = () => {
   return (
-    <div className='space-y-6'>
+    <div className='space-y-6 bg-gray-50 p-6'>
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
         <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
           <h3 className='text-sm font-medium text-gray-600 mb-2'>Total Requests</h3>

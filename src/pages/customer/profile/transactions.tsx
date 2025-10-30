@@ -3,10 +3,7 @@ import { Search, CheckCircle, Clock, XCircle } from 'lucide-react'
 
 const TransactionsContent: React.FC = () => {
   return (
-    <div className='space-y-6'>
-      <h1 className='text-3xl font-bold text-gray-800'>Transaction History</h1>
-
-      {/* Filter Section */}
+    <div className='space-y-6 bg-gray-50 p-6'>
       <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
         <h2 className='text-lg font-semibold text-gray-800 mb-4'>Filter Transactions</h2>
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4'>

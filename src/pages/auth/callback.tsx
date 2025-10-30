@@ -45,10 +45,16 @@ const AuthCallback = () => {
           userName: decoded.name,
           accountId: decoded.accountId,
           accountStatus: decoded.accountStatus,
-          role: 'customer',
+          role: decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"],
         }
 
         console.log('User from decoded token:', user)
+
+        if (decoded.accountStatus === 'PendingVerification') {
+          localStorage.setItem('showVerifyModal', 'true')
+          navigate('/', { replace: true })
+          return
+        }
 
         login(urlToken, user)
         setHasProcessed(true)

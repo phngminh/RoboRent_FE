@@ -3,10 +3,7 @@ import { Clock, CheckCircle, XCircle, Eye, Download, MessageCircle } from 'lucid
 
 const RentalRequestsContent: React.FC = () => {
   return (
-    <div className='space-y-6'>
-      <h1 className='text-3xl font-bold text-gray-800'>Rental Requests</h1>
-
-      {/* Filter Section */}
+    <div className='space-y-6 bg-gray-50 p-6'>
       <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
         <h2 className='text-lg font-semibold text-gray-800 mb-4'>Filter Requests</h2>
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>

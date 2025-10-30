@@ -93,32 +93,26 @@ const HowItWorks = () => {
                         className='w-full h-full object-cover'
                       />
                       <div className='absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent' />
-                      
-                      {isCenter && (
-                        <div className='absolute bottom-5 left-0 right-0 text-white px-8'>
-                          <h3 className='text-4xl font-bold mb-1'>{slide.title}</h3>
-                        </div>
-                      )}
                     </div>
 
                     {isCenter && (
-                      <div className='p-8 bg-gradient-to-br from-gray-50 to-white rounded-2xl'>
-                        <p className='text-gray-700 text-lg leading-relaxed mb-6 font-light'>
+                      <div className='p-4 text-center'>
+                        <h3 className='text-3xl font-bold text-gray-900 mb-2'>{slide.title}</h3>
+                        <p className='text-gray-600 font-semibold text-base mb-4 leading-relaxed max-w-lg mx-auto'>
                           {slide.description}
                         </p>
-                        <ul className='space-y-3'>
+
+                        <div className='flex flex-row flex-wrap justify-center items-center gap-4 mb-3'>
                           {slide.features.map((feature, idx) => (
-                            <li 
+                            <div 
                               key={idx} 
-                              className='flex items-center justify-center gap-3 group hover:translate-x-1 transition-transform duration-200'
+                              className='flex items-center gap-3 bg-gray-50 px-5 py-3 rounded-xl shadow-sm'
                             >
-                              <div className='bg-green-100 rounded-full p-1.5 group-hover:bg-green-200 transition-colors'>
-                                <Check className='text-green-600 w-5 h-5 flex-shrink-0' />
-                              </div>
-                              <span className='font-medium text-lg text-gray-800'>{feature}</span>
-                            </li>
+                              <Check className='text-green-600 w-5 h-5 flex-shrink-0' />
+                              <span className='text-gray-800 font-medium'>{feature}</span>
+                            </div>
                           ))}
-                        </ul>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -145,7 +145,7 @@ const Header = () => {
 
       {isLoginModalOpen && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100] animate-in fade-in duration-300'>
-          <div className='bg-white rounded-2xl shadow-2xl max-w-4xl w-full h-[500px] grid md:grid-cols-2 overflow-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300'>
+          <div className='bg-slate-100 rounded-2xl shadow-2xl max-w-4xl w-full h-[500px] grid md:grid-cols-2 overflow-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300'>
             <button
               onClick={() => setIsLoginModalOpen(false)}
               className='absolute top-4 right-4 z-10 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700 transition-colors'
@@ -153,7 +153,7 @@ const Header = () => {
               <X size={20} />
             </button>
 
-            <div className='p-8 md:p-10 flex flex-col justify-center font-medium ml-6 bg-blue-200'>
+            <div className='p-8 md:p-10 flex flex-col justify-center font-medium ml-6'>
               <h2 className='text-4xl font-orbitron font-bold text-gray-700 mb-10 animate-in slide-in-from-left duration-500'>
                 Login or signup to get started
               </h2>

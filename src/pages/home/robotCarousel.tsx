@@ -130,7 +130,7 @@ const RobotCarousel = () => {
                 className='flex-shrink-0 px-3'
                 style={{ width: `${100 / 3.6}%` }}
               >
-                <div className='bg-white overflow-hidden'>
+                <div className='bg-white overflow-hidden rounded-lg shadow-sm'>
                   <div className='relative h-96 bg-gray-100'>
                     <img
                       src={robot.image || '/placeholder.svg'}
@@ -141,14 +141,15 @@ const RobotCarousel = () => {
                         target.src = '/placeholder.svg'
                       }}
                     />
-                    <div className='absolute top-4 left-4 bg-blue-900 text-white px-3 py-1 text-sm font-medium'>
-                      {robot.roboType}
-                    </div>
-                    <div className='absolute bottom-4 left-4 text-white text-left'>
-                      <h3 className='text-2xl font-bold mb-2'>
+                    <div className='absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent' />
+                    <div className='absolute bottom-4 left-4 right-4 text-left text-white'>
+                      <div className='inline-block bg-blue-900 text-white px-3 py-1 text-sm font-medium mb-3 rounded'>
+                        {robot.roboType}
+                      </div>
+                      <h3 className='text-2xl font-bold mb-2 drop-shadow-lg'>
                         {robot.robotName}
                       </h3>
-                      <p className='text-lg mb-3 opacity-90'>
+                      <p className='text-base opacity-95 leading-snug drop-shadow-md mb-4'>
                         {robot.description}
                       </p>
                       {/* <div className='text-sm font-medium flex items-center'>
