@@ -16,18 +16,17 @@ const Header = () => {
     setIsMenuOpen(false)
   }
 
+  const googleLoginWithClose = () => {
+    setIsLoginModalOpen(false)
+    setIsMenuOpen(false)
+    googleLogin()
+  }
+
   const openLoginModal = (e: any) => {
     e.preventDefault()
     setIsLoginModalOpen(true)
     setIsMenuOpen(false)
   }
-
-  useEffect(() => {
-    if (window.opener) {
-      window.opener.location.reload()
-      window.close()
-    }
-  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -41,25 +40,38 @@ const Header = () => {
   return (
     <>
       <header className={`fixed top-0 left-0 right-0 z-50 w-full transition-colors duration-300 ${
-        isScrolled ? 'bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-100' : 'bg-transparent'
+        isScrolled || isMenuOpen ? 'bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-100' : 'bg-transparent'
       }`}>
         <div className='w-full px-4 sm:px-6 lg:px-8 font-extrabold font-orbitron'>
-          <div className='flex justify-between items-center h-16'>
+          <div className='grid grid-cols-3 items-center h-16'>
             <div className='flex items-center space-x-1 ml-10'>
-              <img 
-                src={logo} 
+              <img
+                src={logo}
                 alt='logo'
-                className='w-8 h-7 mr-3 mb-1'
+                className={`w-8 h-7 mr-3 mb-1 transition-all duration-200
+                  ${isScrolled ? 'filter drop-shadow-[0_0_2px_black]' : ''}
+                `}
               />
               <Link 
                 to='/' 
-                className={`font-orbitron text-2xl tracking-widest transition-colors duration-300 ${isScrolled ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent' : 'text-white'}`}
+                className={`font-orbitron text-2xl tracking-widest transition-colors duration-300 ${isScrolled || isMenuOpen ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent' : 'text-white'}`}
               >
                 ROBORENT
               </Link>
+              
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className={`md:hidden p-2 rounded-md transition-all duration-200 ${
+                  isScrolled || isMenuOpen
+                    ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                    : 'text-white hover:text-gray-200 hover:bg-white/10'
+                }`}
+              >
+                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
             </div>
 
-            <nav className='hidden md:flex space-x-8 tracking-wide text-lg'>
+            <nav className='hidden md:flex justify-center space-x-8 tracking-wide text-lg'>
               <Link to='/' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
                 HOME
               </Link>
@@ -71,80 +83,69 @@ const Header = () => {
               </a>
             </nav>
 
-            <div className='flex items-center space-x-4 mr-10'>
-              {isAuthenticated ? (
-                <div className='flex items-center space-x-4'>
-                  <div className='flex items-center space-x-2'>
-                    <div className='h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center'>
-                      <span className='text-white text-lg font-medium'>
-                        {user?.name?.charAt(0)}
+            <div className='flex justify-end items-center space-x-4 mr-2 sm:mr-10'>
+              <div className='hidden md:flex items-center space-x-4'>
+                {isAuthenticated ? (
+                  <div className='flex items-center space-x-4'>
+                    <Link to='/profile' className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'>
+                      <div className='h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center'>
+                        <span className='text-white text-lg font-medium'>
+                          {(user?.name || user?.userName || '?').charAt(0)}
+                        </span>
+                      </div>
+                      <span
+                        className={`text-lg transition-colors duration-200 ${isScrolled ? 'text-gray-700' : 'text-white'}`}
+                      >
+                        {user?.name || user?.userName || 'User'}
                       </span>
-                    </div>
-                    <span className={`text-lg hidden sm:block transition-colors duration-200 ${isScrolled ? 'text-gray-700' : 'text-white'}`}>
-                      {user?.name}
-                    </span>
+                    </Link>
+
+                    <button
+                      onClick={handleLogout}
+                      className={`flex items-center space-x-1 transition-colors duration-200 ${
+                        isScrolled
+                          ? 'text-gray-700 hover:text-gray-900'
+                          : 'text-white hover:text-gray-200'
+                      }`}
+                      title='Logout'
+                    >
+                      <LogOut size={18} />
+                      <span className='text-lg'>Logout</span>
+                    </button>
                   </div>
-                  
+                ) : (
                   <button
-                    onClick={handleLogout}
-                    className={`flex items-center space-x-1 transition-colors duration-200 ${isScrolled ? 'text-gray-700 hover:text-gray-900' : 'text-white hover:text-gray-200'}`}
-                    title='Logout'
+                    onClick={openLoginModal}
+                    className='bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-bold whitespace-nowrap'
                   >
-                    <LogOut size={18} />
-                    <span className='hidden sm:block text-lg'>Logout</span>
+                    Get Started
                   </button>
-                </div>
-              ) : (
-                <button
-                  onClick={openLoginModal}
-                  className='bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-bold'
-                >
-                  Get Started
-                </button>
-              )}
-              
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className={`md:hidden p-2 rounded-md transition-colors ${isScrolled ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100' : 'text-white hover:text-gray-200 hover:bg-white/10'}`}
-              >
-                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
+                )}
+              </div>
             </div>
           </div>
 
           {isMenuOpen && (
-            <div className='md:hidden absolute top-16 left-0 right-0 bg-white shadow-lg border-t border-gray-100 animate-in slide-in-from-top-2 duration-200'>
+            <div className='md:hidden absolute top-16 left-0 right-0 bg-white/95 shadow-lg animate-in slide-in-from-top-2 duration-200'>
               <nav className='px-4 py-4 space-y-2'>
-                <Link to='/' className='block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors' onClick={() => setIsMenuOpen(false)}>
+                <Link to='/' className='block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors' onClick={() => setIsMenuOpen(false)}>
                   Home
                 </Link>
-                <a href='#' className='block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors'>
+                <a href='#' className='block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors'>
                   Products
                 </a>
-                <a href='#' className='block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors'>
+                <a href='#' className='block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors'>
                   About Us
                 </a>
-                
-                {isAuthenticated ? (
-                  <button
-                    onClick={handleLogout}
-                    className='block w-full text-xl text-left px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors'
-                  >
-                    Logout
-                  </button>
-                ) : (
-                  <></>
-                )}
               </nav>
             </div>
           )}
         </div>
       </header>
 
-      {/* Login Modal */}
       {isLoginModalOpen && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100] animate-in fade-in duration-300'>
-          <div className='bg-white rounded-2xl shadow-2xl max-w-4xl w-full h-[500px] grid md:grid-cols-2 overflow-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300'>
+          <div className='bg-slate-100 rounded-2xl shadow-2xl max-w-4xl w-full h-[500px] grid md:grid-cols-2 overflow-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300'>
             <button
               onClick={() => setIsLoginModalOpen(false)}
               className='absolute top-4 right-4 z-10 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700 transition-colors'
@@ -152,13 +153,13 @@ const Header = () => {
               <X size={20} />
             </button>
 
-            <div className='p-8 md:p-12 flex flex-col justify-center font-medium'>
-              <h2 className='text-4xl font-bold text-gray-800 mb-10 animate-in slide-in-from-left duration-500'>
-                Create an account to get started
+            <div className='p-8 md:p-10 flex flex-col justify-center font-medium ml-6'>
+              <h2 className='text-4xl font-orbitron font-bold text-gray-700 mb-10 animate-in slide-in-from-left duration-500'>
+                Login or signup to get started
               </h2>
-
+              
               <button
-                onClick={googleLogin}
+                onClick={googleLoginWithClose}
                 className='w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all text-lg mb-2 animate-in slide-in-from-left duration-500 delay-100'
               >
                 <svg className='w-5 h-5' viewBox='0 0 24 24'>
@@ -182,11 +183,7 @@ const Header = () => {
                 Continue with Google
               </button>
 
-              {/* <button className='w-full bg-blue-600 border-2 border-gray-300 text-white px-6 py-2.5 rounded-lg hover:bg-gray-50 hover:border-gray-400 hover:text-gray-700 transition-all font-mono text-lg mb-2 animate-in slide-in-from-left duration-500 delay-200 mt-1'>
-                Continue with another way
-              </button> */}
-
-              <div className='relative mt-2 mb-2'>
+              {/* <div className='relative mt-2 mb-2'>
                 <div className='absolute inset-0 flex items-center'>
                   <div className='w-full border-t border-gray-300'></div>
                 </div>
@@ -198,40 +195,33 @@ const Header = () => {
               <p className='text-center text-gray-500 text-lg animate-in slide-in-from-left duration-500 delay-300'>
                 Already have an account?{' '}
                 <button
-                  onClick={googleLogin}
+                  onClick={googleLoginWithClose}
                   className='text-blue-600 hover:underline font-medium'
                 >
                   Log in
                 </button>
-              </p>
+              </p> */}
 
-              <p className='text-sm text-gray-500 mt-2 animate-in slide-in-from-left duration-500 delay-500'>
+              <p className='text-base text-gray-600 mt-2 animate-in slide-in-from-left duration-500 delay-200'>
                 By continuing, you agree to RoboRent's{' '}
-                <a href='#' className='text-black font-bold hover:underline'>
+                <a href='#' className='text-gray-800 font-bold hover:underline'>
                   Terms of Use
                 </a>
                 . Read our{' '}
-                <a href='#' className='text-black font-bold hover:underline'>
+                <a href='#' className='text-gray-800 font-bold hover:underline'>
                   Privacy Policy
                 </a>
                 .
               </p>
             </div>
 
-            <div className='hidden md:block bg-gradient-to-br from-purple-200 via-pink-100 to-orange-100 relative'>
-              <div className='absolute inset-0 flex items-center justify-center p-8 animate-in slide-in-from-right duration-500'>
-                <div className='bg-white rounded-xl shadow-2xl p-6 transform rotate-2 hover:rotate-0 transition-transform duration-300'>
-                  <div className='border-2 border-gray-100 rounded-lg p-3'>
-                    <div className='w-80 h-64 overflow-hidden shadow-inner'>
-                      <img
-                        src='https://img.vn.my-best.com/product_images/502bf54283166aa2e805ea723c0eb714.jpg?ixlib=rails-4.3.1&q=70&lossless=0&w=800&h=800&fit=clip&s=a873d6efe4ca1aa56045fed76c888b3f'
-                        alt='RoboRent'
-                        className='w-full h-full object-cover hover:scale-105 transition-transform duration-300'
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className='hidden md:block relative'>
+              <img
+                src='https://www.pixelstalk.net/wp-content/uploads/2016/08/Cool-Robot-Wallpaper.jpg'
+                alt='Robot'
+                className='absolute inset-0 w-full h-full object-cover'
+                style={{ objectPosition: '75% center' }}
+              />
             </div>
           </div>
         </div>
