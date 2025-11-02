@@ -7,15 +7,22 @@ import ProtectedRoute from './components/ProtectedRoute'
 import HomePage from './pages/home/homePage'
 import AuthCallback from './pages/auth/callback'
 import Profile from './pages/customer/profile/profile'
+import AboutUs from './pages/home/aboutUs'
+import OurProducts from './pages/customer/product/ourProduct'
+import ScrollToTop from './components/scrollToTop'
 
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <ScrollToTop />
         <div className='App'>
           <Routes>
             <Route path='/' element={<HomePage />} />
             <Route path='/callback' element={<AuthCallback />} />
+            <Route path='/our-products' element={<OurProducts></OurProducts>} />
+            <Route path='/about-us' element={<AboutUs></AboutUs>} />
+
             <Route 
               path='/profile'
               element={

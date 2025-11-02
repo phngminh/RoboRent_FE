@@ -113,8 +113,8 @@ const RobotCarousel = () => {
         <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1 bg-white'>
           POPULAR ROBOTS
         </p>
-        <h1 className='text-[2.5rem] font-bold text-gray-700 mb-12'>
-          Our <span className='text-emerald-500'>most requested</span> robots, trusted by thousands of customers
+        <h1 className='text-[2.5rem] font-bold text-blue-900 mb-12'>
+          Our <span className='text-teal-500'>most requested</span> robots, trusted by thousands of customers
         </h1>
 
         <div className='relative w-full overflow-hidden'>

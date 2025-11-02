@@ -75,12 +75,12 @@ const Header = () => {
               <Link to='/' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
                 HOME
               </Link>
-              <a href='#' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
+              <Link to='/our-products' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
                 PRODUCTS
-              </a>
-              <a href='#' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
+              </Link>
+              <Link to='/about-us' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
                 ABOUT US
-              </a>
+              </Link>
             </nav>
 
             <div className='flex justify-end items-center space-x-4 mr-2 sm:mr-10'>
@@ -131,12 +131,12 @@ const Header = () => {
                 <Link to='/' className='block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors' onClick={() => setIsMenuOpen(false)}>
                   Home
                 </Link>
-                <a href='#' className='block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors'>
+                <Link to='/our-products' className='block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors'>
                   Products
-                </a>
-                <a href='#' className='block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors'>
+                </Link>
+                <Link to='/about-us' className='block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors'>
                   About Us
-                </a>
+                </Link>
               </nav>
             </div>
           )}

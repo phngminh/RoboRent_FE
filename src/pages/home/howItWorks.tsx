@@ -3,7 +3,6 @@ import { Calendar, Settings, CreditCard, Truck, Check, ChevronLeft, ChevronRight
 
 const HowItWorks = () => {
   const [currentSlide, setCurrentSlide] = useState(0)
-
   const slides = [
     {
       icon: Calendar,
@@ -64,8 +63,8 @@ const HowItWorks = () => {
         <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1 bg-white'>
           HOW IT WORKS
         </p>
-        <h1 className='text-[2.5rem] font-bold text-gray-700 mb-12'>
-          Get your robot ready in <span className='text-emerald-500'>four</span> simple steps
+        <h1 className='text-[2.5rem] font-bold text-blue-900 mb-12'>
+          Get your robot ready in <span className='text-teal-500'>four</span> simple steps
         </h1>
 
         <div className='relative'>
