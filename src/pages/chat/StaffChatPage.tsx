@@ -1,14 +1,25 @@
 // src/pages/chat/StaffChatPage.tsx
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { Send, Paperclip, Calendar, MapPin, Package } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+import { getChatMessages, sendMessage } from '../../apis/chat.api'
+import { MessageType } from '../../types/chat.types'
+import type { ChatMessageResponse } from '../../types/chat.types'
+import ChatMessage from '../../components/chat/ChatMessage'
 import Header from '../../components/header'
+import { toast } from 'react-toastify'
 
 export default function StaffChatPage() {
   const { rentalId } = useParams<{ rentalId: string }>()
+  const { user } = useAuth()
+  const [messages, setMessages] = useState<ChatMessageResponse[]>([])
   const [inputMessage, setInputMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [isSending, setIsSending] = useState(false)
 
-  // Mock rental data for now
+  // Mock rental data
   const rentalDetails = {
     customerName: 'Sarah Johnson',
     packageName: 'Registration Assistant Package',
@@ -18,12 +29,64 @@ export default function StaffChatPage() {
     robotsRequested: 4
   }
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+  
+  const handleSendMessage = async () => {
+  if (!inputMessage.trim() || !rentalId || isSending) return
+
+  setIsSending(true)
+  const messageContent = inputMessage.trim()
+  
+  try {
+    const newMessage = await sendMessage({
+      rentalId: parseInt(rentalId),
+      messageType: MessageType.Text,
+      content: messageContent
+    })
+    
+    // Add to messages list
+    setMessages(prev => [...prev, newMessage])
+    setInputMessage('')
+    toast.success('Message sent!')
+  } catch (error: any) {
+    console.error('Failed to send message:', error)
+    toast.error(error.response?.data?.error || 'Failed to send message')
+  } finally {
+    setIsSending(false)
+  }
+
+  // Load messages
+  useEffect(() => {
+    if (!rentalId) return
+
+    const loadMessages = async () => {
+      setIsLoading(true)
+      try {
+        const response = await getChatMessages(parseInt(rentalId), 1, 50)
+        setMessages(response.messages)
+      } catch (error) {
+        console.error('Failed to load messages:', error)
+        toast.error('Failed to load chat messages')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadMessages()
+  }, [rentalId])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
       <div className="pt-16 h-screen flex">
-        {/* Left Sidebar - Customer List (Empty for now) */}
+        {/* Left Sidebar */}
         <div className="w-80 border-r border-gray-200 bg-white flex flex-col">
           <div className="p-4 border-b border-gray-200">
             <h2 className="text-lg font-bold text-gray-900">Active Chats</h2>
@@ -54,38 +117,58 @@ export default function StaffChatPage() {
             </div>
           </div>
 
-          {/* Messages Area (Empty) */}
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-400">Messages will appear here</p>
-            </div>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
+                  <p className="text-gray-500">Loading messages...</p>
+                </div>
+              </div>
+            ) : messages.length > 0 ? (
+              <>
+                {messages.map((message) => (
+                  <ChatMessage
+                    key={message.id}
+                    message={message}
+                    isOwnMessage={message.senderRole === 'Staff' || message.senderId === user?.id}
+                  />
+                ))}
+                <div ref={messagesEndRef} />
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-400">No messages yet. Start the conversation!</p>
+              </div>
+            )}
           </div>
 
-          {/* Input Area */}
-          <div className="border-t border-gray-200 p-4 bg-white">
-            <div className="flex gap-2">
-              <button className="p-3 hover:bg-gray-100 rounded-full transition-colors">
-                <Paperclip size={20} className="text-gray-600" />
-              </button>
-              <input
-                type="text"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Type a message..."
-                disabled
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-              />
-              <button
-                disabled
-                className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                <Send size={20} />
-              </button>
-            </div>
-          </div>
+        {/* Input Area */}
+        <div className="border-t border-gray-200 p-4 bg-white">
+        <div className="flex gap-2">
+            <button className="p-3 hover:bg-gray-100 rounded-full transition-colors">
+            <Paperclip size={20} className="text-gray-600" />
+            </button>
+            <input
+            type="text"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="Type a message..."
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+            onClick={handleSendMessage}
+            disabled={!inputMessage.trim() || isSending}
+            className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+            <Send size={20} />
+            </button>
+        </div>
         </div>
 
-        {/* Right Sidebar - Rental Details */}
+        {/* Right Sidebar */}
         <div className="w-96 border-l border-gray-200 bg-gray-50 overflow-y-auto">
           <div className="p-6 bg-white border-b border-gray-200">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Rental Information</h2>
