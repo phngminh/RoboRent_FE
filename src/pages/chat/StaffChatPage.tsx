@@ -3,9 +3,10 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { Send, Paperclip, Calendar, MapPin, Package } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { signalRService } from '../../utils/signalr'
 import { getChatMessages, sendMessage } from '../../apis/chat.api'
-import { MessageType } from '../../types/chat.types'
 import type { ChatMessageResponse } from '../../types/chat.types'
+import { MessageType } from '../../types/chat.types'
 import ChatMessage from '../../components/chat/ChatMessage'
 import Header from '../../components/header'
 import { toast } from 'react-toastify'
@@ -15,9 +16,9 @@ export default function StaffChatPage() {
   const { user } = useAuth()
   const [messages, setMessages] = useState<ChatMessageResponse[]>([])
   const [inputMessage, setInputMessage] = useState('')
+  const [isSending, setIsSending] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [isSending, setIsSending] = useState(false)
 
   // Mock rental data
   const rentalDetails = {
@@ -31,30 +32,6 @@ export default function StaffChatPage() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-  
-  const handleSendMessage = async () => {
-  if (!inputMessage.trim() || !rentalId || isSending) return
-
-  setIsSending(true)
-  const messageContent = inputMessage.trim()
-  
-  try {
-    const newMessage = await sendMessage({
-      rentalId: parseInt(rentalId),
-      messageType: MessageType.Text,
-      content: messageContent
-    })
-    
-    // Add to messages list
-    setMessages(prev => [...prev, newMessage])
-    setInputMessage('')
-    toast.success('Message sent!')
-  } catch (error: any) {
-    console.error('Failed to send message:', error)
-    toast.error(error.response?.data?.error || 'Failed to send message')
-  } finally {
-    setIsSending(false)
   }
 
   // Load messages
@@ -77,16 +54,80 @@ export default function StaffChatPage() {
     loadMessages()
   }, [rentalId])
 
+  // SignalR setup
+  useEffect(() => {
+    if (!rentalId) return
+
+    let isSubscribed = true
+
+    const setupSignalR = async () => {
+      try {
+        await signalRService.connect()
+        await signalRService.joinRentalChat(parseInt(rentalId))
+
+        const handleReceiveMessage = (message: ChatMessageResponse) => {
+          if (!isSubscribed) return
+          
+          setMessages(prev => {
+            // Prevent duplicates
+            if (prev.some(m => m.id === message.id)) return prev
+            return [...prev, message]
+          })
+
+          scrollToBottom()
+        }
+
+        signalRService.onReceiveMessage(handleReceiveMessage)
+
+      } catch (error) {
+        console.error('SignalR setup failed:', error)
+      }
+    }
+
+    setupSignalR()
+
+    return () => {
+      isSubscribed = false
+
+      if (rentalId) {
+        signalRService.leaveRentalChat(parseInt(rentalId))
+        signalRService.offReceiveMessage()
+      }
+    }
+  }, [rentalId])
+
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || !rentalId || isSending) return
+
+    setIsSending(true)
+    const messageContent = inputMessage.trim()
+    
+    try {
+      await sendMessage({
+        rentalId: parseInt(rentalId),
+        messageType: MessageType.Text,
+        content: messageContent
+      })
+      
+      setInputMessage('')
+    } catch (error: any) {
+      console.error('Failed to send message:', error)
+      toast.error(error.response?.data?.error || 'Failed to send message')
+    } finally {
+      setIsSending(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
       <div className="pt-16 h-screen flex">
-        {/* Left Sidebar */}
+        {/* Left Sidebar - Customer List */}
         <div className="w-80 border-r border-gray-200 bg-white flex flex-col">
           <div className="p-4 border-b border-gray-200">
             <h2 className="text-lg font-bold text-gray-900">Active Chats</h2>
@@ -144,31 +185,32 @@ export default function StaffChatPage() {
             )}
           </div>
 
-        {/* Input Area */}
-        <div className="border-t border-gray-200 p-4 bg-white">
-        <div className="flex gap-2">
-            <button className="p-3 hover:bg-gray-100 rounded-full transition-colors">
-            <Paperclip size={20} className="text-gray-600" />
-            </button>
-            <input
-            type="text"
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Type a message..."
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-            onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || isSending}
-            className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-            <Send size={20} />
-            </button>
-        </div>
+          {/* Input Area */}
+          <div className="border-t border-gray-200 p-4 bg-white">
+            <div className="flex gap-2">
+              <button className="p-3 hover:bg-gray-100 rounded-full transition-colors">
+                <Paperclip size={20} className="text-gray-600" />
+              </button>
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder="Type a message..."
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={!inputMessage.trim() || isSending}
+                className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                <Send size={20} />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Right Sidebar */}
+        {/* Right Sidebar - Rental Details */}
         <div className="w-96 border-l border-gray-200 bg-gray-50 overflow-y-auto">
           <div className="p-6 bg-white border-b border-gray-200">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Rental Information</h2>
