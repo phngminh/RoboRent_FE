@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { ArrowRight, Calendar, Monitor, Sparkles, X, Zap } from 'lucide-react'
 import HowItWorks from './howItWorks'
-import RobotCarousel from './robotCarousel'
-import emailImg from  '../../assets/email.jpg'
-import Layout from '../../components/layout'
+import RobotCarousel from '../homePage/robotCarousel'
+import emailImg from  '../../../assets/email.jpg'
+import Layout from '../../../components/layout'
 
 export default function Home() {
   const [showVerifyModal, setShowVerifyModal] = useState(false)

@@ -4,11 +4,11 @@ import 'react-toastify/dist/ReactToastify.css'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
-import HomePage from './pages/home/homePage'
+import HomePage from './pages/home/homePage/homePage'
 import AuthCallback from './pages/auth/callback'
 import Profile from './pages/customer/profile/profile'
 import AboutUs from './pages/home/aboutUs'
-import OurProducts from './pages/customer/product/ourProduct'
+import OurProducts from './pages/home/ourProduct'
 import ScrollToTop from './components/scrollToTop'
 
 function App() {
