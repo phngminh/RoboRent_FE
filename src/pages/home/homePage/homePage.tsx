@@ -24,7 +24,7 @@ export default function Home() {
 
         <div className='min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 p-8'>
           <div className='max-w-6xl mx-auto mt-4'>
-            <div className='mb-6'>
+            <div className='mb-6' data-aos='fade-down'>
               <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1 bg-white'>
                 WHY CHOOSE US
               </p>
@@ -36,7 +36,7 @@ export default function Home() {
             <div className='grid grid-cols-[1.3fr_0.7fr] gap-6 mt-12 mb-10'>
               <div className='flex flex-col gap-6'>
                   <div className='grid grid-cols-2 gap-6'>
-                    <div className='group bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in transition-all duration-150 hover:shadow-xl hover:-translate-y-1 border-2 border-gray-200 hover:border-gray-500'>
+                    <div className='group bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in transition-all duration-150 hover:shadow-xl hover:-translate-y-1 border-2 border-gray-200 hover:border-gray-500' data-aos='fade-right' data-aos-delay='100'>
                       <div className='flex items-center gap-3 mb-4'>
                         <div className='w-11 h-11 flex-shrink-0 rounded-full border-2 border-gray-900 flex items-center justify-center'>
                           <Sparkles className='w-6 h-6 text-gray-900' />
@@ -51,7 +51,7 @@ export default function Home() {
                       </p>
                     </div>
 
-                    <div className='group bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in delay-200 transition-all duration-150 hover:shadow-xl hover:-translate-y-1 border-2 border-gray-200 hover:border-gray-500'>
+                    <div className='group bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in delay-200 transition-all duration-150 hover:shadow-xl hover:-translate-y-1 border-2 border-gray-200 hover:border-gray-500' data-aos='fade-right' data-aos-delay='200'>
                       <div className='flex items-center gap-3 mb-4'>
                         <div className='w-11 h-11 flex-shrink-0 rounded-full border-2 border-gray-900 flex items-center justify-center'>
                           <Zap className='w-6 h-6 text-gray-900' />
@@ -67,7 +67,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className='group bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in delay-300 transition-all duration-150 hover:shadow-xl hover:-translate-y-1 border-2 border-gray-200 hover:border-gray-500'>
+                  <div className='group bg-gray-50 rounded-3xl p-8 animate-in slide-in-from-left-8 fade-in delay-300 transition-all duration-150 hover:shadow-xl hover:-translate-y-1 border-2 border-gray-200 hover:border-gray-500' data-aos='fade-right' data-aos-delay='300'>
                     <div className='flex items-center gap-3 mb-4'>
                       <div className='w-11 h-11 rounded-full border-2 border-gray-900 flex items-center justify-center'>
                         <Monitor className='w-6 h-6 text-gray-900' />
@@ -83,7 +83,7 @@ export default function Home() {
                   </div>
               </div>
 
-              <div className='bg-blue-900 max-w-[400px] w-full mx-auto rounded-3xl p-8 text-white animate-in slide-in-from-right-8 fade-in duration-700 delay-100'>
+              <div className='bg-blue-900 max-w-[400px] w-full mx-auto rounded-3xl p-8 text-white animate-in slide-in-from-right-8 fade-in duration-700 delay-100' data-aos='fade-left' data-aos-delay='150'>
                 <div className='flex items-center gap-3 mb-4'>
                   <div className='w-11 h-11 rounded-full border-2 border-white flex items-center justify-center'>
                     <Calendar className='w-6 h-6 text-white' />

@@ -1,28 +1,31 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Edit2, User } from 'lucide-react'
+import { getProfile } from '../../../apis/auth.api'
 
 interface ProfileData {
-  firstName: string
-  lastName: string
-  phoneNumber: string
-  email: string
-  location: string
-  address: string
-  dateOfBirth: string
-  gender: string
+  firstName?: string
+  lastName?: string
+  phoneNumber?: string
+  email?: string
+  location?: string
+  address?: string
+  dateOfBirth?: string
+  gender?: string
 }
 
 const AccountProfile: React.FC = () => {
-  const [isEditingBasic, setIsEditingBasic] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [loading, setLoading] = useState(true)
+
   const [profileData, setProfileData] = useState<ProfileData>({
-    firstName: 'Brooklyn',
-    lastName: 'Simmons',
-    phoneNumber: '+91 98 34 53 2945',
-    email: 'brooklyn.simmons@techholding.co',
-    location: 'Ahmedabad, India',
-    address: '227, Ashoka Shopping Centre, Naranpura, Ahmedabad, Gujarat, India - 400001',
-    dateOfBirth: '1990-05-15',
-    gender: 'Female'
+    firstName: 'N/A',
+    lastName: 'N/A',
+    phoneNumber: 'N/A',
+    email: 'N/A',
+    location: 'N/A',
+    address: 'N/A',
+    dateOfBirth: 'N/A',
+    gender: 'N/A'
   })
 
   const handleInputChange = (field: keyof ProfileData, value: string) => {
@@ -30,8 +33,36 @@ const AccountProfile: React.FC = () => {
   }
 
   const handleSaveBasic = () => {
-    setIsEditingBasic(false)
+    setIsEditing(false)
   }
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await getProfile()
+        setProfileData({
+          firstName: 'N/A',
+          lastName: 'N/A',
+          phoneNumber: 'N/A',
+          email: data.email || 'N/A',
+          location: 'N/A',
+          address: 'N/A',
+          dateOfBirth: 'N/A',
+          gender: 'N/A'
+        })
+      } catch (error) {
+        console.error('Failed to fetch profile:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProfile()
+  }, [])
+
+
+  if (loading) return <div className="text-center mt-10 text-gray-600">Loading profile...</div>
+
   return (
     <div className='h-auto bg-gray-50 p-6'>
       <div className='max-w-6xl mx-auto'>
@@ -53,11 +84,11 @@ const AccountProfile: React.FC = () => {
           <div className='flex items-center justify-center mb-8 relative'>
             <h2 className='text-xl font-semibold text-gray-900 text-center'>Basic details</h2>
             <button
-              onClick={() => (isEditingBasic ? handleSaveBasic() : setIsEditingBasic(true))}
+              onClick={() => (isEditing ? handleSaveBasic() : setIsEditing(true))}
               className='absolute right-0 flex items-center space-x-2 text-gray-600 hover:text-gray-900'
             >
               <Edit2 size={16} />
-              <span className='text-sm font-medium'>{isEditingBasic ? 'SAVE' : 'EDIT'}</span>
+              <span className='text-sm font-medium'>{isEditing ? 'SAVE' : 'EDIT'}</span>
             </button>
           </div>
 
@@ -68,7 +99,7 @@ const AccountProfile: React.FC = () => {
                 type='text'
                 value={profileData.firstName}
                 onChange={(e) => handleInputChange('firstName', e.target.value)}
-                disabled={!isEditingBasic}
+                disabled={!isEditing}
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-800 disabled:bg-white disabled:text-gray-900'
               />
             </div>
@@ -79,7 +110,7 @@ const AccountProfile: React.FC = () => {
                 type='text'
                 value={profileData.lastName}
                 onChange={(e) => handleInputChange('lastName', e.target.value)}
-                disabled={!isEditingBasic}
+                disabled={!isEditing}
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-800 disabled:bg-white disabled:text-gray-900'
               />
             </div>
@@ -90,7 +121,7 @@ const AccountProfile: React.FC = () => {
                 type='text'
                 value={profileData.phoneNumber}
                 onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                disabled={!isEditingBasic}
+                disabled={!isEditing}
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-800 disabled:bg-white disabled:text-gray-900'
               />
             </div>
@@ -101,7 +132,7 @@ const AccountProfile: React.FC = () => {
                 type='date'
                 value={profileData.dateOfBirth}
                 onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                disabled={!isEditingBasic}
+                disabled={!isEditing}
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-800 disabled:bg-white disabled:text-gray-900'
               />
             </div>
@@ -111,7 +142,7 @@ const AccountProfile: React.FC = () => {
               <select
                 value={profileData.gender}
                 onChange={(e) => handleInputChange('gender', e.target.value)}
-                disabled={!isEditingBasic}
+                disabled={!isEditing}
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-800 disabled:bg-white disabled:text-gray-900'
               >
                 <option value='Male'>Male</option>
@@ -127,7 +158,7 @@ const AccountProfile: React.FC = () => {
               <textarea
                 value={profileData.address}
                 onChange={(e) => handleInputChange('address', e.target.value)}
-                disabled={!isEditingBasic}
+                disabled={!isEditing}
                 rows={2}
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-800 disabled:bg-white disabled:text-gray-900'
               />

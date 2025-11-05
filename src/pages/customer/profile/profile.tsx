@@ -16,7 +16,6 @@ const Profile = () => {
 
   const handleLogout = () => {
     logout()
-    
   }
 
   const renderContent = () => {
@@ -42,8 +41,8 @@ const Profile = () => {
   return (
     <div className='flex flex-col h-screen'>
       <header className='fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-gray-100 py-3 px-24 font-orbitron flex items-center justify-between'>
-        <div className='flex items-center space-x-3'>
-          <img src={logo} alt='logo' className='w-8 h-8' />
+        <div className='flex items-center space-x-4'>
+          <img src={logo} alt='logo' className='w-8 h-7' />
           <Link
             to='/'
             className='text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-wider'

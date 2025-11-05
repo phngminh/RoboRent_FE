@@ -10,8 +10,21 @@ import Profile from './pages/customer/profile/profile'
 import AboutUs from './pages/home/aboutUs'
 import OurProducts from './pages/home/ourProduct'
 import ScrollToTop from './components/scrollToTop'
+import { useEffect } from 'react'
+import AOS from 'aos'
+import 'aos/dist/aos.css'
 
 function App() {
+  useEffect(() => {
+    AOS.init({
+      duration: 800,
+      easing: 'ease-in-out',
+      once: false,
+      mirror: true,
+      offset: 110,
+    })
+  }, [])
+
   return (
     <AuthProvider>
       <Router>

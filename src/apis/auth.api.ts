@@ -15,14 +15,17 @@ export const refreshToken = async (): Promise<string | null> => {
   return response.data.token || null
 }
 
-export const getProfile = async () => {
-  try {
-    const response = await http.get(`${API_URL}/profile`)
-    if (!response.data) throw new Error('Failed to fetch profile')
-    return response.data
-  } catch (error: any) {
-    console.error('Error fetching profile:', error)
-    throw error
-  }
+export interface AuthProfileResponse {
+  userId: string
+  email: string
+  userName: string
+  accountId: string
+  accountStatus: string
+  emailConfirmed: boolean
+  role: string
 }
 
+export const getProfile = async () => {
+  const response = await http.get<AuthProfileResponse>(`${API_URL}/profile`)
+  return response.data
+}

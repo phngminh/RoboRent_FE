@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Menu, X, LogOut } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { googleLogin } from '../apis/auth.api'
@@ -10,6 +10,7 @@ const Header = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const { user, logout, isAuthenticated } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
+  const location = useLocation()
 
   const handleLogout = () => {
     logout()
@@ -72,13 +73,46 @@ const Header = () => {
             </div>
 
             <nav className='hidden md:flex justify-center space-x-8 tracking-wide text-lg'>
-              <Link to='/' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
+              <Link 
+                to='/' 
+                className={`transition-colors duration-200 relative pb-1 ${
+                  isScrolled
+                    ? 'text-gray-600 hover:text-gray-900 after:bg-gray-600'
+                    : 'text-white hover:text-gray-200 after:bg-white'
+                } ${
+                  location.pathname === '/'
+                    ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px]'
+                    : ''
+                }`}
+              >
                 HOME
               </Link>
-              <Link to='/our-products' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
+              <Link 
+                to='/our-products' 
+                className={`transition-colors duration-200 relative pb-1 ${
+                  isScrolled
+                    ? 'text-gray-600 hover:text-gray-900 after:bg-gray-600'
+                    : 'text-white hover:text-gray-200 after:bg-white'
+                } ${
+                  location.pathname === '/our-products'
+                    ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px]'
+                    : ''
+                }`}
+              >
                 PRODUCTS
               </Link>
-              <Link to='/about-us' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
+              <Link 
+                to='/about-us'
+                className={`transition-colors duration-200 relative pb-1 ${
+                  isScrolled
+                    ? 'text-gray-600 hover:text-gray-900 after:bg-gray-600'
+                    : 'text-white hover:text-gray-200 after:bg-white'
+                } ${
+                  location.pathname === '/about-us'
+                    ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px]'
+                    : ''
+                }`}
+              >
                 ABOUT US
               </Link>
             </nav>
@@ -128,13 +162,31 @@ const Header = () => {
           {isMenuOpen && (
             <div className='md:hidden absolute top-16 left-0 right-0 bg-white/95 shadow-lg animate-in slide-in-from-top-2 duration-200'>
               <nav className='px-4 py-4 space-y-2'>
-                <Link to='/' className='block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors' onClick={() => setIsMenuOpen(false)}>
+                <Link 
+                  to='/' 
+                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${
+                    location.pathname === '/' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   Home
                 </Link>
-                <Link to='/our-products' className='block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors'>
+                <Link 
+                  to='/our-products' 
+                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${
+                    location.pathname === '/our-products' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   Products
                 </Link>
-                <Link to='/about-us' className='block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors'>
+                <Link 
+                  to='/about-us' 
+                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${
+                    location.pathname === '/about-us' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   About Us
                 </Link>
               </nav>

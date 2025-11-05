@@ -110,14 +110,14 @@ const RobotCarousel = () => {
   return (
     <div className='relative bg-white py-20 px-6 overflow-hidden'>
       <div className='relative max-w-8xl mx-auto text-center -mt-8'>
-        <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1 bg-white'>
+        <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1 bg-white' data-aos='fade-down'>
           POPULAR ROBOTS
         </p>
-        <h1 className='text-[2.5rem] font-bold text-blue-900 mb-12'>
+        <h1 className='text-[2.5rem] font-bold text-blue-900 mb-12' data-aos='fade-up'>
           Our <span className='text-teal-500'>most requested</span> robots, trusted by thousands of customers
         </h1>
 
-        <div className='relative w-full overflow-hidden'>
+        <div className='relative w-full overflow-hidden' data-aos='fade-left'>
           <div 
             className='flex transition-transform duration-500 ease-in-out'
             style={{
