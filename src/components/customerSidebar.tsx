@@ -9,9 +9,9 @@ interface ProfileSidebarProps {
 const CustomerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab, onTabChange }) => {
   const menuItems = [
     { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard },
-    { id: 'account', label: 'Account', icon: User },
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar },
     { id: 'transactions', label: 'Transactions', icon: CreditCard },
+    { id: 'account', label: 'Account', icon: User },
   ]
 
   return (

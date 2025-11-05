@@ -45,7 +45,7 @@ const AuthCallback = () => {
           userName: decoded.name,
           accountId: decoded.accountId,
           accountStatus: decoded.accountStatus,
-          role: decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"],
+          role: decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"].toLowerCase(),
         }
 
         console.log('User from decoded token:', user)

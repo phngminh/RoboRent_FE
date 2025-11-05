@@ -3,7 +3,6 @@ import { Calendar, Settings, CreditCard, Truck, Check, ChevronLeft, ChevronRight
 
 const HowItWorks = () => {
   const [currentSlide, setCurrentSlide] = useState(0)
-
   const slides = [
     {
       icon: Calendar,
@@ -61,14 +60,14 @@ const HowItWorks = () => {
   return (
     <div className='relative bg-gradient-to-b from-gray-50 via-white to-gray-50 py-20 px-6 overflow-hidden'>
       <div className='relative max-w-8xl mx-auto text-center -mt-8'>
-        <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1 bg-white'>
+        <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1 bg-white' data-aos='fade-down'>
           HOW IT WORKS
         </p>
-        <h1 className='text-[2.5rem] font-bold text-gray-700 mb-12'>
-          Get your robot ready in <span className='text-emerald-500'>four</span> simple steps
+        <h1 className='text-[2.5rem] font-bold text-blue-900 mb-12' data-aos='fade-up'>
+          Get your robot ready in <span className='text-teal-500'>four</span> simple steps
         </h1>
 
-        <div className='relative'>
+        <div className='relative' data-aos='fade-right'>
           <div className='flex items-center justify-center gap-4'>
             {[-1, 0, 1].map((offset) => {
               const index = (currentSlide + offset + slides.length) % slides.length
