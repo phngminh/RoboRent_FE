@@ -4,23 +4,30 @@ import 'react-toastify/dist/ReactToastify.css'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
-import HomePage from './pages/home/homePage'
+import HomePage from './pages/home/homePage/homePage'
 import AuthCallback from './pages/auth/callback'
-import StaffChatPage from './pages/chat/StaffChatPage'
-import CustomerChatPage from './pages/chat/CustomerChatPage'
-import ManagerQuotesPage from './pages/manager/ManagerQuotesPage'
 
 function App() {
+  useEffect(() => {
+    AOS.init({
+      duration: 800,
+      easing: 'ease-in-out',
+      once: false,
+      mirror: true,
+      offset: 110,
+    })
+  }, [])
+
   return (
     <AuthProvider>
       <Router>
+        <ScrollToTop />
         <div className='App'>
           <Routes>
             {/* Auth Routes */}
             <Route path='/' element={<div>Home Page - Coming Soon</div>} />
             <Route path='/callback' element={<AuthCallback />} />
-
-            {/* Staff Routes */}
+            
             <Route 
               path='/staff/chat/:rentalId'
               element={
