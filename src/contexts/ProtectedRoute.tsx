@@ -1,9 +1,9 @@
 import React from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { Navigate, useLocation, Outlet } from 'react-router-dom'
+import { useAuth } from './AuthContext'
 
 interface ProtectedRouteProps {
-  children: React.ReactNode
+  children?: React.ReactNode
   allowedRoles?: ('admin' | 'staff' | 'manager' | 'customer')[]
   redirectTo?: string
 }
@@ -32,7 +32,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to='/' replace />
   }
 
-  return <>{children}</>
+  // Use Outlet for nested routes, or children if provided
+  return children ? <>{children}</> : <Outlet />
 }
 
 export default ProtectedRoute

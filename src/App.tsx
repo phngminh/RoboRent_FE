@@ -1,13 +1,16 @@
 import './App.css'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
-import ProtectedRoute from './components/ProtectedRoute'
-import HomePage from './pages/home/homePage/homePage'
-import AuthCallback from './pages/auth/callback'
+import { useEffect } from 'react'
+import useRouteElements from './contexts/useRouteElement'
+import AOS from 'aos'
+import 'aos/dist/aos.css'
+import ScrollToTop from './components/scrollToTop'
 
 function App() {
+  const routeElement = useRouteElements()
+
   useEffect(() => {
     AOS.init({
       duration: 800,
@@ -20,46 +23,9 @@ function App() {
 
   return (
     <AuthProvider>
-      <Router>
-        <ScrollToTop />
-        <div className='App'>
-          <Routes>
-            {/* Auth Routes */}
-            <Route path='/' element={<div>Home Page - Coming Soon</div>} />
-            <Route path='/callback' element={<AuthCallback />} />
-            
-            <Route 
-              path='/staff/chat/:rentalId'
-              element={
-                <ProtectedRoute allowedRoles={['staff']}>
-                  <StaffChatPage />
-                </ProtectedRoute>
-              } 
-            />
-
-            {/* Manager Routes */}
-            <Route 
-              path='/manager/quotes'
-              element={
-                <ProtectedRoute allowedRoles={['manager']}>
-                  <ManagerQuotesPage />
-                </ProtectedRoute>
-              } 
-            />
-
-            {/* Customer Routes */}
-            <Route 
-              path='/customer/chat/:rentalId'
-              element={
-                <ProtectedRoute allowedRoles={['customer']}>
-                  <CustomerChatPage />
-                </ProtectedRoute>
-              } 
-            />
-          </Routes>
-          <ToastContainer />
-        </div>
-      </Router>
+      <ScrollToTop />
+      {routeElement}
+      <ToastContainer />
     </AuthProvider>
   )
 }
