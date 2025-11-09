@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Menu, X, LogOut } from 'lucide-react'
+import { Menu, X, LogOut, Bell } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { googleLogin } from '../apis/auth.api'
+import { getStaffChatRooms, getCustomerChatRooms } from '../apis/chat.api'
+import { getQuotesByRentalId } from '../apis/priceQuote.api'
+import { QuoteStatus } from '../types/chat.types'
 import logo from '../assets/logo1.png'
 
 const Header = () => {
@@ -10,6 +13,7 @@ const Header = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const { user, logout, isAuthenticated } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const handleLogout = () => {
     logout()
@@ -36,6 +40,51 @@ const Header = () => {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // Count unread messages + pending quotes
+  useEffect(() => {
+    if (!user?.id) return
+
+    const countUnread = async () => {
+      try {
+        let totalUnread = 0
+
+        // Get chat rooms based on role
+        const isStaff = user.role === 'Staff'
+        const getRooms = isStaff ? getStaffChatRooms : getCustomerChatRooms
+        
+        const response = await getRooms(user.id, 1, 50)
+        
+        // Count unread messages
+        totalUnread = response.rooms.reduce((sum, room) => sum + room.unreadCount, 0)
+
+        // For customers: count pending quotes
+        if (!isStaff) {
+          for (const room of response.rooms) {
+            try {
+              const quotes = await getQuotesByRentalId(room.rentalId)
+              const pendingQuotes = quotes.quotes.filter(
+                q => q.status === QuoteStatus.PendingCustomer
+              ).length
+              totalUnread += pendingQuotes
+            } catch (error) {
+              console.error('Failed to load quotes for room:', room.rentalId)
+            }
+          }
+        }
+
+        setUnreadCount(totalUnread)
+      } catch (error) {
+        console.error('Failed to count unread:', error)
+      }
+    }
+
+    countUnread()
+    
+    // Refresh every 30s
+    const interval = setInterval(countUnread, 30000)
+    return () => clearInterval(interval)
+  }, [user?.id, user?.role])
 
   return (
     <>
@@ -73,6 +122,16 @@ const Header = () => {
             <div className='flex items-center space-x-4 mr-10'>
               {isAuthenticated ? (
                 <div className='flex items-center space-x-4'>
+                  {/* Notification Bell */}
+                  <button className="relative p-2 hover:bg-gray-100/10 rounded-full transition-colors">
+                    <Bell size={20} className={isScrolled ? 'text-gray-700' : 'text-white'} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
                   <div className='flex items-center space-x-2'>
                     <div className='h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center'>
                       <span className='text-white text-lg font-medium'>
@@ -169,25 +228,6 @@ const Header = () => {
                 </svg>
                 Continue with Google
               </button>
-
-              {/* <div className='relative mt-2 mb-2'>
-                <div className='absolute inset-0 flex items-center'>
-                  <div className='w-full border-t border-gray-300'></div>
-                </div>
-                <div className='relative flex justify-center text-sm'>
-                  <span className='px-4 bg-white text-gray-500'>or</span>
-                </div>
-              </div>
-
-              <p className='text-center text-gray-500 text-lg animate-in slide-in-from-left duration-500 delay-300'>
-                Already have an account?{' '}
-                <button
-                  onClick={googleLoginWithClose}
-                  className='text-blue-600 hover:underline font-medium'
-                >
-                  Log in
-                </button>
-              </p> */}
 
               <p className='text-base text-gray-200 mt-2 animate-in slide-in-from-left duration-500 delay-200'>
                 By continuing, you agree to RoboRent's{' '}

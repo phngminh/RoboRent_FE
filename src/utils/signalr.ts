@@ -110,6 +110,19 @@ class SignalRService {
   offQuoteStatusChanged() {
     this.connection?.off('QuoteStatusChanged')
   }
+
+  onQuoteCreated(callback: (data: {
+    QuoteId: number
+    QuoteNumber: number
+    Total: number
+  }) => void) {
+    this.connection?.on('QuoteCreated', callback)
+  }
+
+  offQuoteCreated() {
+    this.connection?.off('QuoteCreated')
+  }
+
 }
 
 export const signalRService = new SignalRService()

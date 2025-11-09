@@ -11,13 +11,14 @@ import CustomerChatPage from './pages/chat/CustomerChatPage'
 import ManagerQuotesPage from './pages/manager/ManagerQuotesPage'
 
 function App() {
+
   return (
     <AuthProvider>
       <Router>
         <div className='App'>
           <Routes>
-            {/* Auth Routes */}
-            <Route path='/' element={<div>Home Page - Coming Soon</div>} />
+            {/* Public Routes */}
+            <Route path='/' element={<HomePage />} />
             <Route path='/callback' element={<AuthCallback />} />
 
             {/* Staff Routes */}
@@ -26,6 +27,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['staff']}>
                   <StaffChatPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path='/staff'
+              element={
+                <ProtectedRoute allowedRoles={['staff']}>
+                  <div>Staff Dashboard - Coming Soon</div>
                 </ProtectedRoute>
               } 
             />
@@ -39,6 +48,14 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path='/manager'
+              element={
+                <ProtectedRoute allowedRoles={['manager']}>
+                  <div>Manager Dashboard - Coming Soon</div>
+                </ProtectedRoute>
+              } 
+            />
 
             {/* Customer Routes */}
             <Route 
@@ -46,6 +63,24 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['customer']}>
                   <CustomerChatPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path='/customer'
+              element={
+                <ProtectedRoute allowedRoles={['customer']}>
+                  <div>Customer Dashboard - Coming Soon</div>
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Admin Routes */}
+            <Route 
+              path='/admin'
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <div>Admin Dashboard - Coming Soon</div>
                 </ProtectedRoute>
               } 
             />

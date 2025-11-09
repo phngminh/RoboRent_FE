@@ -22,6 +22,7 @@ interface DemoUploadButtonProps {
   onUploadSuccess: (videoData: { url: string; publicId: string }) => void
   rentalId: number
   disabled?: boolean
+  disabledReason?: string
 }
 
 declare global {
@@ -41,11 +42,14 @@ declare global {
 export default function DemoUploadButton({ 
   onUploadSuccess, 
   rentalId,
-  disabled = false 
+  disabled = false,
+  disabledReason = 'This action is not available yet'
 }: DemoUploadButtonProps) {
   const [isUploading, setIsUploading] = useState(false)
 
   const handleUpload = () => {
+    if (disabled) return
+
     // Check if Cloudinary script is loaded
     if (typeof window.cloudinary === 'undefined') {
       toast.error('Cloudinary widget not loaded. Please refresh the page.')
@@ -53,7 +57,7 @@ export default function DemoUploadButton({
     }
 
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
-const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 
     if (!cloudName || !uploadPreset) {
       toast.error('Cloudinary configuration missing')
@@ -162,22 +166,36 @@ const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
   }
 
   return (
-    <button
-      onClick={handleUpload}
-      disabled={disabled || isUploading}
-      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {isUploading ? (
-        <>
-          <Upload size={16} className="text-blue-600 animate-pulse" />
-          Uploading...
-        </>
-      ) : (
-        <>
-          <Video size={16} className="text-blue-600" />
-          Send Demo
-        </>
+    <div className="relative group">
+      <button
+        onClick={handleUpload}
+        disabled={disabled || isUploading}
+        className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors text-sm ${
+          disabled || isUploading
+            ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-900'
+        }`}
+      >
+        {isUploading ? (
+          <>
+            <Upload size={16} className="text-gray-400 animate-pulse" />
+            Uploading...
+          </>
+        ) : (
+          <>
+            <Video size={16} className={disabled ? 'text-gray-400' : 'text-blue-600'} />
+            Send Demo
+          </>
+        )}
+      </button>
+
+      {/* Tooltip */}
+      {disabled && !isUploading && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+          {disabledReason}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+        </div>
       )}
-    </button>
+    </div>
   )
 }

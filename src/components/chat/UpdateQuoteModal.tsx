@@ -48,11 +48,11 @@ export default function UpdateQuoteModal({
     try {
       const data = await getPriceQuoteById(quoteId)
       
-      if (data.status !== QuoteStatus.RejectedManager) {
-        toast.error('This quote cannot be edited')
-        onClose()
-        return
-      }
+      if (data.status !== QuoteStatus.PendingManager && data.status !== QuoteStatus.RejectedManager) {
+      toast.error('Cannot edit quote with status: ' + data.status)
+      onClose()
+      return
+    }
 
       setQuote(data)
       

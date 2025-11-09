@@ -144,6 +144,7 @@ export interface ChatRoomListItem {
   packageName?: string
   eventDate?: string
   status?: string
+  rentalStatus?: string 
   lastMessage?: string
   lastMessageTime?: string
   unreadCount: number
