@@ -4,7 +4,7 @@ import AboutUs from '../pages/home/aboutUs'
 import OurProducts from '../pages/home/ourProduct'
 import Home from '../pages/home/homePage/homePage'
 import ProtectedRoute from './ProtectedRoute'
-import Profile from '../pages/customer/profile/profile'
+import CustomerProfile from '../pages/customer/profile/profile'
 import CustomerChatPage from '../pages/chat/CustomerChatPage'
 import StaffChatPage from '../pages/chat/StaffChatPage'
 import ManagerQuotesPage from '../pages/manager/ManagerQuotesPage'
@@ -13,6 +13,7 @@ import DashboardContent from '../pages/customer/profile/dashboard'
 import RentalRequestsContent from '../pages/customer/profile/rentalRequest'
 import TransactionsContent from '../pages/customer/profile/transactions'
 import AccountProfile from '../pages/customer/profile/account'
+import StaffProfile from '../pages/staff/profile'
 
 export default function useRouteElements() {
   const routeElements = useRoutes([
@@ -28,9 +29,9 @@ export default function useRouteElements() {
       path: path.BASE_CUSTOMER,
       element: <ProtectedRoute allowedRoles={['customer']} />,
       children: [
-        { index: true, element: <Navigate to="dashboard" replace /> },
+        { index: true, element: <Navigate to='dashboard' replace /> },
         {
-          element: <Profile />,
+          element: <CustomerProfile />,
           children: [
             { path: 'dashboard', element: <DashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
@@ -46,6 +47,16 @@ export default function useRouteElements() {
       path: path.BASE_STAFF,
       element: <ProtectedRoute allowedRoles={['staff']} />,
       children: [
+        { index: true, element: <Navigate to='dashboard' replace /> },
+        {
+          element: <StaffProfile />,
+          children: [
+            { path: 'dashboard', element: <DashboardContent /> },
+            { path: 'account', element: <AccountProfile /> },
+            { path: 'rental-requests', element: <RentalRequestsContent /> },
+            { path: 'transactions', element: <TransactionsContent /> }
+          ]
+        },
         {
           path: 'chat/:rentalId',
           element: <StaffChatPage />

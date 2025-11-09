@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import ProfileSidebar from '../../../components/sidebar/customerSidebar'
+import ProfileSidebar from '../../components/sidebar/staffSidebar'
 import DashboardContent from './dashboard'
 import AccountContent from './account'
 import RentalRequestsContent from './rentalRequest'
 import TransactionsContent from './transactions'
-import { useAuth } from '../../../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 import { Link } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
-import logo from '../../../assets/logo1.png'
-import { getProfile } from '../../../apis/auth.api'
+import logo from '../../assets/logo1.png'
+import { getProfile } from '../../apis/auth.api'
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -53,7 +53,7 @@ const Profile = () => {
 
         <div className='flex items-center space-x-4'>
           <Link
-            to='/customer'
+            to='/staff'
             className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'
           >
             <div className='h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center'>

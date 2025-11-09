@@ -32,7 +32,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to='/' replace />
   }
 
-  // Use Outlet for nested routes, or children if provided
   return children ? <>{children}</> : <Outlet />
 }
 

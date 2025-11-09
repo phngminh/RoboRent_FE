@@ -8,21 +8,20 @@ export const googleLogin = () => {
 }
 
 export const refreshToken = async (): Promise<string | null> => {
-  const response = await http.post(`${API_URL}/refresh-token`, {}, { withCredentials: true })
-  if (!response.data && !response.data.token) {
-    throw new Error('Failed to refresh token')
-  }
-  return response.data.token || null
+  const response = await http.post(`${API_URL}/refresh-token`)
+  return response.data
 }
 
 export interface AuthProfileResponse {
   userId: string
   email: string
-  userName: string
-  accountId: string
-  accountStatus: string
-  emailConfirmed: boolean
-  role: string
+  firstName: string
+  lastName: string
+  phoneNumber: string
+  address: string
+  dateOfBirth: string
+  gender: string
+  picture: string
 }
 
 export const getProfile = async () => {

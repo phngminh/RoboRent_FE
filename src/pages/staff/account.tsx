@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Edit2, User } from 'lucide-react'
-import { getProfile } from '../../../apis/auth.api'
+import { getProfile } from '../../apis/auth.api'
 
 interface ProfileData {
   firstName?: string
