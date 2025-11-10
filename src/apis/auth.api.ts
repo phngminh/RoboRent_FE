@@ -8,7 +8,7 @@ export const googleLogin = () => {
 }
 
 export const refreshToken = async (): Promise<string | null> => {
-  const response = await http.post(`${API_URL}/refresh-token`)
+  const response = await http.post('/Auth/refresh-token')
   return response.data
 }
 
@@ -25,6 +25,6 @@ export interface AuthProfileResponse {
 }
 
 export const getProfile = async () => {
-  const response = await http.get<AuthProfileResponse>(`${API_URL}/profile`)
+  const response = await http.get<AuthProfileResponse>('/Auth/profile')
   return response.data
 }

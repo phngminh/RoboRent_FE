@@ -1,7 +1,7 @@
 // src/pages/chat/CustomerChatPage.tsx
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Send, Calendar, MapPin, Package, CheckCircle2, Search } from 'lucide-react'
+import { Send, Calendar, MapPin, Package, CheckCircle2, Search, LogOut } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { signalRService } from '../../utils/signalr'
 import { 
@@ -21,9 +21,10 @@ import ChatMessage from '../../components/chat/ChatMessage'
 import DemoVideoCard from '../../components/chat/DemoVideoCard'
 import QuoteCard from '../../components/chat/QuoteCard'
 import QuoteDetailModal from '../../components/chat/QuoteDetailModal'
-import Header from '../../components/header'
 import { toast } from 'react-toastify'
 import { formatDistanceToNow } from 'date-fns'
+import { Link } from 'react-router-dom'
+import logo from '../../assets/logo1.png'
 
 // Interface cho rental trong sidebar
 interface CustomerRental {
@@ -40,7 +41,7 @@ interface CustomerRental {
 export default function CustomerChatPage() {
   const { rentalId } = useParams<{ rentalId: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const [messages, setMessages] = useState<ChatMessageResponse[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -111,6 +112,10 @@ export default function CustomerChatPage() {
     } catch (error) {
       console.error('Failed to load quotes:', error)
     }
+  }
+
+  const handleLogout = () => {
+    logout()
   }
 
   useEffect(() => {
@@ -311,7 +316,48 @@ export default function CustomerChatPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <header className='fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-gray-100 py-3 px-24 font-orbitron flex items-center justify-between'>
+        <div className='flex items-center space-x-4'>
+          <img
+            src={logo}
+            alt='logo'
+            className={`w-8 h-7 transition-all duration-200 filter drop-shadow-[0_0_2px_black]`}
+          />
+          <Link
+            to='/'
+            className='text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-wider'
+          >
+            ROBORENT
+          </Link>
+        </div>
+
+        <div className='flex items-center space-x-4'>
+          <Link
+            to='/customer'
+            className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'
+          >
+            <div className='h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center'>
+              <img
+                src={user?.picture}
+                alt='User Avatar'
+                className='h-7 w-7 rounded-full object-cover'
+              />
+            </div>
+            <span className='text-gray-700 text-lg font-bold'>
+              {user?.name || user?.userName || 'User'}
+            </span>
+          </Link>
+
+          <button
+            onClick={handleLogout}
+            className='flex items-center space-x-1 text-gray-700 hover:text-gray-900 transition-colors'
+            title='Logout'
+          >
+            <LogOut size={18} />
+            <span className='text-lg font-bold'>Logout</span>
+          </button>
+        </div>
+      </header>
       
       <div className="pt-16 h-screen flex">
         {/* Left Sidebar - Rental List */}
