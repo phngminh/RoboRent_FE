@@ -6,7 +6,7 @@ const mockRobots = [
     id: 1,
     robotName: 'PartyBot Pro',
     roboType: 'Entertainment',
-    image: 'https://vr360.com.vn/uploads/images/robot-va-tri-tue-nhan-tao-buoc-tien-trong-cuoc-cach-mang-4-0%20(2).jpg',
+    image: 'https://www.thedailyupside.com/wp-content/uploads/2025/02/cio_humanoid-robot_02-10-25_iStock-iLexx.png',
     description: 'Interactive party robot that sings, dances and entertains guests'
   },
   {

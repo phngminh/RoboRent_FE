@@ -5,6 +5,13 @@ import { useAuth } from '../contexts/AuthContext'
 import { googleLogin } from '../apis/auth.api'
 import logo from '../assets/logo1.png'
 
+const roleRedirectMap: Record<string, string> = {
+  customer: '/customer',
+  staff: '/staff',
+  manager: '/manager',
+  admin: '/admin',
+}
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -121,11 +128,16 @@ const Header = () => {
               <div className='hidden md:flex items-center space-x-4'>
                 {isAuthenticated ? (
                   <div className='flex items-center space-x-4'>
-                    <Link to='/profile' className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'>
+                    <Link 
+                      to={roleRedirectMap[user?.role]}
+                      className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'
+                    >
                       <div className='h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center'>
-                        <span className='text-white text-lg font-medium'>
-                          {(user?.name || user?.userName || '?').charAt(0)}
-                        </span>
+                        <img
+                          src={user?.picture}
+                          alt='User Avatar'
+                          className='h-7 w-7 rounded-full object-cover'
+                        />
                       </div>
                       <span
                         className={`text-lg transition-colors duration-200 ${isScrolled ? 'text-gray-700' : 'text-white'}`}

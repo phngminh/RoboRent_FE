@@ -8,11 +8,19 @@ interface JwtPayload {
   sub?: string
   email?: string
   name?: string
-  preferred_username?: string
-  unique_name?: string
+  picture?: string
   accountId?: string
   accountStatus?: string
+  role?: string
+  exp?: number
   [key: string]: any
+}
+
+const roleRedirectMap: Record<string, string> = {
+  customer: '/',
+  staff: '/staff',
+  manager: '/manager',
+  admin: '/admin',
 }
 
 const AuthCallback = () => {
@@ -43,14 +51,16 @@ const AuthCallback = () => {
           userId: decoded.sub,
           email: decoded.email,
           userName: decoded.name,
+          picture: decoded.picture || '',
           accountId: decoded.accountId,
           accountStatus: decoded.accountStatus,
+          exp: decoded.exp,
           role: decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"].toLowerCase(),
         }
 
         console.log('User from decoded token:', user)
 
-        if (decoded.accountStatus === 'PendingVerification') {
+        if (user.accountStatus === 'PendingVerification') {
           localStorage.setItem('showVerifyModal', 'true')
           navigate('/', { replace: true })
           return
@@ -59,7 +69,9 @@ const AuthCallback = () => {
         login(urlToken, user)
         setHasProcessed(true)
         window.history.replaceState({}, document.title, window.location.pathname)
-        navigate('/', { replace: true })
+        
+        const redirectPath = roleRedirectMap[user.role || 'customer'] || '/'
+        navigate(redirectPath, { replace: true })
       } catch (err: any) {
         console.error('AuthCallback error:', err)
         setError(err.message || 'Login failed. Please try again.')
