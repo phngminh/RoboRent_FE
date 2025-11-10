@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, LogOut } from 'lucide-react'
+import { Menu, X, LogOut, Bell } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { googleLogin } from '../apis/auth.api'
+import { getStaffChatRooms, getCustomerChatRooms } from '../apis/chat.api'
+import { getQuotesByRentalId } from '../apis/priceQuote.api'
+import { QuoteStatus } from '../types/chat.types'
 import logo from '../assets/logo1.png'
 
 const roleRedirectMap: Record<string, string> = {
@@ -18,6 +21,7 @@ const Header = () => {
   const { user, logout, isAuthenticated } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
   const location = useLocation()
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const handleLogout = () => {
     logout()
@@ -45,6 +49,51 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // Count unread messages + pending quotes
+  useEffect(() => {
+    if (!user?.id) return
+
+    const countUnread = async () => {
+      try {
+        let totalUnread = 0
+
+        // Get chat rooms based on role
+        const isStaff = user.role === 'Staff'
+        const getRooms = isStaff ? getStaffChatRooms : getCustomerChatRooms
+        
+        const response = await getRooms(user.id, 1, 50)
+        
+        // Count unread messages
+        totalUnread = response.rooms.reduce((sum, room) => sum + room.unreadCount, 0)
+
+        // For customers: count pending quotes
+        if (!isStaff) {
+          for (const room of response.rooms) {
+            try {
+              const quotes = await getQuotesByRentalId(room.rentalId)
+              const pendingQuotes = quotes.quotes.filter(
+                q => q.status === QuoteStatus.PendingCustomer
+              ).length
+              totalUnread += pendingQuotes
+            } catch (error) {
+              console.error('Failed to load quotes for room:', room.rentalId)
+            }
+          }
+        }
+
+        setUnreadCount(totalUnread)
+      } catch (error) {
+        console.error('Failed to count unread:', error)
+      }
+    }
+
+    countUnread()
+    
+    // Refresh every 30s
+    const interval = setInterval(countUnread, 30000)
+    return () => clearInterval(interval)
+  }, [user?.id, user?.role])
+
   return (
     <>
       <header className={`fixed top-0 left-0 right-0 z-50 w-full transition-colors duration-300 ${
@@ -66,6 +115,61 @@ const Header = () => {
               >
                 ROBORENT
               </Link>
+            </div>
+
+            <nav className='hidden md:flex space-x-8 tracking-wide text-lg'>
+              <Link to='/' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
+                HOME
+              </Link>
+              <a href='#' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
+                PRODUCTS
+              </a>
+              <a href='#' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
+                ABOUT US
+              </a>
+            </nav>
+
+            <div className='flex items-center space-x-4 mr-10'>
+              {isAuthenticated ? (
+                <div className='flex items-center space-x-4'>
+                  {/* Notification Bell */}
+                  <button className="relative p-2 hover:bg-gray-100/10 rounded-full transition-colors">
+                    <Bell size={20} className={isScrolled ? 'text-gray-700' : 'text-white'} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  <div className='flex items-center space-x-2'>
+                    <div className='h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center'>
+                      <span className='text-white text-lg font-medium'>
+                        {(user?.name || user?.userName || '?').charAt(0)}
+                      </span>
+                    </div>
+                    <span className={`text-lg hidden sm:block transition-colors duration-200 ${isScrolled ? 'text-gray-700' : 'text-white'}`}>
+                      {user?.name || user?.userName || 'User'}
+                    </span>
+                  </div>
+                  
+                  <button
+                    onClick={handleLogout}
+                    className={`flex items-center space-x-1 transition-colors duration-200 ${isScrolled ? 'text-gray-700 hover:text-gray-900' : 'text-white hover:text-gray-200'}`}
+                    title='Logout'
+                  >
+                    <LogOut size={18} />
+                    <span className='hidden sm:block text-lg'>Logout</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={openLoginModal}
+                  className='bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-bold whitespace-nowrap'
+                >
+                  Get Started
+                </button>
+              )}
               
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -246,7 +350,7 @@ const Header = () => {
                 </svg>
                 Continue with Google
               </button>
-
+              
               {/* <div className='relative mt-2 mb-2'>
                 <div className='absolute inset-0 flex items-center'>
                   <div className='w-full border-t border-gray-300'></div>
@@ -266,7 +370,7 @@ const Header = () => {
                 </button>
               </p> */}
 
-              <p className='text-base text-gray-600 mt-2 animate-in slide-in-from-left duration-500 delay-200'>
+              <p className='text-base text-gray-200 mt-2 animate-in slide-in-from-left duration-500 delay-200'>
                 By continuing, you agree to RoboRent's{' '}
                 <a href='#' className='text-gray-800 font-bold hover:underline'>
                   Terms of Use
