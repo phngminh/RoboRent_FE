@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, LogOut, Bell } from 'lucide-react'
+import { X, LogOut, Bell } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { googleLogin } from '../apis/auth.api'
 import { getStaffChatRooms, getCustomerChatRooms } from '../apis/chat.api'
@@ -49,24 +49,18 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Count unread messages + pending quotes
   useEffect(() => {
     if (!user?.id) return
 
     const countUnread = async () => {
       try {
         let totalUnread = 0
-
-        // Get chat rooms based on role
         const isStaff = user.role === 'Staff'
         const getRooms = isStaff ? getStaffChatRooms : getCustomerChatRooms
         
         const response = await getRooms(user.id, 1, 50)
-        
-        // Count unread messages
         totalUnread = response.rooms.reduce((sum, room) => sum + room.unreadCount, 0)
 
-        // For customers: count pending quotes
         if (!isStaff) {
           for (const room of response.rooms) {
             try {
@@ -89,7 +83,6 @@ const Header = () => {
 
     countUnread()
     
-    // Refresh every 30s
     const interval = setInterval(countUnread, 30000)
     return () => clearInterval(interval)
   }, [user?.id, user?.role])
@@ -115,72 +108,6 @@ const Header = () => {
               >
                 ROBORENT
               </Link>
-            </div>
-
-            <nav className='hidden md:flex space-x-8 tracking-wide text-lg'>
-              <Link to='/' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
-                HOME
-              </Link>
-              <a href='#' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
-                PRODUCTS
-              </a>
-              <a href='#' className={`${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-white hover:text-gray-200'} transition-colors duration-200`}>
-                ABOUT US
-              </a>
-            </nav>
-
-            <div className='flex items-center space-x-4 mr-10'>
-              {isAuthenticated ? (
-                <div className='flex items-center space-x-4'>
-                  {/* Notification Bell */}
-                  <button className="relative p-2 hover:bg-gray-100/10 rounded-full transition-colors">
-                    <Bell size={20} className={isScrolled ? 'text-gray-700' : 'text-white'} />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
-                  </button>
-
-                  <div className='flex items-center space-x-2'>
-                    <div className='h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center'>
-                      <span className='text-white text-lg font-medium'>
-                        {(user?.name || user?.userName || '?').charAt(0)}
-                      </span>
-                    </div>
-                    <span className={`text-lg hidden sm:block transition-colors duration-200 ${isScrolled ? 'text-gray-700' : 'text-white'}`}>
-                      {user?.name || user?.userName || 'User'}
-                    </span>
-                  </div>
-                  
-                  <button
-                    onClick={handleLogout}
-                    className={`flex items-center space-x-1 transition-colors duration-200 ${isScrolled ? 'text-gray-700 hover:text-gray-900' : 'text-white hover:text-gray-200'}`}
-                    title='Logout'
-                  >
-                    <LogOut size={18} />
-                    <span className='hidden sm:block text-lg'>Logout</span>
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={openLoginModal}
-                  className='bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-bold whitespace-nowrap'
-                >
-                  Get Started
-                </button>
-              )}
-              
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className={`md:hidden p-2 rounded-md transition-all duration-200 ${
-                  isScrolled || isMenuOpen
-                    ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-                    : 'text-white hover:text-gray-200 hover:bg-white/10'
-                }`}
-              >
-                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
             </div>
 
             <nav className='hidden md:flex justify-center space-x-8 tracking-wide text-lg'>
@@ -227,11 +154,19 @@ const Header = () => {
                 ABOUT US
               </Link>
             </nav>
-
+            
             <div className='flex justify-end items-center space-x-4 mr-2 sm:mr-10'>
               <div className='hidden md:flex items-center space-x-4'>
                 {isAuthenticated ? (
                   <div className='flex items-center space-x-4'>
+                    <button className="relative p-2 hover:bg-gray-100/10 rounded-full transition-colors">
+                      <Bell size={21} className={isScrolled ? 'text-gray-700' : 'text-white'} />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
                     <Link 
                       to={roleRedirectMap[user?.role]}
                       className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'
@@ -350,7 +285,7 @@ const Header = () => {
                 </svg>
                 Continue with Google
               </button>
-              
+
               {/* <div className='relative mt-2 mb-2'>
                 <div className='absolute inset-0 flex items-center'>
                   <div className='w-full border-t border-gray-300'></div>
