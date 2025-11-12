@@ -6,9 +6,10 @@ import { QuoteStatus } from '../../types/chat.types'
 interface QuoteCardProps {
   quote: PriceQuoteResponse
   onViewDetails?: () => void
+  isNew?: boolean 
 }
 
-export default function QuoteCard({ quote, onViewDetails }: QuoteCardProps) {
+export default function QuoteCard({ quote, onViewDetails, isNew = false }: QuoteCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case QuoteStatus.PendingManager:
@@ -48,7 +49,16 @@ export default function QuoteCard({ quote, onViewDetails }: QuoteCardProps) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
+    <div className={`bg-white rounded-xl border-2 p-4 hover:shadow-md transition-shadow relative ${
+      isNew ? 'border-orange-400 shadow-lg' : 'border-gray-200'
+    }`}>
+      {/* NEW Badge */}
+      {isNew && (
+        <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+          NEW
+        </span>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">

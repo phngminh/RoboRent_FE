@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Clock, CheckCircle, XCircle, Eye, Download, MessageCircle } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, Eye, MessageCircle } from 'lucide-react'
 import { getRequestByCustomer, type RentalRequestResponse } from '../../apis/rentalRequest.api'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
@@ -102,11 +102,12 @@ const RentalRequestsContent: React.FC = () => {
             <thead className='bg-gray-50'>
               <tr>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Request ID</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Package ID</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Name</th>
+                {/* <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Description</th> */}
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Address</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Status</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Date</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Created Date</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Updated Date</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Actions</th>
               </tr>
             </thead>
@@ -117,6 +118,10 @@ const RentalRequestsContent: React.FC = () => {
                   Icon: Clock
                 }
 
+                const eventDate = request.eventDate
+                  ? new Date(request.eventDate).toLocaleDateString()
+                  : '—'
+
                 const createdDate = request.createdDate
                   ? new Date(request.createdDate).toLocaleDateString()
                   : '—'
@@ -124,10 +129,11 @@ const RentalRequestsContent: React.FC = () => {
                 return (
                   <tr key={request.id ?? request.accountId} className='hover:bg-gray-50'>
                     <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center'>{request.id}</td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.rentalPackageId ?? '—'}</td>
                     <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>
                       {request.eventName ?? '—'}
                     </td>
+                    {/* <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.description ?? '—'}</td> */}
+                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.address ?? '—'}</td>
                     <td className='px-6 py-4 whitespace-nowrap text-center'>
                       <div className='flex items-center justify-center space-x-2'>
                         <Icon size={16} />
@@ -136,10 +142,8 @@ const RentalRequestsContent: React.FC = () => {
                         </span>
                       </div>
                     </td>
+                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{eventDate}</td>
                     <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{createdDate}</td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>
-                      {request.updatedDate ? new Date(request.updatedDate).toLocaleDateString() : '—'}
-                    </td>
                     <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center'>
                       <div className='flex justify-center space-x-2'>
                         <button className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'>
@@ -152,10 +156,6 @@ const RentalRequestsContent: React.FC = () => {
                         >
                           <MessageCircle size={14} />
                           <span>Chat</span>
-                        </button>
-                        <button className='bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-1'>
-                          <Download size={14} />
-                          <span>Download</span>
                         </button>
                       </div>
                     </td>
