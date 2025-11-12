@@ -4,19 +4,11 @@ import DashboardContent from '../dashboard'
 import AccountContent from './account'
 import RentalRequestsContent from '../rentalRequest'
 import TransactionsContent from '../transactions'
-import { useAuth } from '../../../contexts/AuthContext'
-import { Link } from 'react-router-dom'
-import { LogOut } from 'lucide-react'
-import logo from '../../../assets/logo1.png'
 import { getProfile } from '../../../apis/auth.api'
+import Header from '../../../components/header'
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const { user, logout } = useAuth()
-
-  const handleLogout = () => {
-    logout()
-  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -40,7 +32,7 @@ const Profile = () => {
 
   return (
     <div className='flex flex-col h-screen'>
-      <header className='fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-gray-100 py-3 px-24 font-orbitron flex items-center justify-between'>
+      {/* <header className='fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-gray-100 py-3 px-24 font-orbitron flex items-center justify-between'>
         <div className='flex items-center space-x-4'>
           <img
             src={logo}
@@ -81,7 +73,8 @@ const Profile = () => {
             <span className='text-lg font-bold'>Logout</span>
           </button>
         </div>
-      </header>
+      </header> */}
+      <Header />
       
       <div className='flex flex-1 pt-12 overflow-hidden'>
         <ProfileSidebar activeTab={activeTab} onTabChange={setActiveTab} />
