@@ -17,7 +17,7 @@ const Profile = () => {
       case 'account':
         return <AccountContent />
       case 'rental-requests':
-        return <RentalRequestsContent />
+        return <RentalRequestsContent onCreate={(..._args: any[]) => {}} onView={(..._args: any[]) => {}} />
       case 'transactions':
         return <TransactionsContent />
       default:

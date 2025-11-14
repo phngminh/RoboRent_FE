@@ -10,6 +10,7 @@ const path = {
   CUSTOMER_DASHBOARD: '/customer/dashboard',
   CUSTOMER_PROFILE: '/customer/profile',
   CUSTOMER_REQUESTS: '/customer/rental-requests',
+  CUSTOMER_CREATE_REQUEST: '/customer/create-rental-request',
   CUSTOMER_TRANSACTIONS: '/customer/transactions',
   CUSTOMER_CHAT: '/customer/chat/:rentalId',
 

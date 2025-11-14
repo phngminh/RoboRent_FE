@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Clock, CheckCircle, XCircle, Eye, MessageCircle } from 'lucide-react'
-import { getRequestByCustomer, type RentalRequestResponse } from '../../apis/rentalRequest.api'
-import { useAuth } from '../../contexts/AuthContext'
+import { getRequestByCustomer, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
+import { useAuth } from '../../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 const RentalRequestsContent: React.FC = () => {

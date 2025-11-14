@@ -6,7 +6,6 @@ interface AuthContextType {
   token: string | null
   login: (token: string, user: any) => void
   logout: () => void
-  refreshToken: () => Promise<boolean>
   isLoading: boolean
   isAuthenticated: boolean
 }
@@ -33,6 +32,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const savedUser = localStorage.getItem('user')
     const savedToken = localStorage.getItem('token')
+    console.log(savedToken)
     if (savedUser && savedToken) {
       try {
         setUser(JSON.parse(savedUser))
@@ -60,29 +60,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('token')
   }, [])
 
-  const refreshToken = useCallback(async (): Promise<boolean> => {
-    try {
-      const { refreshToken: apiRefresh } = await import('../apis/auth.api')
-      const newToken = await apiRefresh()
-      if (newToken) {
-        setToken(newToken)
-        localStorage.setItem('token', newToken)
-        return true
-      }
-      return false
-    } catch (error) {
-      console.error('Token refresh failed:', error)
-      logout()
-      return false
-    }
-  }, [logout])
-
   const value = {
     user,
     token,
     login,
     logout,
-    refreshToken,
     isLoading,
     isAuthenticated: !!user && !!token,
   }
