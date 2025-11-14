@@ -10,20 +10,21 @@ import StaffChatPage from '../pages/chat/StaffChatPage'
 import ManagerQuotesPage from '../pages/manager/ManagerQuotesPage'
 import AuthCallback from '../pages/auth/callback'
 import DashboardContent from '../pages/customer/dashboard'
-import RentalRequestsContent from '../pages/customer/rentalRequest'
+import RentalRequestsContent from '../pages/customer/RentalRequest/rentalRequest'
 import TransactionsContent from '../pages/customer/transactions'
 import AccountProfile from '../pages/customer/profile/account'
 import StaffProfile from '../pages/staff/profile'
+import ManagerProfile from '../pages/manager/profile'
+import Clauses from '../pages/manager/contract/templateClauses'
+import BreachReports from '../pages/manager/report/breachReports'
+import AllContracts from '../pages/manager/contract/allContracts'
 
 export default function useRouteElements() {
   const routeElements = useRoutes([
-    { path: '/', element: <Home /> },
-    { path: '/about-us', element: <AboutUs /> },
-    { path: '/our-products', element: <OurProducts /> },
-    {
-      path: path.callback,
-      element: <AuthCallback />
-    },
+    { path: path.home, element: <Home /> },
+    { path: path.aboutUs, element: <AboutUs /> },
+    { path: path.products, element: <OurProducts /> },
+    { path: path.callback, element: <AuthCallback /> },
     //================ Customer routes ================
     {
       path: path.BASE_CUSTOMER,
@@ -58,8 +59,7 @@ export default function useRouteElements() {
           ]
         },
         {
-          path: 'chat/:rentalId',
-          element: <StaffChatPage />
+          path: 'chat/:rentalId', element: <StaffChatPage />
         }
       ]
     },
@@ -68,9 +68,18 @@ export default function useRouteElements() {
       path: path.BASE_MANAGER,
       element: <ProtectedRoute allowedRoles={['manager']} />,
       children: [
+        { index: true, element: <Navigate to='dashboard' replace /> },
         {
-          path: 'quotes',
-          element: <ManagerQuotesPage />
+          element: <ManagerProfile />,
+          children: [
+            { path: 'dashboard', element: <DashboardContent /> },
+            { path: 'account', element: <AccountProfile /> },
+            { path: 'rental-requests', element: <RentalRequestsContent /> },
+            { path: 'quotes', element: <ManagerQuotesPage /> },
+            { path: 'all-contracts', element: <AllContracts /> },
+            { path: 'templates-clauses', element: <Clauses /> },
+            { path: 'reports', element: <BreachReports /> }
+          ]
         }
       ]
     },
