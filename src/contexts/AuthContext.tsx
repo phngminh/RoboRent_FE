@@ -10,6 +10,10 @@ interface AuthContextType {
   isAuthenticated: boolean
 }
 
+interface AuthProviderProps {
+  children: ReactNode
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const useAuth = () => {
@@ -20,8 +24,20 @@ export const useAuth = () => {
   return context
 }
 
-interface AuthProviderProps {
-  children: ReactNode
+function decodeJwt(token: string) {
+  try {
+    const base64Payload = token.split('.')[1]
+    const payload = JSON.parse(atob(base64Payload))
+    return payload
+  } catch {
+    return null
+  }
+}
+
+function isTokenExpired(token: string) {
+  const decoded = decodeJwt(token)
+  if (!decoded?.exp) return true
+  return decoded.exp * 1000 < Date.now()
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -33,14 +49,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const savedUser = localStorage.getItem('user')
     const savedToken = localStorage.getItem('token')
     console.log(savedToken)
+
     if (savedUser && savedToken) {
-      try {
+      const expired = isTokenExpired(savedToken)
+
+      if (expired) {
+        logout()
+      } else {
         setUser(JSON.parse(savedUser))
         setToken(savedToken)
-      } catch (error) {
-        console.error('Error parsing saved auth data:', error)
-        localStorage.removeItem('user')
-        localStorage.removeItem('token')
+
+        const decoded = decodeJwt(savedToken)
+        const expiresInMs = decoded.exp * 1000 - Date.now()
+
+        setTimeout(() => {
+          logout()
+        }, expiresInMs)
       }
     }
     setIsLoading(false)
@@ -51,6 +75,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(userData)
     localStorage.setItem('token', newToken)
     localStorage.setItem('user', JSON.stringify(userData))
+
+    const decoded = decodeJwt(newToken)
+    if (decoded?.exp) {
+      const expiresInMs = decoded.exp * 1000 - Date.now()
+      setTimeout(() => {
+        logout()
+      }, expiresInMs)
+    }
   }, [])
 
   const logout = useCallback(() => {

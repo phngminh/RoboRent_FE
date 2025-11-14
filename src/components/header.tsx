@@ -7,12 +7,13 @@ import { getStaffChatRooms, getCustomerChatRooms } from '../apis/chat.api'
 import { getQuotesByRentalId } from '../apis/priceQuote.api'
 import { QuoteStatus } from '../types/chat.types'
 import logo from '../assets/logo1.png'
+import path from '../constants/path'
 
 const roleRedirectMap: Record<string, string> = {
-  customer: '/customer',
-  staff: '/staff',
-  manager: '/manager',
-  admin: '/admin',
+  customer: path.BASE_CUSTOMER,
+  staff: path.BASE_STAFF,
+  manager: path.BASE_MANAGER,
+  admin: path.BASE_ADMIN,
 }
 
 const Header = () => {
@@ -23,7 +24,7 @@ const Header = () => {
   const location = useLocation()
   const [unreadCount, setUnreadCount] = useState(0)
 
-  const showNav = ['/', '/our-products', '/about-us'].includes(location.pathname)
+  const showNav = [path.home, path.products, path.aboutUs].includes(location.pathname)
 
   const handleLogout = () => {
     logout()
