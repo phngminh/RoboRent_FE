@@ -10,14 +10,16 @@ import StaffChatPage from '../pages/chat/StaffChatPage'
 import ManagerQuotesPage from '../pages/manager/ManagerQuotesPage'
 import AuthCallback from '../pages/auth/callback'
 import DashboardContent from '../pages/customer/dashboard'
-import RentalRequestsContent from '../pages/customer/RentalRequest/rentalRequest'
+import CustomerRentalRequestsContent from '../pages/customer/RentalRequest/rentalRequest'
+import StaffRentalRequestsContent from '../pages/staff/rentalRequest'
+import ManagerRentalRequestsContent from '../pages/manager/rentalRequest'
 import TransactionsContent from '../pages/customer/transactions'
 import AccountProfile from '../pages/customer/profile/account'
 import StaffProfile from '../pages/staff/profile'
 import ManagerProfile from '../pages/manager/profile'
 import Clauses from '../pages/manager/contract/templateClauses'
 import BreachReports from '../pages/manager/report/breachReports'
-import AllContracts from '../pages/manager/contract/allContracts'
+import ContractTemplates from '../pages/manager/contract/allContracts'
 
 export default function useRouteElements() {
   const routeElements = useRoutes([
@@ -36,7 +38,7 @@ export default function useRouteElements() {
           children: [
             { path: 'dashboard', element: <DashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
-            { path: 'rental-requests', element: <RentalRequestsContent /> },
+            { path: 'rental-requests', element: <CustomerRentalRequestsContent /> },
             { path: 'transactions', element: <TransactionsContent /> }
           ]
         },
@@ -54,7 +56,7 @@ export default function useRouteElements() {
           children: [
             { path: 'dashboard', element: <DashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
-            { path: 'rental-requests', element: <RentalRequestsContent /> },
+            { path: 'rental-requests', element: <StaffRentalRequestsContent /> },
             { path: 'transactions', element: <TransactionsContent /> }
           ]
         },
@@ -74,9 +76,9 @@ export default function useRouteElements() {
           children: [
             { path: 'dashboard', element: <DashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
-            { path: 'rental-requests', element: <RentalRequestsContent /> },
+            { path: 'rental-requests', element: <ManagerRentalRequestsContent /> },
             { path: 'quotes', element: <ManagerQuotesPage /> },
-            { path: 'all-contracts', element: <AllContracts /> },
+            { path: 'contract-templates', element: <ContractTemplates /> },
             { path: 'templates-clauses', element: <Clauses /> },
             { path: 'reports', element: <BreachReports /> }
           ]

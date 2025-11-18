@@ -1,50 +1,107 @@
 import React, { useEffect, useState } from 'react'
-import { Clock, CheckCircle, XCircle, Eye, MessageCircle } from 'lucide-react'
+import { Eye, MessageCircle } from 'lucide-react'
 import { getRequestByCustomer, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 const RentalRequestsContent: React.FC = () => {
-  const [rentals, setRentals] = useState<RentalRequestResponse[]>([])
+  const [allRentals, setAllRentals] = useState<RentalRequestResponse[]>([])
+  const [filteredRentals, setFilteredRentals] = useState<RentalRequestResponse[]>([])
   const [currentPage, setCurrentPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [statusFilter, setStatusFilter] = useState('All Status')
+  const [appliedStatus, setAppliedStatus] = useState('All Status')
+  const [dateFrom, setDateFrom] = useState('')
+  const [appliedDateFrom, setAppliedDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [appliedDateTo, setAppliedDateTo] = useState('')
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  useEffect(() => {
-    const getAllRequests = async () => {
-      try {
-        const data = await getRequestByCustomer(user.accountId)
-        console.log('Fetched rentals:', data)
-        setRentals(data)
-      } catch (error) {
-        console.error('Error fetching rentals:', error)
-      }
-    }
-    getAllRequests()
-  }, [user?.accountId])
+  const pageSize = 5
+  const totalPages = Math.max(1, Math.ceil(filteredRentals.length / pageSize))
+  const paginatedRentals = filteredRentals.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
-  const statusConfig: Record<string, { badge: string; Icon: React.ComponentType<{ size?: number }> }> = {
-    Pending: { badge: 'bg-yellow-100 text-yellow-800', Icon: Clock },
-    Accepted: { badge: 'bg-green-100 text-green-800', Icon: CheckCircle },
-    AcceptedDemo: { badge: 'bg-green-100 text-green-800', Icon: CheckCircle },
-    Draft: { badge: 'bg-gray-100 text-gray-800', Icon: Clock },
-    Rejected: { badge: 'bg-red-100 text-red-800', Icon: XCircle },
-    Completed: { badge: 'bg-blue-100 text-blue-800', Icon: CheckCircle }
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const data = await getRequestByCustomer(user.accountId)
+      console.log('Fetched rentals:', data)
+      setAllRentals(data)
+    } catch (error) {
+      console.error('Error fetching rentals:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const pageSize = 5
-  const totalPages = Math.max(1, Math.ceil(rentals.length / pageSize))
-  const paginatedRentals = rentals.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const filterData = () => {
+    let filtered = [...allRentals]
+
+    if (appliedStatus !== 'All Status') {
+      filtered = filtered.filter((r) => r.status === appliedStatus)
+    }
+
+    if (appliedDateFrom) {
+      const fromDate = new Date(appliedDateFrom)
+      filtered = filtered.filter((r) => new Date(r.createdDate) >= fromDate)
+    }
+
+    if (appliedDateTo) {
+      const toDate = new Date(appliedDateTo)
+      toDate.setHours(23, 59, 59, 999)
+      filtered = filtered.filter((r) => new Date(r.createdDate) <= toDate)
+    }
+
+    if (search.trim()) {
+      filtered = filtered.filter((r) =>
+        r.eventName?.toLowerCase().includes(search.toLowerCase().trim())
+      )
+    }
+
+    filtered.sort((a, b) => a.id - b.id)
+
+    setFilteredRentals(filtered)
+    setCurrentPage(1)
+  }
 
   useEffect(() => {
-    const newTotalPages = Math.max(1, Math.ceil(rentals.length / pageSize))
+    if (user?.accountId) {
+      fetchData()
+    }
+  }, [user?.accountId])
+
+  useEffect(() => {
+    filterData()
+  }, [allRentals, search, appliedStatus, appliedDateFrom, appliedDateTo])
+
+  useEffect(() => {
+    const newTotalPages = Math.max(1, Math.ceil(filteredRentals.length / pageSize))
     if (currentPage > newTotalPages) {
       setCurrentPage(newTotalPages)
     }
-    if (rentals.length === 0 && currentPage !== 1) {
+    if (filteredRentals.length === 0 && currentPage !== 1) {
       setCurrentPage(1)
     }
-  }, [rentals.length, currentPage])
+  }, [filteredRentals.length, currentPage])
+
+  const applyFilters = () => {
+    setAppliedStatus(statusFilter)
+    setAppliedDateFrom(dateFrom)
+    setAppliedDateTo(dateTo)
+  }
+
+  const clearFilters = () => {
+    setSearch('')
+    setStatusFilter('All Status')
+    setAppliedStatus('All Status')
+    setDateFrom('')
+    setAppliedDateFrom('')
+    setDateTo('')
+    setAppliedDateTo('')
+    setCurrentPage(1)
+  }
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return
@@ -53,41 +110,70 @@ const RentalRequestsContent: React.FC = () => {
 
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
+      {/* Filter Section */}
       <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
-        <h2 className='text-lg font-semibold text-gray-800 mb-4'>Filter Requests</h2>
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+        <h2 className='text-lg font-semibold text-gray-800 mb-4 text-center'>Filter Requests</h2>
+
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Status</label>
-            <select className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
               <option>All Status</option>
               <option>Pending</option>
-              <option>Approved</option>
+              <option>Accepted</option>
+              <option>AcceptedDemo</option>
+              <option>Draft</option>
               <option>Rejected</option>
               <option>Completed</option>
             </select>
           </div>
           
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Date From</label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</label>
             <input 
               type='date'
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             />
           </div>
           
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Date To</label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</label>
             <input 
               type='date'
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             />
           </div>
           
-          <div className='flex items-end'>
-            <button className='w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'>
+          <div className='flex items-end space-x-2'>
+            <button 
+              onClick={applyFilters}
+              className='flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'>
               Apply Filters
             </button>
+            <button 
+              onClick={clearFilters}
+              className='bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors'>
+              Clear
+            </button>
           </div>
+        </div>
+
+        <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Event Name</label>
+        <div className='flex gap-3 mb-4'>
+          <input
+            type='text'
+            placeholder='Enter event name...'
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+          />
         </div>
       </div>
 
@@ -101,67 +187,88 @@ const RentalRequestsContent: React.FC = () => {
           <table className='w-full'>
             <thead className='bg-gray-50'>
               <tr>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Request ID</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Name</th>
-                {/* <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Description</th> */}
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Address</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Status</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Activity</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Activity Type</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Date</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Created Date</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Actions</th>
               </tr>
             </thead>
             <tbody className='bg-white divide-y divide-gray-200'>
-              {paginatedRentals.map((request) => {
-                const { badge, Icon } = statusConfig[request.status] ?? {
-                  badge: 'bg-gray-100 text-gray-800',
-                  Icon: Clock
-                }
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
+                    Loading...
+                  </td>
+                </tr>
+              ) : paginatedRentals.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
+                    No rental requests found.
+                  </td>
+                </tr>
+              ) : (
+                paginatedRentals.map((request) => {
+                  const badgeClass =
+                    (request.status === 'Accepted' || request.status === 'AcceptedDemo')
+                      ? 'bg-green-100 text-green-800'
+                      : request.status === 'Completed'
+                      ? 'bg-blue-100 text-blue-800'
+                      : request.status === 'Pending'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : request.status === 'Draft'
+                      ? 'bg-gray-100 text-gray-800'
+                      : request.status === 'Rejected'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-blue-100 text-blue-800'
 
-                const eventDate = request.eventDate
-                  ? new Date(request.eventDate).toLocaleDateString()
-                  : '—'
+                  const eventDate = request.eventDate
+                    ? new Date(request.eventDate).toLocaleDateString()
+                    : '—'
 
-                const createdDate = request.createdDate
-                  ? new Date(request.createdDate).toLocaleDateString()
-                  : '—'
+                  const createdDate = request.createdDate
+                    ? new Date(request.createdDate).toLocaleDateString()
+                    : '—'
 
-                return (
-                  <tr key={request.id ?? request.accountId} className='hover:bg-gray-50'>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center'>{request.id}</td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>
-                      {request.eventName ?? '—'}
-                    </td>
-                    {/* <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.description ?? '—'}</td> */}
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.address ?? '—'}</td>
-                    <td className='px-6 py-4 whitespace-nowrap text-center'>
-                      <div className='flex items-center justify-center space-x-2'>
-                        <Icon size={16} />
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${badge}`}>
-                          {request.status}
-                        </span>
-                      </div>
-                    </td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{eventDate}</td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{createdDate}</td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center'>
-                      <div className='flex justify-center space-x-2'>
-                        <button className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'>
-                          <Eye size={14} />
-                          <span>View</span>
-                        </button>
-                        <button
-                          onClick={() => navigate(`/customer/chat/${request.id}`)}
-                          className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
-                        >
-                          <MessageCircle size={14} />
-                          <span>Chat</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+                  return (
+                    <tr key={request.id ?? request.accountId} className='hover:bg-gray-50'>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>
+                        {request.eventName ?? '—'}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.address ?? '—'}</td>
+                      <td className='px-6 py-4 whitespace-nowrap text-center'>
+                        <div className='flex items-center justify-center space-x-2'>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`}>
+                            {request.status}
+                          </span>
+                        </div>
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.eventActivityName}</td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.activityTypeName}</td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{eventDate}</td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{createdDate}</td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center'>
+                        <div className='flex justify-center space-x-2'>
+                          <button className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'>
+                            <Eye size={14} />
+                            <span>View</span>
+                          </button>
+                          <button
+                            onClick={() => navigate(`/customer/chat/${request.id}`)}
+                            className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
+                          >
+                            <MessageCircle size={14} />
+                            <span>Chat</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -195,13 +302,13 @@ const RentalRequestsContent: React.FC = () => {
             <button
               className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
               onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages || rentals.length === 0}
+              disabled={currentPage === totalPages || filteredRentals.length === 0}
             >
               Next
             </button>
           </div>
           <div className='text-sm text-gray-500'>
-            Showing {paginatedRentals.length} of {rentals.length} request{rentals.length === 1 ? '' : 's'}
+            Showing {paginatedRentals.length} of {filteredRentals.length} request{filteredRentals.length === 1 ? '' : 's'}
           </div>
         </div>
       </div>

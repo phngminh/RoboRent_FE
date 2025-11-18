@@ -16,9 +16,16 @@ export interface RentalRequestResponse {
   eventId: number
   eventActivityId: number
   activityTypeId: number
+  eventActivityName: string
+  activityTypeName: string
 }
 
 export const getRequestByCustomer = async (accountId: number) => {
   const response = await http.get<RentalRequestResponse[]>(`Rental/my-rentals/${accountId}`)
+  return response.data
+}
+
+export const getAllRequests = async () => {
+  const response = await http.get<RentalRequestResponse[]>(`Rental/all`)
   return response.data
 }

@@ -1,255 +1,357 @@
-import React, { useState } from 'react'
-import { Eye, Search, AlertTriangle, Plus, Edit, Trash2 } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { Eye, Search, Plus, Edit, Trash2 } from 'lucide-react'
+import { getAllClauses, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
 
 const Clauses: React.FC = () => {
+  const [clauses, setClauses] = useState<TemplateClauseResponse[]>([])
+  const [filteredClauses, setFilteredClauses] = useState<TemplateClauseResponse[]>([])
   const [search, setSearch] = useState('')
-  const [activeFilter, setActiveFilter] = useState('All')
+  const [statusFilter, setStatusFilter] = useState('Editable Status')
+  const [appliedStatus, setAppliedStatus] = useState('Editable Status')
+  const [mandatoryFilter, setMandatoryFilter] = useState('Mandatory Status')
+  const [appliedMandatory, setAppliedMandatory] = useState('Mandatory Status')
+  const [templateFilter, setTemplateFilter] = useState('All Templates')
+  const [appliedTemplate, setAppliedTemplate] = useState('All Templates')
+  const [loading, setLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
-  const causes = [
-    {
-      id: 1,
-      title: 'Financial Non-Payment',
-      category: 'Financial',
-      severity: 'High',
-      description: 'Failure to make scheduled payments as per contract terms.',
-      status: 'Active',
-      createdAt: '2024-01-15',
-      statusColor: 'bg-green-100 text-green-800',
-      severityColor: 'bg-red-100 text-red-800'
-    },
-    {
-      id: 2,
-      title: 'Service Level Agreement Violation',
-      category: 'Service Level',
-      severity: 'Medium',
-      description: 'Service provider failed to meet agreed upon service level metrics.',
-      status: 'Active',
-      createdAt: '2024-02-01',
-      statusColor: 'bg-green-100 text-green-800',
-      severityColor: 'bg-yellow-100 text-yellow-800'
-    },
-    {
-      id: 3,
-      title: 'Compliance Breach',
-      category: 'Compliance',
-      severity: 'High',
-      description: 'Violation of regulatory compliance requirements specified in contract.',
-      status: 'Active',
-      createdAt: '2024-02-10',
-      statusColor: 'bg-green-100 text-green-800',
-      severityColor: 'bg-red-100 text-red-800'
-    },
-    {
-      id: 4,
-      title: 'Intellectual Property Infringement',
-      category: 'Intellectual Property',
-      severity: 'Critical',
-      description: 'Unauthorized use of protected intellectual property assets.',
-      status: 'Active',
-      createdAt: '2024-02-20',
-      statusColor: 'bg-green-100 text-green-800',
-      severityColor: 'bg-purple-100 text-purple-800'
-    },
-    {
-      id: 5,
-      title: 'Delivery Delay',
-      category: 'Service Level',
-      severity: 'Low',
-      description: 'Delayed delivery of goods or services beyond agreed timeline.',
-      status: 'Inactive',
-      createdAt: '2024-01-05',
-      statusColor: 'bg-gray-100 text-gray-800',
-      severityColor: 'bg-blue-100 text-blue-800'
-    },
-    {
-      id: 6,
-      title: 'Quality Standards Not Met',
-      category: 'Service Level',
-      severity: 'Medium',
-      description: 'Delivered goods or services do not meet specified quality standards.',
-      status: 'Active',
-      createdAt: '2024-03-01',
-      statusColor: 'bg-green-100 text-green-800',
-      severityColor: 'bg-yellow-100 text-yellow-800'
+  const pageSize = 5
+  const totalPages = Math.max(1, Math.ceil(filteredClauses.length / pageSize))
+  const paginatedClauses = filteredClauses.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  useEffect(() => {
+    const fetchClauses = async () => {
+      try {
+        setLoading(true)
+        const clausesData = await getAllClauses()
+        console.log('Fetched clauses:', clausesData)
+        setClauses(clausesData)
+        setFilteredClauses(clausesData)
+      } catch (err) {
+        console.error('Failed to load clauses', err)
+        setClauses([])
+        setFilteredClauses([])
+      } finally {
+        setLoading(false)
+      }
     }
+    fetchClauses()
+  }, [])
+
+  useEffect(() => {
+    let filtered = clauses || []
+
+    if (search.trim()) {
+      const searchTerm = search.toLowerCase()
+      filtered = filtered.filter((clause) =>
+        clause.title.toLowerCase().includes(searchTerm)
+      )
+    }
+
+    if (appliedStatus !== 'Editable Status') {
+      filtered = filtered.filter((clause) =>
+        appliedStatus === 'Editable' ? clause.isEditable : !clause.isEditable
+      )
+    }
+
+    if (appliedMandatory !== 'Mandatory Status') {
+      const shouldBeMandatory = appliedMandatory === 'Mandatory'
+      filtered = filtered.filter((clause) => clause.isMandatory === shouldBeMandatory)
+    }
+
+    if (appliedTemplate !== 'All Templates') {
+      filtered = filtered.filter((clause) => clause.contractTemplateTitle === appliedTemplate)
+    }
+    
+    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    setFilteredClauses(filtered)
+    setCurrentPage(1)
+  }, [clauses, search, appliedStatus, appliedMandatory, appliedTemplate])
+
+  const statusOptions = ['Editable Status', 'Editable', 'Non-Editable']
+  const mandatoryOptions = ['Mandatory Status', 'Mandatory', 'Optional']
+  const templateOptions = [
+    'All Templates',
+    ...Array.from(
+      new Set(
+        clauses
+          .map((clause) => clause.contractTemplateTitle)
+          .filter((title) => Boolean(title))
+      )
+    ),
   ]
-
-  const filters = ['All', 'Active', 'Inactive']
-  const categories = ['All Categories', 'Financial', 'Service Level', 'Compliance', 'Intellectual Property']
-
-  const handleViewDetails = (causeId: number) => {
-    console.log('Viewing details for cause:', causeId)
+  const handleViewDetails = (clauseId: number) => {
+    console.log('Viewing details for clause:', clauseId)
   }
 
-  const handleCreateCause = () => {
-    console.log('Creating new cause')
+  const handleCreateClause = () => {
+    console.log('Creating new clause')
   }
 
-  const handleEdit = (causeId: number) => {
-    console.log('Editing cause:', causeId)
+  const handleEdit = (clauseId: number) => {
+    console.log('Editing clause:', clauseId)
   }
 
-  const handleDelete = (causeId: number) => {
-    console.log('Deleting cause:', causeId)
+  const handleDelete = (clauseId: number) => {
+    console.log('Deleting clause:', clauseId)
+  }
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return
+    setCurrentPage(page)
+  }
+
+  const applyFilters = () => {
+    setAppliedStatus(statusFilter)
+    setAppliedMandatory(mandatoryFilter)
+    setAppliedTemplate(templateFilter)
+  }
+
+  const clearFilters = () => {
+    setSearch('')
+    setStatusFilter('Editable Status')
+    setMandatoryFilter('Mandatory Status')
+    setTemplateFilter('All Templates')
+    setAppliedStatus('Editable Status')
+    setAppliedMandatory('Mandatory Status')
+    setAppliedTemplate('All Templates')
+    setCurrentPage(1)
   }
 
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
-      {/* Header Section */}
-      <div className='flex items-center justify-between'>
-        <h1 className='text-2xl font-bold text-gray-800'>Template Clauses</h1>
-        <div className='flex items-center space-x-4'>
-          <div className='relative'>
-            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' size={20} />
-            <input
-              type='text'
-              placeholder='Search templates...'
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className='pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
+      <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-200 space-y-4'>
+        <h2 className='text-lg font-semibold text-gray-800 text-left ml-4'>Filter Clauses</h2>
+        <div className='flex flex-col gap-3 lg:flex-row lg:items-center'>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-3 flex-1'>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            >
+              {statusOptions.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={mandatoryFilter}
+              onChange={(e) => setMandatoryFilter(e.target.value)}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            >
+              {mandatoryOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={templateFilter}
+              onChange={(e) => setTemplateFilter(e.target.value)}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            >
+              {templateOptions.map((template) => (
+                <option key={template} value={template}>
+                  {template}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className='flex gap-2 flex-col sm:flex-row sm:justify-end'>
+            <button
+              onClick={applyFilters}
+              className='w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'
+            >
+              Apply Filters
+            </button>
+            <button
+              onClick={clearFilters}
+              className='w-full sm:w-auto bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors'
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <div className='relative'>
+          <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
+          <input
+            type='text'
+            placeholder='Search by title...'
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className='w-full pl-10 pr-4 py-2 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+          />
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className='bg-white rounded-xl shadow-sm border border-gray-300'>
+        <div className='p-6 border-b border-gray-100 flex items-center justify-between gap-4'>
+          <div className='flex flex-col items-center text-center flex-1 ml-32'>
+            <h2 className='text-xl text-gray-800 font-semibold'>Template Clauses</h2>
           </div>
           <button
-            onClick={handleCreateCause}
-            className='bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2'
+            onClick={handleCreateClause}
+            className='bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2'
           >
             <Plus size={18} />
-            <span>Create Template</span>
+            <span>Create</span>
           </button>
-        </div>
-      </div>
-
-      {/* Filter Section */}
-      <div className='bg-white rounded-xl p-4 shadow-sm border border-gray-100'>
-        <div className='flex flex-wrap items-center gap-4'>
-          <div className='flex space-x-2'>
-            {filters.map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setActiveFilter(filter)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  activeFilter === filter
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
-                }`}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
-          
-          <select className='px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Templates Table */}
-      <div className='bg-white rounded-xl shadow-sm border border-gray-100'>
-        <div className='p-6 border-b border-gray-100'>
-          <h2 className='text-xl font-semibold text-gray-800'>All Templates</h2>
-          <p className='text-gray-600 mt-1'>Manage contract template clauses and their classifications.</p>
         </div>
         
         <div className='overflow-x-auto'>
-          <table className='w-full'>
+          <table className='w-full table-fixed'>
             <thead className='bg-gray-50'>
               <tr>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40'>
+                  Code
+                </th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-60'>
                   Title
                 </th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Category
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24'>
+                  Mandatory
                 </th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Severity
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24'>
+                  Editable
                 </th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Description
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40'>
+                  Template
                 </th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Status
-                </th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32'>
                   Created At
                 </th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40'>
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className='bg-white divide-y divide-gray-200'>
-              {causes
-                .filter((cause) => activeFilter === 'All' || cause.status === activeFilter)
-                .filter(
-                  (cause) =>
-                    search === '' ||
-                    cause.title.toLowerCase().includes(search.toLowerCase()) ||
-                    cause.description.toLowerCase().includes(search.toLowerCase())
-                )
-                .map((cause) => (
-                  <tr key={cause.id} className='hover:bg-gray-50'>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center'>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className='text-center py-6 text-gray-500 text-sm'>
+                    Loading...
+                  </td>
+                </tr>
+              ) : paginatedClauses.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className='text-center py-6 text-gray-500 text-sm'>
+                    No clauses found.
+                  </td>
+                </tr>
+              ) : (
+                paginatedClauses.map((clause) => (
+                  <tr key={clause.id} className='hover:bg-gray-50'>
+                    <td className='px-6 py-4 text-sm text-gray-900 text-center w-40 truncate'>
+                      {clause.clauseCode}
+                    </td>
+                    <td className='px-6 py-4 text-sm text-gray-900 text-center w-60 truncate'>
                       <div className='flex items-center justify-center space-x-2'>
-                        <AlertTriangle className='text-orange-500' size={18} />
-                        <span>{cause.title}</span>
+                        <span>{clause.title}</span>
                       </div>
                     </td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{cause.category}</td>
-                    <td className='px-6 py-4 whitespace-nowrap text-center'>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${cause.severityColor}`}>
-                        {cause.severity}
+                    <td className='px-6 py-4 whitespace-nowrap text-center w-24'>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        clause.isMandatory ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {clause.isMandatory ? 'Yes' : 'No'}
                       </span>
                     </td>
-                    <td className='px-6 py-4 text-sm text-gray-900 max-w-md text-center'>{cause.description}</td>
-                    <td className='px-6 py-4 whitespace-nowrap text-center'>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${cause.statusColor}`}>
-                        {cause.status}
+                    <td className='px-6 py-4 whitespace-nowrap text-center w-24'>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        clause.isEditable ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {clause.isEditable ? 'Yes' : 'No'}
                       </span>
                     </td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{cause.createdAt}</td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center'>
-                      <div className='flex items-center justify-center space-x-2'>
+                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center w-40'>
+                      {clause.contractTemplateTitle}
+                    </td>
+                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center w-32'>
+                      {new Date(clause.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center w-40'>
+                      <div className='flex items-center justify-center space-x-2 text-gray-600'>
                         <button
-                          onClick={() => handleViewDetails(cause.id)}
-                          className='bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-1'
+                          onClick={() => handleViewDetails(clause.id)}
+                          className='flex items-center space-x-1 hover:text-gray-800 text-xs'
                         >
                           <Eye size={14} />
                           <span>View</span>
                         </button>
                         <button
-                          onClick={() => handleEdit(cause.id)}
-                          className='bg-yellow-600 text-white px-3 py-1 rounded-lg hover:bg-yellow-700 transition-colors flex items-center space-x-1'
+                          onClick={() => handleEdit(clause.id)}
+                          className='flex items-center space-x-1 hover:text-gray-800 text-xs'
                         >
                           <Edit size={14} />
+                          <span>Edit</span>
                         </button>
                         <button
-                          onClick={() => handleDelete(cause.id)}
-                          className='bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-1'
+                          onClick={() => handleDelete(clause.id)}
+                          className='flex items-center space-x-1 hover:text-gray-800 text-xs'
                         >
                           <Trash2 size={14} />
+                          <span>Delete</span>
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination */}
         <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
           <div className='flex space-x-2'>
-            <button className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors'>
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 text-sm transition-colors ${
+                currentPage === 1
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
               Previous
             </button>
-            <button className='px-3 py-1 text-sm bg-blue-600 text-white rounded'>1</button>
-            <button className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors'>2</button>
-            <button className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors'>Next</button>
+            {Array.from({ length: totalPages }, (_, index) => {
+              const pageNumber = index + 1
+              const isActive = pageNumber === currentPage
+              return (
+                <button
+                  key={pageNumber}
+                  onClick={() => handlePageChange(pageNumber)}
+                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                    isActive
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  {pageNumber}
+                </button>
+              )
+            })}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 text-sm transition-colors ${
+                currentPage === totalPages
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Next
+            </button>
+          </div>
+          <div className='text-sm text-gray-500'>
+            Showing {paginatedClauses.length} of {filteredClauses.length} clause{filteredClauses.length === 1 ? '' : 's'}
           </div>
         </div>
       </div>
