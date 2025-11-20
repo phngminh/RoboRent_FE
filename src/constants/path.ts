@@ -30,7 +30,7 @@ const path = {
   MANAGER_REQUESTS: '/manager/rental-requests',
   MANAGER_QUOTES: '/manager/quotes',
   MANAGER_REPORTS: '/manager/reports',
-  MANAGER_CONTRACT: '/manager/all-contracts',
+  MANAGER_CONTRACT: '/manager/contract-templates',
   MANAGER_CLAUSES: '/manager/templates-clauses',
   
   //============= Admin ============

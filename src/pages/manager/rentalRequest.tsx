@@ -1,30 +1,28 @@
-import { Clock, CheckCircle, XCircle, Eye, MessageCircle, Circle, Send } from 'lucide-react'
+import { Eye, Search } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
-import { customerSendRentalAsync, getRentalByAccountIdAsync } from '../../apis/rental.customer.api'
+import { getAllRequests, type RentalRequestResponse } from '../../apis/rentalRequest.api'
 
-interface RentalRequestsContentProps {
-  onCreate: () => void
-  onView: (rentalId: number) => void
-}
-
-const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate, onView }) => {
-  const [items, setItems] = useState<any[]>([])
+const RentalRequestsContent: React.FC = () => {
+  const [allRentals, setAllRentals] = useState<RentalRequestResponse[]>([])
+  const [filteredRentals, setFilteredRentals] = useState<RentalRequestResponse[]>([])
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(5)
-  const [totalCount, setTotalCount] = useState(0)
-  const totalPages = totalCount
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sending, setSending] = useState<number | null>(null)
+  const [statusFilter, setStatusFilter] = useState('All Status')
+  const [appliedStatus, setAppliedStatus] = useState('All Status')
+  const [dateFrom, setDateFrom] = useState('')
+  const [appliedDateFrom, setAppliedDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [appliedDateTo, setAppliedDateTo] = useState('')
 
-  const customerId = 1
+  const perPage = 5
+  const totalPages = Math.ceil(filteredRentals.length / perPage)
 
   const fetchData = async () => {
     try {
       setLoading(true)
-      const res = await getRentalByAccountIdAsync(customerId, page, pageSize, search)
-      setItems(res.items)
-      setTotalCount(res.totalCount)
+      const data = await getAllRequests()
+      setAllRentals(data)
     } catch (err) {
       console.error('Failed to load rental requests', err)
     } finally {
@@ -32,9 +30,60 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
     }
   }
 
+  const filterData = () => {
+    let filtered = [...allRentals]
+
+    if (appliedStatus !== 'All Status') {
+      filtered = filtered.filter((r) => r.status === appliedStatus)
+    }
+
+    if (appliedDateFrom) {
+      const fromDate = new Date(appliedDateFrom)
+      filtered = filtered.filter((r) => new Date(r.createdDate) >= fromDate)
+    }
+
+    if (appliedDateTo) {
+      const toDate = new Date(appliedDateTo)
+      toDate.setHours(23, 59, 59, 999)
+      filtered = filtered.filter((r) => new Date(r.createdDate) <= toDate)
+    }
+
+    if (search.trim()) {
+      filtered = filtered.filter((r) =>
+        r.eventName?.toLowerCase().includes(search.toLowerCase().trim())
+      )
+    }
+
+    filtered.sort((a, b) => a.id - b.id)
+
+    setFilteredRentals(filtered)
+    setPage(1)
+  }
+
   useEffect(() => {
     fetchData()
-  }, [page])
+  }, [])
+
+  useEffect(() => {
+    filterData()
+  }, [allRentals, search, appliedStatus, appliedDateFrom, appliedDateTo])
+
+  const applyFilters = () => {
+    setAppliedStatus(statusFilter)
+    setAppliedDateFrom(dateFrom)
+    setAppliedDateTo(dateTo)
+  }
+
+  const clearFilters = () => {
+    setSearch('')
+    setStatusFilter('All Status')
+    setAppliedStatus('All Status')
+    setDateFrom('')
+    setAppliedDateFrom('')
+    setDateTo('')
+    setAppliedDateTo('')
+    setPage(1)
+  }
 
   const handleNext = () => {
     if (page < totalPages) setPage(page + 1)
@@ -48,30 +97,24 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
     setPage(num)
   }
 
-  const handleSend = async (rentalId: number) => {
-    try {
-      setSending(rentalId)
-      await customerSendRentalAsync(rentalId)
-      alert(`Rental ${rentalId} sent successfully! ✅`)
-      await fetchData()
-    } catch (err) {
-      console.error('Error sending rental:', err)
-      alert(`Failed to send rental ${rentalId}.`)
-    } finally {
-      setSending(null)
-    }
+  const handleView = (rentalId: number) => {
+    console.log('Viewing rental request:', rentalId)
   }
+
+  const paginatedRentals = filteredRentals.slice((page - 1) * perPage, page * perPage)
 
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
-      {/* Filter Section */}
       <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
         <h2 className='text-lg font-semibold text-gray-800 mb-4 text-center'>Filter Requests</h2>
-
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4'>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <label className='block text-sm font-medium text-gray-700 mb-1'>Event Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            >
               <option>All Status</option>
               <option>Pending</option>
               <option>Draft</option>
@@ -81,63 +124,61 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
           </div>
 
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Date From</label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</label>
             <input
               type='date'
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             />
           </div>
 
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Date To</label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</label>
             <input
               type='date'
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             />
           </div>
 
-          <div className='flex items-end'>
-            <button className='w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'>
+          <div className='flex items-end space-x-2'>
+            <button
+              onClick={applyFilters}
+              className='flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'
+            >
               Apply Filters
+            </button>
+
+            <button
+              onClick={clearFilters}
+              className='bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors'
+            >
+              Clear
             </button>
           </div>
         </div>
 
         <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Event Name</label>
         <div className='flex gap-3 mb-4'>
-          <input
-            type='text'
-            placeholder='Enter event name...'
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-          />
-          <button
-            onClick={() => {
-              setPage(1)
-              fetchData()
-            }}
-            className='w-40 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'
-          >
-            Search
-          </button>
-        </div>
-
-        <div>
-          <button
-            onClick={onCreate}
-            className='w-full md:w-40 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors'
-          >
-            + Create
-          </button>
+          <div className='relative flex-1'>
+            <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
+            <input
+              type='text'
+              placeholder='Search by event name...'
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className='w-full pl-10 pr-4 py-2 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            />
+          </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className='bg-white rounded-xl shadow-sm border border-gray-100'>
+      <div className='bg-white rounded-xl shadow-sm border border-gray-300'>
         <div className='p-6 border-b border-gray-100'>
           <h2 className='text-xl font-semibold text-gray-800'>All Rental Requests</h2>
-          <p className='text-gray-600 mt-1'>Manage your rental requests and track their status.</p>
         </div>
 
         <div className='overflow-x-auto'>
@@ -145,10 +186,11 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
             <thead className='bg-gray-50'>
               <tr>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Request ID</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Name</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Status</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Activity</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Activity Type</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Date</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Created Date</th>
                 <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Actions</th>
               </tr>
@@ -157,26 +199,25 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
             <tbody className='bg-white divide-y divide-gray-200'>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className='text-center py-6 text-gray-500 text-sm'>
+                  <td colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
                     Loading...
                   </td>
                 </tr>
-              ) : items.length === 0 ? (
+              ) : paginatedRentals.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className='text-center py-6 text-gray-500 text-sm'>
+                  <td colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
                     No rental requests found.
                   </td>
                 </tr>
               ) : (
-                items.map((request: any) => {
-                  const StatusIcon =
-                    request.status === 'Received'
-                      ? CheckCircle
-                      : request.status === 'Pending'
-                      ? Clock
-                      : request.status === 'Canceled'
-                      ? XCircle
-                      : Circle
+                paginatedRentals.map((request: RentalRequestResponse) => {
+                  const eventDate = request.eventDate
+                    ? new Date(request.eventDate).toLocaleDateString()
+                    : '—'
+
+                  const createdDate = request.createdDate
+                    ? new Date(request.createdDate).toLocaleDateString()
+                    : '—'
 
                   return (
                     <tr key={request.id} className='hover:bg-gray-50'>
@@ -184,14 +225,13 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                       <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventName}</td>
                       <td className='px-6 py-4 text-sm text-center'>
                         <div className='flex items-center justify-center space-x-2'>
-                          <StatusIcon size={16} />
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              request.status === 'Approved'
+                              request.status === 'Received'
                                 ? 'bg-green-100 text-green-800'
                                 : request.status === 'Pending'
                                 ? 'bg-yellow-100 text-yellow-800'
-                                : request.status === 'Rejected'
+                                : request.status === 'Canceled'
                                 ? 'bg-red-100 text-red-800'
                                 : 'bg-blue-100 text-blue-800'
                             }`}
@@ -203,34 +243,19 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                       <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventActivityName}</td>
                       <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.activityTypeName}</td>
                       <td className='px-6 py-4 text-sm text-gray-900 text-center'>
-                        {new Date(request.createdDate).toLocaleDateString()}
+                        {eventDate}
+                      </td>
+                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>
+                        {createdDate}
                       </td>
                       <td className='px-6 py-4 text-sm text-center'>
                         <div className='flex justify-center space-x-2'>
                           <button
-                            onClick={() => onView(request.id)}
+                            onClick={() => handleView(request.id)}
                             className='text-gray-600 hover:text-gray-800 flex items-center space-x-1'
                           >
                             <Eye size={14} />
                             <span>View</span>
-                          </button>
-
-                          <button className='text-gray-600 hover:text-gray-800 flex items-center space-x-1'>
-                            <MessageCircle size={14} />
-                            <span>Chat</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleSend(request.id)}
-                            disabled={sending === request.id}
-                            className={`px-3 py-1 rounded-lg flex items-center space-x-1 transition-colors ${
-                              sending === request.id
-                                ? 'bg-gray-400 text-white cursor-not-allowed'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
-                            }`}
-                          >
-                            <Send size={14} />
-                            <span>{sending === request.id ? 'Sending...' : 'Send'}</span>
                           </button>
                         </div>
                       </td>
@@ -242,7 +267,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
           </table>
         </div>
 
-        {/* Pagination */}
         <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
           <div className='flex space-x-2'>
             <button

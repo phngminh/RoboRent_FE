@@ -19,17 +19,17 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   ]
 
   const contractSubItems = [
-    { id: 'all-contracts', label: 'All Contracts' },
+    { id: 'contract-templates', label: 'Contract Templates' },
     { id: 'templates-clauses', label: 'Template Clauses' },
   ]
 
   useEffect(() => {
-    if (activeTab === 'all-contracts' || activeTab === 'templates-clauses') {
+    if (activeTab === 'contract-templates' || activeTab === 'templates-clauses') {
       setContractsExpanded(true)
     }
   }, [activeTab])
 
-  const isContractsActive = activeTab === 'contracts' || activeTab === 'all-contracts' || activeTab === 'templates-clauses'
+  const isContractsActive = activeTab === 'contracts' || activeTab === 'contract-templates' || activeTab === 'templates-clauses'
   const shouldShowSubItems = contractsExpanded || isContractsActive
 
   const handleContractClick = () => {
@@ -38,7 +38,7 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
     } else {
       setContractsExpanded(true)
       if (!isContractsActive) {
-        navigate('all-contracts')
+        navigate('contract-templates')
       }
     }
   }

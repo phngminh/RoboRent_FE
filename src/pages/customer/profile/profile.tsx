@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import type { ComponentType } from 'react'
 import ProfileSidebar from '../../../components/sidebar/customerSidebar'
 import DashboardContent from '../dashboard'
 import AccountContent from './account'
@@ -9,8 +8,6 @@ import { getProfile } from '../../../apis/auth.api'
 import CreateRentalRequestContent from '../RentalRequest/createRentalRequest'
 import CreateRentalDetailContent from '../RentalDetail/CreateRentalDetailContent'
 import Header from '../../../components/header'
-
-const RentalRequestsContentComponent = RentalRequestsContent as ComponentType<any>
 
 const Profile = () => {
   type ActiveTab =
@@ -33,9 +30,9 @@ const Profile = () => {
 
       case 'rental-requests':
         return (
-          <RentalRequestsContentComponent
+          <RentalRequestsContent
             onCreate={() => setActiveTab({ name: 'create-rental-request' })}
-            onView={(rentalId : any) => setActiveTab({name: 'create-rental-request', rentalId})}
+            onView={(rentalId: number) => setActiveTab({ name: 'create-rental-request', rentalId })}
           />
         )
 

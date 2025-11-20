@@ -123,7 +123,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
       eventDate: eventDate ? new Date(eventDate).toISOString() : null,
       updatedDate: new Date().toISOString(),
       status:'Draft',
-      accountId: user?.userId,
+      accountId: user?.accountId,
       eventActivityId: selectedActivityId,
       activityTypeId: selectedTypeId,
     }
