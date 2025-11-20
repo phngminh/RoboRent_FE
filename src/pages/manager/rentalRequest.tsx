@@ -105,10 +105,11 @@ const RentalRequestsContent: React.FC = () => {
 
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
-      <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-200'>
-        <h2 className='text-lg font-semibold text-gray-800 mb-4 text-left ml-4'>Filter Requests</h2>
-        <div className='grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4'>
-          <div className='md:col-span-1 lg:col-span-1'>
+      <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
+        <h2 className='text-lg font-semibold text-gray-800 mb-4 text-center'>Filter Requests</h2>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4'>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>Event Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -122,25 +123,27 @@ const RentalRequestsContent: React.FC = () => {
             </select>
           </div>
 
-          <div className='md:col-span-1 lg:col-span-2 flex items-center gap-2'>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</label>
             <input
               type='date'
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             />
+          </div>
 
-            <span className='text-xl text-gray-500 flex-shrink-0'>–</span>
-
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</label>
             <input
               type='date'
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             />
           </div>
 
-          <div className='md:col-span-1 lg:col-span-1 flex items-end space-x-2'>
+          <div className='flex items-end space-x-2'>
             <button
               onClick={applyFilters}
               className='flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'
@@ -157,6 +160,7 @@ const RentalRequestsContent: React.FC = () => {
           </div>
         </div>
 
+        <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Event Name</label>
         <div className='flex gap-3 mb-4'>
           <div className='relative flex-1'>
             <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />

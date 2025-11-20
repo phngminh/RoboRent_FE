@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { Eye, MessageCircle } from 'lucide-react'
+import { Eye, MessageCircle, Plus, Search } from 'lucide-react'
 import { getRequestByCustomer, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import path from '../../../constants/path'
 
-const RentalRequestsContent: React.FC = () => {
+interface RentalRequestsContentProps {
+  onCreate: () => void
+  onView: (rentalId: number) => void
+}
+
+const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate, onView }) => {
   const [allRentals, setAllRentals] = useState<RentalRequestResponse[]>([])
   const [filteredRentals, setFilteredRentals] = useState<RentalRequestResponse[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -123,7 +129,6 @@ const RentalRequestsContent: React.FC = () => {
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
               <option>All Status</option>
               <option>Pending</option>
-              <option>Accepted</option>
               <option>AcceptedDemo</option>
               <option>Draft</option>
               <option>Rejected</option>
@@ -167,20 +172,32 @@ const RentalRequestsContent: React.FC = () => {
 
         <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Event Name</label>
         <div className='flex gap-3 mb-4'>
-          <input
-            type='text'
-            placeholder='Enter event name...'
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-          />
+          <div className='relative flex-1'>
+            <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
+            <input
+              type='text'
+              placeholder='Search by event name...'
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className='w-full pl-10 pr-4 py-2 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            />
+          </div>
         </div>
       </div>
 
       <div className='bg-white rounded-xl shadow-sm border border-gray-100'>
-        <div className='p-6 border-b border-gray-100'>
-          <h2 className='text-xl font-semibold text-gray-800'>All Rental Requests</h2>
-          <p className='text-gray-600 mt-1'>Manage your rental requests and track their status.</p>
+        <div className='p-6 border-b border-gray-100 flex items-center justify-between gap-4'>
+          <div className='flex flex-col items-center text-center flex-1 ml-32'>
+            <h2 className='text-xl font-semibold text-gray-800'>All Rental Requests</h2>
+            <p className='text-gray-600 mt-1'>Manage your rental requests and track their status.</p>
+          </div>
+          <button
+            onClick={onCreate}
+            className='bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2'
+          >
+            <Plus size={18} />
+            <span>Create</span>
+          </button>
         </div>
         
         <div className='overflow-x-auto'>
@@ -252,12 +269,15 @@ const RentalRequestsContent: React.FC = () => {
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{createdDate}</td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center'>
                         <div className='flex justify-center space-x-2'>
-                          <button className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'>
+                          <button 
+                            onClick={() => onView(request.id)}
+                            className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
+                          >
                             <Eye size={14} />
                             <span>View</span>
                           </button>
                           <button
-                            onClick={() => navigate(`/customer/chat/${request.id}`)}
+                            onClick={() => navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))}
                             className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
                           >
                             <MessageCircle size={14} />
