@@ -21,9 +21,20 @@ export interface ContractTemplateResponse {
   updatedByName: string
 }
 
+export interface ContractTemplateWithBodyPayload {
+  templateCode: string
+  title: string
+  description: string
+  version: string
+}
+
 export const getAllTemplates = async (): Promise<ContractTemplateResponse[]> => {
   const response = await http.get<ApiResponse<ContractTemplateResponse>>(`ContractTemplates`)
   return response.data.success ? response.data.data : []
+}
+
+export const createTemplateWithBody = (data: ContractTemplateWithBodyPayload) => {
+  return http.post('/ContractTemplates/create-with-body', data)
 }
 
 export interface TemplateClauseResponse {
