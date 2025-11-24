@@ -4,10 +4,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from '../../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Button } from '../../../components/ui/button'
-import { Search, Plus, Eye, Edit, Trash2 } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Eye } from 'lucide-react'
 import { getAllClauses, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
+import DeleteTemplateClause from './deleteClause'
+import CreateTemplateClause from './createClause'
+import EditTemplateClause from './editClause'
+import DetailTemplateClause from './detailClause'
 
 const Clauses: React.FC = () => {
+  const [selectedClause, setSelectedClause] = useState<TemplateClauseResponse | null>(null)
   const [clauses, setClauses] = useState<TemplateClauseResponse[]>([])
   const [filteredClauses, setFilteredClauses] = useState<TemplateClauseResponse[]>([])
   const [search, setSearch] = useState('')
@@ -19,27 +24,32 @@ const Clauses: React.FC = () => {
   const [appliedTemplate, setAppliedTemplate] = useState('')
   const [loading, setLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false)
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false)
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false)
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false)
 
   const pageSize = 5
   const totalPages = Math.max(1, Math.ceil(filteredClauses.length / pageSize))
   const paginatedClauses = filteredClauses.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
-  useEffect(() => {
-    const fetchClauses = async () => {
-      try {
-        setLoading(true)
-        const clausesData = await getAllClauses()
-        console.log('Fetched clauses:', clausesData)
-        setClauses(clausesData)
-        setFilteredClauses(clausesData)
-      } catch (err) {
-        console.error('Failed to load clauses', err)
-        setClauses([])
-        setFilteredClauses([])
-      } finally {
-        setLoading(false)
-      }
+  const fetchClauses = async () => {
+    try {
+      setLoading(true)
+      const clausesData = await getAllClauses()
+      console.log('Fetched clauses:', clausesData)
+      setClauses(clausesData)
+      setFilteredClauses(clausesData)
+    } catch (err) {
+      console.error('Failed to load clauses', err)
+      setClauses([])
+      setFilteredClauses([])
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchClauses()
   }, [])
 
@@ -55,7 +65,6 @@ const Clauses: React.FC = () => {
       setAppliedTemplate(first)
     }
   }, [clauses, templateFilter])
-
 
   useEffect(() => {
     let filtered = clauses || []
@@ -98,26 +107,16 @@ const Clauses: React.FC = () => {
     )
   ).sort()
 
-  const handleViewDetails = (clauseId: number) => {
-    console.log('Viewing details for clause:', clauseId)
-  }
-
-  const handleCreateClause = () => {
-    console.log('Creating new clause')
-  }
-
-  const handleEdit = (clauseId: number) => {
-    console.log('Editing clause:', clauseId)
-  }
-
-  const handleDelete = (clauseId: number) => {
-    console.log('Deleting clause:', clauseId)
-  }
-
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     }
+  }
+
+  const decodeHtml = (html: string) => {
+    const txt = document.createElement('textarea')
+    txt.innerHTML = html
+    return txt.value
   }
 
   const applyFilters = () => {
@@ -284,7 +283,7 @@ const Clauses: React.FC = () => {
             Template Clauses
           </h2>
           <Button
-            onClick={handleCreateClause}
+            onClick={() => setIsCreateModalVisible(true)}
             className='absolute right-6 top-3.5 bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2'
           >
             <Plus size={18} />
@@ -328,7 +327,11 @@ const Clauses: React.FC = () => {
                           const cellClass = `px-6 py-4 text-sm text-gray-900 text-center ${column.className || ''}`
                           let content: React.ReactNode
                           if (column.key === 'title' || column.key === 'clauseCode') {
-                            content = <span className='truncate'>{clause[column.accessor as keyof TemplateClauseResponse]}</span>
+                            content = (
+                              <span className='truncate'>
+                                {decodeHtml(clause[column.accessor as keyof TemplateClauseResponse] as string)}
+                              </span>
+                            )
                           } else if (column.key === 'isMandatory') {
                             content = (
                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getMandatoryColor(clause.isMandatory)}`}>
@@ -347,21 +350,30 @@ const Clauses: React.FC = () => {
                             content = (
                               <div className='flex items-center justify-center space-x-2 text-sm text-gray-600'>
                                 <button
-                                  onClick={() => handleViewDetails(clause.id)}
+                                  onClick={() => {
+                                    setSelectedClause(clause)
+                                    setIsDetailModalVisible(true)
+                                  }}
                                   className='flex items-center space-x-1 hover:text-gray-800'
                                 >
                                   <Eye size={14} />
                                   <span>View</span>
                                 </button>
                                 <button
-                                  onClick={() => handleEdit(clause.id)}
+                                  onClick={() => {
+                                    setSelectedClause(clause)
+                                    setIsEditModalVisible(true)
+                                  }}
                                   className='flex items-center space-x-1 hover:text-gray-800'
                                 >
                                   <Edit size={14} />
                                   <span>Edit</span>
                                 </button>
                                 <button
-                                  onClick={() => handleDelete(clause.id)}
+                                  onClick={() => {
+                                    setSelectedClause(clause)
+                                    setIsDeleteModalVisible(true)
+                                  }}
                                   className='flex items-center space-x-1 hover:text-gray-800'
                                 >
                                   <Trash2 size={14} />
@@ -420,6 +432,41 @@ const Clauses: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      
+      <DetailTemplateClause
+        open={isDetailModalVisible}
+        onClose={() => setIsDetailModalVisible(false)}
+        clause={selectedClause}
+      />
+      
+      <CreateTemplateClause
+        open={isCreateModalVisible}
+        onClose={() => setIsCreateModalVisible(false)}
+        onSuccess={() => {
+          setIsCreateModalVisible(false)
+          fetchClauses()
+        }}
+      />
+
+      <EditTemplateClause
+        open={isEditModalVisible}
+        onClose={() => setIsEditModalVisible(false)}
+        onSuccess={() => {
+          setIsEditModalVisible(false)
+          fetchClauses()
+        }}
+        clause={selectedClause}
+      />
+
+      <DeleteTemplateClause
+        open={isDeleteModalVisible}
+        onClose={() => setIsDeleteModalVisible(false)}
+        onSuccess={() => {
+          setIsDeleteModalVisible(false)
+          fetchClauses()
+        }}
+        clause={selectedClause}
+      />
     </div>
   )
 }

@@ -6,11 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from '../../../components/ui/button'
 import { Search, Plus, Eye, Edit, Trash2 } from 'lucide-react'
 import { getAllTemplates, type ContractTemplateResponse } from '../../../apis/contractTemplates.api'
+import DetailContractTemplate from './detailContractTemplate'
 import CreateContractTemplate from './createContractTemplate'
-import EditContractTemplate from './editContractTempalte'
+import EditContractTemplate from './editContractTemplate'
 import DeleteContractTemplate from './deleteContractTemplate'
 
 const ContractTemplates: React.FC = () => {
+  const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplateResponse | null>(null)
   const [templates, setTemplates] = useState<ContractTemplateResponse[]>([])
   const [filteredTemplates, setFilteredTemplates] = useState<ContractTemplateResponse[]>([])
   const [search, setSearch] = useState('')
@@ -18,6 +20,7 @@ const ContractTemplates: React.FC = () => {
   const [appliedStatus, setAppliedStatus] = useState('All Status')
   const [loading, setLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false)
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false)
   const [isEditModalVisible, setIsEditModalVisible] = useState(false)
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false)
@@ -74,18 +77,6 @@ const ContractTemplates: React.FC = () => {
       default:
         return 'bg-gray-100 text-gray-800'
     }
-  }
-
-  const handleViewDetails = (templateId: number) => {
-    console.log('Viewing details for template:', templateId)
-  }
-
-  const handleEdit = (templateId: number) => {
-    console.log('Editing template:', templateId)
-  }
-
-  const handleDelete = (templateId: number) => {
-    console.log('Deleting template:', templateId)
   }
 
   const handlePageChange = (page: number) => {
@@ -263,7 +254,7 @@ const ContractTemplates: React.FC = () => {
                           const cellClass = `px-6 py-4 text-sm text-gray-900 text-center ${column.className || ''}`
                           let content: React.ReactNode
                           if (column.key === 'description') {
-                            content = <span className='max-w-md truncate'>{template[column.accessor as keyof ContractTemplateResponse]}</span>
+                            content = <span className='max-w-md truncate'>{template[column.accessor as keyof ContractTemplateResponse] || 'N/A'}</span>
                           } else if (column.key === 'status') {
                             content = <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(template.status)}`}>
                               {template.status}
@@ -274,21 +265,30 @@ const ContractTemplates: React.FC = () => {
                             content = (
                               <div className='flex items-center justify-center space-x-3 text-sm text-gray-600'>
                                 <button
-                                  onClick={() => handleViewDetails(template.id)}
+                                  onClick={() => {
+                                    setSelectedTemplate(template)
+                                    setIsDetailModalVisible(true)
+                                  }}
                                   className='flex items-center space-x-1 hover:text-gray-800'
                                 >
                                   <Eye size={14} />
                                   <span>View</span>
                                 </button>
                                 <button
-                                  onClick={() => handleEdit(template.id)}
+                                  onClick={() => {
+                                    setSelectedTemplate(template)
+                                    setIsEditModalVisible(true)
+                                  }}
                                   className='flex items-center space-x-1 hover:text-gray-800'
                                 >
                                   <Edit size={14} />
                                   <span>Edit</span>
                                 </button>
                                 <button
-                                  onClick={() => handleDelete(template.id)}
+                                   onClick={() => {
+                                    setSelectedTemplate(template)
+                                    setIsDeleteModalVisible(true)
+                                  }}
                                   className='flex items-center space-x-1 hover:text-gray-800'
                                 >
                                   <Trash2 size={14} />
@@ -348,6 +348,12 @@ const ContractTemplates: React.FC = () => {
         </CardContent>
       </Card>
 
+      <DetailContractTemplate
+        open={isDetailModalVisible}
+        onClose={() => setIsDetailModalVisible(false)}
+        template={selectedTemplate}
+      />
+
       <CreateContractTemplate
         open={isCreateModalVisible}
         onClose={() => setIsCreateModalVisible(false)}
@@ -360,6 +366,7 @@ const ContractTemplates: React.FC = () => {
       <EditContractTemplate
         open={isEditModalVisible}
         onClose={() => setIsEditModalVisible(false)}
+        template={selectedTemplate}
         onSuccess={() => {
           setIsEditModalVisible(false)
           fetchTemplates()
@@ -369,6 +376,7 @@ const ContractTemplates: React.FC = () => {
       <DeleteContractTemplate
         open={isDeleteModalVisible}
         onClose={() => setIsDeleteModalVisible(false)}
+        template={selectedTemplate}
         onSuccess={() => {
           setIsDeleteModalVisible(false)
           fetchTemplates()
