@@ -12,6 +12,7 @@ const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab, onTabChange })
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar },
     { id: 'transactions', label: 'Transactions', icon: CreditCard },
     { id: 'account', label: 'Account', icon: User },
+    { id: 'robot-group', label: 'Robot Groups', icon: Calendar}
   ]
 
   return (

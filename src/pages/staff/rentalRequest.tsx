@@ -1,8 +1,14 @@
-import { Eye, MessageCircle, Send, Search, Plus } from 'lucide-react'
+import { Eye, MessageCircle, Send, Search } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import path from '../../constants/path'
-import { getPendingRentalAsync } from '../../apis/rental.staff.api'
+
+import { 
+  getPendingRentalAsync,
+  getReceivedRentalByStaffIdAsync,
+  receiveRentalAsync
+} from '../../apis/rental.staff.api'
+
+import { useAuth } from '../../contexts/AuthContext'
 
 interface RentalRequestsContentProps {
   onCreate: () => void
@@ -24,15 +30,26 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   const [appliedDateTo, setAppliedDateTo] = useState('')
   const [receiving, setReceiving] = useState<number | null>(null)
 
+  const [viewMode, setViewMode] = useState<'pending' | 'received'>('pending')
+
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const staffId = user?.accountId
 
   // ============================
-  // FETCH FROM NEW API
+  // FETCH FROM API
   // ============================
   const fetchData = async () => {
     try {
       setLoading(true)
-      const res = await getPendingRentalAsync()
+
+      let res
+      if (viewMode === 'pending') {
+        res = await getPendingRentalAsync()
+      } else {
+        res = await getReceivedRentalByStaffIdAsync(staffId)
+      }
+
       setAllItems(res.data ?? [])
     } catch (err) {
       console.error('Failed to load rental requests', err)
@@ -41,6 +58,14 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
     }
   }
 
+  useEffect(() => {
+    if (staffId) fetchData()
+  }, [viewMode, staffId])
+
+
+  // ============================
+  // FILTERING
+  // ============================
   const filterData = () => {
     let filtered = [...allItems]
 
@@ -70,42 +95,17 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   }
 
   useEffect(() => {
-    fetchData()
-  }, [])
-
-  useEffect(() => {
     filterData()
   }, [allItems, search, appliedStatus, appliedDateFrom, appliedDateTo])
 
-  useEffect(() => {
-    const newTotalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize))
-    if (currentPage > newTotalPages) {
-      setCurrentPage(newTotalPages)
-    }
-    if (filteredItems.length === 0 && currentPage !== 1) {
-      setCurrentPage(1)
-    }
-  }, [filteredItems.length, currentPage])
 
-  const applyFilters = () => {
-    setAppliedStatus(statusFilter)
-    setAppliedDateFrom(dateFrom)
-    setAppliedDateTo(dateTo)
-  }
-
-  const clearFilters = () => {
-    setSearch('')
-    setStatusFilter('All Status')
-    setAppliedStatus('All Status')
-    setDateFrom('')
-    setAppliedDateFrom('')
-    setDateTo('')
-    setAppliedDateTo('')
-    setCurrentPage(1)
-  }
+  // ============================
+  // PAGINATION
+  // ============================
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize))
+  const paginatedItems = filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const handleNext = () => {
-    const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize))
     if (currentPage < totalPages) setCurrentPage(currentPage + 1)
   }
 
@@ -114,24 +114,32 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   }
 
   const handlePageSelect = (num: number) => {
-    const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize))
-    if (num >= 1 && num <= totalPages) {
-      setCurrentPage(num)
-    }
+    if (num >= 1 && num <= totalPages) setCurrentPage(num)
   }
 
-  const paginatedItems = filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize))
 
-  // =============================
-  // New action: Receive Rental
-  // =============================
+  // ============================
+  // RECEIVE RENTAL
+  // ============================
   const handleReceive = async (id: number) => {
     try {
       setReceiving(id)
-      alert(`Receiving rental ID ${id} (call your receive API here)`)
-      // You can add your real API call here
+
+      if (!staffId) {
+        alert("Staff ID missing!")
+        return
+      }
+
+      const res = await receiveRentalAsync(id, staffId)
+
+      if (res.success) {
+        alert(`Rental ID ${id} successfully received!`)
+      } else {
+        alert(`Failed: ${res.message || 'Unknown error'}`)
+      }
+
       await fetchData()
+
     } catch (err) {
       console.error(err)
       alert('Failed to receive rental')
@@ -140,8 +148,38 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
     }
   }
 
+
+  // ============================
+  // UI
+  // ============================
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
+
+      {/* SWITCH BUTTONS */}
+      <div className="flex justify-center gap-3">
+        <button
+          onClick={() => setViewMode('pending')}
+          className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
+            viewMode === 'pending'
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+          }`}
+        >
+          Pending
+        </button>
+
+        <button
+          onClick={() => setViewMode('received')}
+          className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
+            viewMode === 'received'
+              ? 'bg-green-600 text-white border-green-600'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+          }`}
+        >
+          Received
+        </button>
+      </div>
+
       {/* FILTER BOX */}
       <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
         <h2 className='text-lg font-semibold text-gray-800 mb-4 text-center'>Filter Requests</h2>
@@ -152,7 +190,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
             >
               <option>All Status</option>
               <option>Pending</option>
@@ -167,7 +205,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
               type='date'
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
             />
           </div>
 
@@ -177,19 +215,34 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
               type='date'
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
             />
           </div>
 
           <div className='flex items-end space-x-2'>
             <button
-              onClick={applyFilters}
-              className='flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'>
+              onClick={() => {
+                setAppliedStatus(statusFilter)
+                setAppliedDateFrom(dateFrom)
+                setAppliedDateTo(dateTo)
+              }}
+              className='flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg'
+            >
               Apply Filters
             </button>
             <button
-              onClick={clearFilters}
-              className='bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors'>
+              onClick={() => {
+                setSearch('')
+                setStatusFilter('All Status')
+                setAppliedStatus('All Status')
+                setDateFrom('')
+                setAppliedDateFrom('')
+                setDateTo('')
+                setAppliedDateTo('')
+                setCurrentPage(1)
+              }}
+              className='bg-gray-300 text-gray-700 px-4 py-2 rounded-lg'
+            >
               Clear
             </button>
           </div>
@@ -204,7 +257,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
               placeholder='Search by event name...'
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+              className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg'
             />
           </div>
         </div>
@@ -212,76 +265,63 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
 
       {/* TABLE */}
       <div className='bg-white rounded-xl shadow-sm border border-gray-100'>
-        <div className='p-6 border-b border-gray-100 flex items-center justify-between gap-4'>
-          <div className='flex flex-col items-center text-center flex-1 ml-32'>
-            <h2 className='text-xl font-semibold text-gray-800'>Pending Rental Requests</h2>
-            <p className='text-gray-600 mt-1'>These requests are waiting for staff to receive.</p>
-          </div>
-        </div>
-
         <div className='overflow-x-auto'>
           <table className='w-full'>
             <thead className='bg-gray-50'>
               <tr>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>ID</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Status</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Activity</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Activity Type</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Created Date</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Actions</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>ID</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Event</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Status</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Event Activity</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Activity Type</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Created Date</th>
+                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Actions</th>
               </tr>
             </thead>
 
             <tbody className='bg-white divide-y divide-gray-200'>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className='text-center py-6 text-gray-500 text-sm'>
-                    Loading...
-                  </td>
+                  <td colSpan={7} className='text-center py-6 text-gray-500'>Loading...</td>
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className='text-center py-6 text-gray-500 text-sm'>
-                    No pending requests.
-                  </td>
+                  <td colSpan={7} className='text-center py-6 text-gray-500'>No requests found.</td>
                 </tr>
               ) : (
-                paginatedItems.map((request: any) => {
-                  return (
-                    <tr key={request.id} className='hover:bg-gray-50'>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.id}</td>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventName}</td>
+                paginatedItems.map((request: any) => (
+                  <tr key={request.id} className='hover:bg-gray-50'>
+                    <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.id}</td>
+                    <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventName}</td>
+                    <td className='px-6 py-4 text-sm text-center'>
+                      <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800'>
+                        {request.status}
+                      </span>
+                    </td>
+                    <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventActivityName}</td>
+                    <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.activityTypeName}</td>
+                    <td className='px-6 py-4 text-sm text-gray-900 text-center'>
+                      {new Date(request.createdDate).toLocaleDateString()}
+                    </td>
 
-                      <td className='px-6 py-4 text-sm text-center'>
-                        <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800'>
-                          Pending
-                        </span>
-                      </td>
+                    <td className='px-6 py-4 text-sm text-center'>
+                      <div className='flex justify-center space-x-2'>
 
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventActivityName}</td>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.activityTypeName}</td>
+                        {/* View */}
+                        <button
+                          onClick={() => onView(request.id)}
+                          className='text-gray-600 hover:text-gray-800 flex items-center space-x-1'
+                        >
+                          <Eye size={14} />
+                          <span>View</span>
+                        </button>
 
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>
-                        {new Date(request.createdDate).toLocaleDateString()}
-                      </td>
-
-                      <td className='px-6 py-4 text-sm text-center'>
-                        <div className='flex justify-center space-x-2'>
-                          {/* View */}
-                          <button
-                            onClick={() => onView(request.id)}
-                            className='text-gray-600 hover:text-gray-800 flex items-center space-x-1'
-                          >
-                            <Eye size={14} />
-                            <span>View</span>
-                          </button>
-
-                          {/* Receive */}
+                        {/* Receive button only in pending view */}
+                        {viewMode === 'pending' && (
                           <button
                             onClick={() => handleReceive(request.id)}
                             disabled={receiving === request.id}
-                            className={`px-3 py-1 rounded-lg flex items-center space-x-1 transition-colors ${
+                            className={`px-3 py-1 rounded-lg flex items-center space-x-1 ${
                               receiving === request.id
                                 ? 'bg-gray-400 text-white cursor-not-allowed'
                                 : 'bg-green-600 text-white hover:bg-green-700'
@@ -290,11 +330,23 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                             <Send size={14} />
                             <span>{receiving === request.id ? 'Receiving...' : 'Receive'}</span>
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
+                        )}
+
+                        {/* Chat button only in RECEIVED view */}
+                        {viewMode === 'received' && (
+                          <button
+                            onClick={() => navigate(`/staff/chat/${request.id}`)}
+                            className='px-3 py-1 rounded-lg bg-purple-600 text-white hover:bg-purple-700 flex items-center space-x-1'
+                          >
+                            <MessageCircle size={14} />
+                            <span>Chat</span>
+                          </button>
+                        )}
+
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -341,6 +393,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
           </div>
         </div>
       </div>
+
     </div>
   )
 }
