@@ -6,18 +6,10 @@ import { customerCreateRentalAsync, customerUpdateRentalAsync, getRentalByIdAsyn
 import 'react-time-picker/dist/TimePicker.css'
 import 'react-clock/dist/Clock.css'
 import { useAuth } from '../../../contexts/AuthContext'
-import { 
-  ArrowLeft,
-  MapPin,
-  Clock,
-  Home,
-  Map,
-  CalendarDays
-} from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, Home, CalendarDays } from 'lucide-react'
 import BlockTimePicker from '../../../components/customer/BlockTimePicker'
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
 interface EventActivity {
   id: number
@@ -36,16 +28,11 @@ interface ActivityType {
 interface Provinces {
   name: string
   code: number
-  division_type: string
-  codename: string
-  phone_code: number
 }
 
 interface Wards {
   name: string
   code: number
-  division_type: string
-  codename: string
   province_code: number
 }
 
@@ -55,10 +42,17 @@ interface CreateRentalRequestContentProps {
   rentalId?: number
 }
 
-const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({ onBack, onNextStep, rentalId }) => {
+const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
+  onBack,
+  onNextStep,
+  rentalId
+}) => {
   const { user } = useAuth()
-  const [eventDate, setEventDate] = useState<string>('')
   const [errors, setErrors] = useState<string[]>([])
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string[] }>({})
+
+  const [eventName, setEventName] = useState('')
+  const [eventDate, setEventDate] = useState<string>('')
 
   const [eventActivities, setEventActivities] = useState<EventActivity[]>([])
   const [selectedActivityId, setSelectedActivityId] = useState<number | ''>('')
@@ -66,27 +60,19 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([])
   const [selectedTypeId, setSelectedTypeId] = useState<number | ''>('')
 
-  const [provinces, setProvinces] = useState<Provinces[]>([])
-  const [selectedProvinceId, setSelectedProvinceId] = useState<number | ''>('')
-
-  const [wards, setWards] = useState<Wards[]>([])
-  const [selectedWardId, setSelectedWardId] = useState<number | ''>('')
-
-  const [eventName, setEventName] = useState('')
-  const [description, setDescription] = useState('')
-
   const [phoneNumber, setPhoneNumber] = useState('')
   const [email, setEmail] = useState('')
+  const [description, setDescription] = useState('')
+
+  const [provinces, setProvinces] = useState<Provinces[]>([])
+  const [wards, setWards] = useState<Wards[]>([])
+  const [selectedProvinceId, setSelectedProvinceId] = useState<number | ''>('')
+  const [selectedWardId, setSelectedWardId] = useState<number | ''>('')
 
   const [streetAddress, setStreetAddress] = useState('')
-
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
 
-  const buildFullAddress = () => {
-    const ward = wards.find(w => w.code === selectedWardId)?.name || ''
-    return `${streetAddress}${ward ? `, ${ward}` : ''}`
-  }
   
   const parseAddress = (addr?: string) => {
     if (!addr) return { street: '', wardName: ''
@@ -98,44 +84,61 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
     return { street, wardName }
   }
 
+  // -----------------------------
+  // FieldError component
+  // -----------------------------
+  const FieldError = ({ name }: { name: string }) => {
+    if (!fieldErrors[name]) return null
+    return (
+      <p className="text-red-600 text-xs mt-1 ml-1">
+        {fieldErrors[name][0]}
+      </p>
+    )
+  }
+
+  const buildFullAddress = () => {
+    const ward = wards.find(w => w.code === selectedWardId)?.name || ''
+    return `${streetAddress}${ward ? `, ${ward}` : ''}`
+  }
+
   const validateRequired = () => {
-    const errs: string[] = []
-    if (!eventName.trim()) errs.push('Event Name is required.')
-    if (!selectedActivityId) errs.push('Event Activity is required.')
-    if (!selectedTypeId) errs.push('Activity Type is required.')
-    if (!phoneNumber.trim()) errs.push('Phone Number is required.')
-    if (!email.trim()) errs.push('Email Address is required.')
-    if (!streetAddress.trim()) errs.push('Street & House Number is required.')
-    if (!selectedProvinceId) errs.push('Province / City is required.')
-    if (!selectedWardId) errs.push('Ward is required.')
-    if (!eventDate) errs.push('Event Date is required.')
-    if (!startTime) errs.push('Start Time is required.')
-    if (!endTime) errs.push('End Time is required.')
-    setErrors(errs)
-    return errs.length === 0
+    const fe: { [key: string]: string[] } = {}
+
+    if (!eventName.trim()) fe.eventName = ['Event Name is required.']
+    if (!selectedActivityId) fe.selectedActivityId = ['Event Activity is required.']
+    if (!selectedTypeId) fe.selectedTypeId = ['Activity Type is required.']
+    if (!phoneNumber.trim()) fe.phoneNumber = ['Phone Number is required.']
+    if (!email.trim()) fe.email = ['Email Address is required.']
+    if (!streetAddress.trim()) fe.streetAddress = ['Street & House Number is required.']
+    if (!selectedProvinceId) fe.selectedProvinceId = ['Province is required.']
+    if (!selectedWardId) fe.selectedWardId = ['Ward is required.']
+    if (!eventDate) fe.eventDate = ['Event Date is required.']
+    if (!startTime) fe.startTime = ['Start Time is required.']
+    if (!endTime) fe.endTime = ['End Time is required.']
+
+    setFieldErrors(fe)
+    return Object.keys(fe).length === 0
   }
 
   const handleSaveDraft = async () => {
-    if (!validateRequired()) {
-      return
-    }
+    if (!validateRequired()) return
 
     const body: any = {
       id: rentalId,
       eventName,
+      description,
       phoneNumber,
       email,
-      description,
       address: buildFullAddress(),
       city: provinces.find(p => p.code === selectedProvinceId)?.name || '',
+      eventDate: eventDate ? new Date(eventDate).toISOString() : null,
       startTime,
       endTime,
-      eventDate: eventDate ? new Date(eventDate).toISOString() : null,
       updatedDate: new Date().toISOString(),
-      status:'Draft',
+      status: 'Draft',
       accountId: user?.accountId,
       eventActivityId: selectedActivityId,
-      activityTypeId: selectedTypeId,
+      activityTypeId: selectedTypeId
     }
 
     if (!rentalId) {
@@ -146,32 +149,46 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
     try {
       let res
-      if (rentalId) {
-        res = await customerUpdateRentalAsync(body)
-      } else {
-        res = await customerCreateRentalAsync(body)
+      if (rentalId) res = await customerUpdateRentalAsync(body)
+      else res = await customerCreateRentalAsync(body)
+
+      if (res?.success === false && res?.errors?.length > 0) {
+        setErrors(res.errors)
+        return
       }
 
-if (res?.success === false && res?.errors?.length > 0) {
-  setErrors(res.errors)
-  return
-}
-
-// no popup — return quietly
-setErrors([])
-return res?.id ?? rentalId
-
+      setErrors([])
+      return res?.id ?? rentalId
     } catch (err: any) {
-      const beErrors = err.response?.data?.errors
-      if (Array.isArray(beErrors)) {
-        setErrors(beErrors)
-      } else {
-        setErrors(['Something went wrong. Please try again.'])
-      }
-      console.error(err)
-    }
+  console.log("FE caught:", err?.response?.data);
+
+  // 1. Backend ModelState dictionary
+  if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+    setErrors(err.response.data.errors);
+    return;
   }
 
+  // 2. Backend ArgumentException → has "message"
+  if (err.response?.data?.message) {
+    setErrors([err.response.data.message]);  // <-- SHOW IT!
+    return;
+  }
+
+  // 3. Backend validation object (dictionary)
+  if (err.response?.data?.errors && typeof err.response.data.errors === "object") {
+    const fe: any = {};
+    for (const key in err.response.data.errors) {
+      fe[key] = err.response.data.errors[key];
+    }
+    setFieldErrors(fe);
+    return;
+  }
+
+  // 4. Fallback
+  setErrors(["Something went wrong. Please try again."]);
+}
+
+  }
 
   const handleNextStepClick = async () => {
     const id = await handleSaveDraft()
@@ -179,53 +196,100 @@ return res?.id ?? rentalId
     onNextStep(id, Number(selectedTypeId))
   }
 
+  // =============================
+  // LOAD DROPDOWN DATA
+  // =============================
   useEffect(() => {
     (async () => {
-      const res = await getAllEventActivityAsync()
-      setEventActivities(res || [])
+      setEventActivities(await getAllEventActivityAsync())
     })()
   }, [])
 
   useEffect(() => {
+  if (!rentalId || provinces.length === 0) return;
+
+  (async () => {
+    try {
+      const r = await getRentalByIdAsync(rentalId);
+
+      setEventName(r.eventName ?? "");
+      setPhoneNumber(r.phoneNumber ?? "");
+      setEmail(r.email ?? "");
+      setDescription(r.description ?? "");
+      setEventDate(r.eventDate ? String(r.eventDate).slice(0, 10) : "");
+      setStartTime((r.startTime || "").slice(0, 5));
+      setEndTime((r.endTime || "").slice(0, 5));
+
+      setSelectedActivityId(r.eventActivityId ?? "");
+      setSelectedTypeId(r.activityTypeId ?? "");
+
+      // ===== PARSE ADDRESS =====
+      const { street, wardName } = parseAddress(r.address);
+      setStreetAddress(street);
+
+      // ===== FIND PROVINCE =====
+      const province = provinces.find(p => p.name === r.city);
+      if (!province) return;
+
+      setSelectedProvinceId(province.code);
+
+      // ===== LOAD WARDS OF THIS PROVINCE =====
+      const allWards = await getAllWardsAsync();
+      setWards(allWards);
+
+      // ===== FIND WARD =====
+      if (wardName) {
+const matchedWard = allWards.find(
+  (w: Wards) => w.province_code === province.code && w.name === wardName
+);
+        if (matchedWard) {
+          setSelectedWardId(matchedWard.code);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load rental by id", e);
+    }
+  })();
+}, [rentalId, provinces]);
+
+
+  useEffect(() => {
     (async () => {
-      const res = await getAllProvincesAsync()
-      setProvinces(res || [])
+      setProvinces(await getAllProvincesAsync())
     })()
   }, [])
 
   useEffect(() => {
     if (!selectedActivityId) {
       setActivityTypes([])
-      setSelectedTypeId('')
-      return
+      return setSelectedTypeId('')
     }
-    (async () => {
+
+    ;(async () => {
       const res = await getActivityTypeByEAIdAsync(Number(selectedActivityId))
-      setActivityTypes(res || [])
-      if (!res?.some((x: ActivityType) => x.id === selectedTypeId)) {
-        setSelectedTypeId('')
-      }
+      setActivityTypes(res)
     })()
   }, [selectedActivityId])
 
   useEffect(() => {
     if (!selectedProvinceId) {
       setWards([])
-      setSelectedWardId('')
-      return
+      return setSelectedWardId('')
     }
-    (async () => {
+
+    ;(async () => {
       const res = await getAllWardsAsync()
-      setWards(res || [])
-      if (selectedWardId && !res?.some((w: Wards) => w.code === selectedWardId && w.province_code === selectedProvinceId)) {
-        setSelectedWardId('')
-      }
+      setWards(res)
     })()
   }, [selectedProvinceId])
 
+  // =============================
+  // LOAD EXISTING RENTAL
+  // =============================
   useEffect(() => {
     if (!rentalId) return
-    (async () => {
+
+    ;(async () => {
       try {
         const r = await getRentalByIdAsync(rentalId)
 
@@ -233,317 +297,263 @@ return res?.id ?? rentalId
         setPhoneNumber(r.phoneNumber ?? '')
         setEmail(r.email ?? '')
         setDescription(r.description ?? '')
-
         setEventDate(r.eventDate ? String(r.eventDate).slice(0, 10) : '')
-
         setStartTime((r.startTime || '').slice(0, 5))
         setEndTime((r.endTime || '').slice(0, 5))
-
-        const { street, wardName } = parseAddress(r.address)
-        setStreetAddress(street)
 
         setSelectedActivityId(r.eventActivityId ?? '')
         setSelectedTypeId(r.activityTypeId ?? '')
 
-        if (r.city) {
-          let provinceList = provinces
-          if (provinceList.length === 0) {
-            provinceList = (await getAllProvincesAsync()) || []
-            setProvinces(provinceList)
-          }
-          const province = provinceList.find((p: Provinces) => p.name === r.city)
-          if (province) {
-            setSelectedProvinceId(province.code)
-            let wardList = wards
-            if (wardList.length === 0) {
-              wardList = (await getAllWardsAsync()) || []
-              setWards(wardList)
-            }
-
-            if (wardName) {
-              const matchedWard = wardList.find(
-                (w: Wards) => w.province_code === province.code && w.name === wardName
-              )
-              if (matchedWard) setSelectedWardId(matchedWard.code)
-            }
-          }
-        }
+        setStreetAddress(r.address?.split(',')[0] ?? '')
       } catch (e) {
         console.error('Failed to load rental by id', e)
       }
     })()
-  }, [rentalId, provinces.length])
+  }, [rentalId])
 
+  // =====================================================================
+  // 🖼️ RENDER UI
+  // =====================================================================
   return (
-  <div className="space-y-8 bg-white p-8 rounded-xl shadow border border-gray-200 w-full">
-    {/* Back */}
-    <button
-      onClick={onBack}
-      className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
-    >
-      <ArrowLeft size={18} />
-      Back
-    </button>
-
-    <h2 className="text-2xl font-semibold text-center mb-8">
-      {rentalId ? "Edit Rental Request" : "Create Rental Request"}
-    </h2>
-      {/* =========================
-      EVENT INFORMATION
-========================== */}
-<div className="p-6 border border-purple-300 rounded-xl space-y-6">
-  <div className="flex items-center gap-2">
-    <CalendarDays className="text-purple-600" size={20} />
-    <h3 className="font-semibold text-lg text-gray-800">Event Information</h3>
-  </div>
-  <p className="text-sm text-gray-500 -mt-3 ml-7">
-    Provide the main details about your event.
-  </p>
-
-  {/* Event Name */}
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      Event Name <span className="text-red-500">*</span>
-    </label>
-    <input
-      type="text"
-      placeholder="Enter event name"
-      value={eventName}
-      onChange={(e) => setEventName(e.target.value)}
-      className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
-    />
-  </div>
-
-  {/* Activity + Type */}
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Event Activity <span className="text-red-500">*</span>
-      </label>
-      <select
-        value={selectedActivityId}
-        onChange={(e) => setSelectedActivityId(Number(e.target.value) || "")}
-        className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
+    <div className="space-y-8 bg-white p-8 rounded-xl shadow border border-gray-200 w-full">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
       >
-        <option value="">Select activity...</option>
-        {eventActivities.map((ea) => (
-          <option key={ea.id} value={ea.id}>
-            {ea.name}
-          </option>
-        ))}
-      </select>
-    </div>
+        <ArrowLeft size={18} />
+        Back
+      </button>
 
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Activity Type <span className="text-red-500">*</span>
-      </label>
-      <select
-        value={selectedTypeId}
-        onChange={(e) => setSelectedTypeId(Number(e.target.value) || "")}
-        disabled={!selectedActivityId}
-        className={`w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 ${
-          !selectedActivityId ? "bg-gray-100 cursor-not-allowed" : ""
-        }`}
-      >
-        <option value="">Select type...</option>
-        {activityTypes.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.name}
-          </option>
-        ))}
-      </select>
-    </div>
-  </div>
+      <h2 className="text-2xl font-semibold text-center mb-4">
+        {rentalId ? 'Edit Rental Request' : 'Create Rental Request'}
+      </h2>
 
-  {/* Description */}
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      Event Description
-    </label>
-    <textarea
-      placeholder="Describe your event..."
-      value={description}
-      onChange={(e) => setDescription(e.target.value)}
-      className="w-full border rounded-md px-4 py-2.5 text-sm min-h-[80px] focus:ring-2 focus:ring-purple-500"
-    ></textarea>
-  </div>
-</div>
+      {/* ERROR PANEL */}
+      {errors.length > 0 && (
+        <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-4 rounded-xl mb-6 shadow-sm">
+          <p className="font-semibold mb-2">Please fix the following issues:</p>
+          <ul className="list-disc pl-6 space-y-1 text-sm">
+            {errors.map((e, i) => (
+              <li key={i}>{e}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-{/* =========================
-      CONTACT INFORMATION
-========================== */}
-<div className="p-6 border rounded-xl space-y-6">
-  <div className="flex items-center gap-2">
-    <Home className="text-purple-600" size={20} />
-    <h3 className="font-semibold text-lg text-gray-800">Contact Information</h3>
-  </div>
-  <p className="text-sm text-gray-500 -mt-3 ml-7">
-    How we can reach you for this request.
-  </p>
-
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Phone Number <span className="text-red-500">*</span>
-      </label>
-      <input
-        type="text"
-        placeholder="e.g. 0912345678"
-        value={phoneNumber}
-        onChange={(e) => setPhoneNumber(e.target.value)}
-        className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
-      />
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Email Address <span className="text-red-500">*</span>
-      </label>
-      <input
-        type="email"
-        placeholder="e.g. example@mail.com"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
-      />
-    </div>
-  </div>
-</div>
-
-
-    {/* =====================================================
-        LOCATION + TIME ON THE SAME ROW (SIDE BY SIDE)
-    ====================================================== */}
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-      {/* ============= LOCATION ============= */}
-      <div className="p-6 border rounded-xl space-y-6">
+      {/* ================= EVENT INFO ================= */}
+      <div className="p-6 border border-purple-300 rounded-xl space-y-6">
         <div className="flex items-center gap-2">
-          <MapPin className="text-purple-600" size={20} />
-          <h3 className="font-semibold text-lg text-gray-800">Event Location</h3>
+          <CalendarDays className="text-purple-600" size={20} />
+          <h3 className="font-semibold text-lg text-gray-800">Event Information</h3>
         </div>
 
-        {/* Street */}
+        {/* Event Name */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Street & House Number <span className="text-red-500">*</span>
-          </label>
+          <label className="text-sm font-medium text-gray-700 mb-1">Event Name *</label>
           <input
             type="text"
-            placeholder="e.g. 600 Trường Sa"
-            value={streetAddress}
-            onChange={(e) => setStreetAddress(e.target.value)}
-            className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
+            value={eventName}
+            onChange={e => setEventName(e.target.value)}
+            className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-purple-500"
           />
+          <FieldError name="eventName" />
         </div>
 
-        {/* Province + Ward */}
+        {/* Event Activity + Type */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Province *</label>
+            <label className="text-sm font-medium text-gray-700 mb-1">Event Activity *</label>
             <select
-              value={selectedProvinceId}
-              onChange={(e) => setSelectedProvinceId(Number(e.target.value) || "")}
-              className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
+              value={selectedActivityId}
+              onChange={e => setSelectedActivityId(Number(e.target.value) || '')}
+              className="w-full border rounded-md px-4 py-2.5 text-sm"
             >
-              <option value="">Select Province</option>
-              {provinces.map((p) => (
-                <option key={p.code} value={p.code}>
-                  {p.name}
+              <option value="">Select activity...</option>
+              {eventActivities.map(ea => (
+                <option key={ea.id} value={ea.id}>
+                  {ea.name}
                 </option>
               ))}
             </select>
+            <FieldError name="selectedActivityId" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ward *</label>
+            <label className="text-sm font-medium text-gray-700 mb-1">Activity Type *</label>
             <select
-              value={selectedWardId}
-              onChange={(e) => setSelectedWardId(Number(e.target.value) || "")}
-              disabled={!selectedProvinceId}
-              className={`w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 ${
-                !selectedProvinceId ? "bg-gray-100 cursor-not-allowed" : ""
-              }`}
+              value={selectedTypeId}
+              onChange={e => setSelectedTypeId(Number(e.target.value) || '')}
+              disabled={!selectedActivityId}
+              className="w-full border rounded-md px-4 py-2.5 text-sm"
             >
-              <option value="">Select Ward</option>
-              {wards
-                .filter((w) => w.province_code === selectedProvinceId)
-                .map((w) => (
-                  <option key={w.code} value={w.code}>
-                    {w.name}
-                  </option>
-                ))}
+              <option value="">Select type...</option>
+              {activityTypes.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
             </select>
+            <FieldError name="selectedTypeId" />
           </div>
+        </div>
+
+        {/* Description */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-1">Event Description</label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            className="w-full border rounded-md px-4 py-2.5 text-sm min-h-[80px]"
+          />
         </div>
       </div>
 
-      {/* ============= TIME ============= */}
+      {/* CONTACT INFORMATION */}
       <div className="p-6 border rounded-xl space-y-6">
         <div className="flex items-center gap-2">
-          <Clock className="text-purple-600" size={20} />
-          <h3 className="font-semibold text-lg text-gray-800">Event Time</h3>
+          <Home className="text-purple-600" size={20} />
+          <h3 className="font-semibold text-lg text-gray-800">Contact Information</h3>
         </div>
 
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Event Date <span className="text-red-500">*</span>
-  </label>
-
-  <DatePicker
-    selected={eventDate ? new Date(eventDate) : null}
-    onChange={(date: Date | null) => setEventDate(date ? date.toISOString().slice(0, 10) : "")}
-    className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
-    placeholderText="Select event date"
-    dateFormat="dd-MM-yyyy"
-    calendarStartDay={1}
-    showPopperArrow={false}
-  />
-</div>
-
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Start Time */}
           <div>
-<BlockTimePicker
-  label="Start Time"
-  value={startTime}
-  onChange={(val) => setStartTime(val)}
-/>
+            <label className="text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+            <input
+              value={phoneNumber}
+              onChange={e => setPhoneNumber(e.target.value)}
+              className="w-full border rounded-md px-4 py-2.5 text-sm"
+            />
+            <FieldError name="phoneNumber" />
           </div>
 
-          {/* End Time */}
           <div>
-<BlockTimePicker
-  label="End Time"
-  value={endTime}
-  onChange={(val) => setEndTime(val)}
-/>
+            <label className="text-sm font-medium text-gray-700 mb-1">Email *</label>
+            <input
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full border rounded-md px-4 py-2.5 text-sm"
+            />
+            <FieldError name="email" />
           </div>
         </div>
       </div>
-    </div>
 
-    {/* Buttons */}
-    <div className="flex justify-end gap-4 pt-4">
-<button
-  onClick={async () => {
-    const id = await handleSaveDraft();
-    if (id) onBack();
-  }}
-  className="px-5 py-2.5 rounded-md bg-gray-600 text-white hover:bg-gray-700 text-sm"
->
-  Save as Draft
-</button>
-      <button
-        onClick={handleNextStepClick}
-        className="px-5 py-2.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 text-sm"
-      >
-        Customize Robot
-      </button>
+      {/* LOCATION + TIME */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="p-6 border rounded-xl space-y-6">
+          <div className="flex items-center gap-2">
+            <MapPin className="text-purple-600" size={20} />
+            <h3 className="font-semibold text-lg text-gray-800">Event Location</h3>
+          </div>
+
+          {/* Street */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1">Street *</label>
+            <input
+              value={streetAddress}
+              onChange={e => setStreetAddress(e.target.value)}
+              className="w-full border rounded-md px-4 py-2.5 text-sm"
+            />
+            <FieldError name="streetAddress" />
+          </div>
+
+          {/* Province & Ward */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1">Province *</label>
+              <select
+                value={selectedProvinceId}
+                onChange={e => setSelectedProvinceId(Number(e.target.value) || '')}
+                className="w-full border rounded-md px-4 py-2.5 text-sm"
+              >
+                <option value="">Select Province</option>
+                {provinces.map(p => (
+                  <option key={p.code} value={p.code}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <FieldError name="selectedProvinceId" />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1">Ward *</label>
+              <select
+                value={selectedWardId}
+                onChange={e => setSelectedWardId(Number(e.target.value) || '')}
+                className="w-full border rounded-md px-4 py-2.5 text-sm"
+                disabled={!selectedProvinceId}
+              >
+                <option value="">Select Ward</option>
+                {wards
+                  .filter(w => w.province_code === selectedProvinceId)
+                  .map(w => (
+                    <option key={w.code} value={w.code}>
+                      {w.name}
+                    </option>
+                  ))}
+              </select>
+              <FieldError name="selectedWardId" />
+            </div>
+          </div>
+        </div>
+
+        {/* TIME */}
+        <div className="p-6 border rounded-xl space-y-6">
+          <div className="flex items-center gap-2">
+            <Clock className="text-purple-600" size={20} />
+            <h3 className="font-semibold text-lg text-gray-800">Event Time</h3>
+          </div>
+
+          {/* Event Date */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1">Event Date *</label>
+            <DatePicker
+              selected={eventDate ? new Date(eventDate) : null}
+              onChange={d =>
+                setEventDate(d ? d.toISOString().slice(0, 10) : '')
+              }
+              className="w-full border rounded-md px-4 py-2.5 text-sm"
+              dateFormat="dd-MM-yyyy"
+            />
+            <FieldError name="eventDate" />
+          </div>
+
+          {/* Time Picker */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <BlockTimePicker label="Start Time" value={startTime} onChange={setStartTime} />
+              <FieldError name="startTime" />
+            </div>
+            <div>
+              <BlockTimePicker label="End Time" value={endTime} onChange={setEndTime} />
+              <FieldError name="endTime" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* BUTTONS */}
+      <div className="flex justify-end gap-4 pt-4">
+        <button
+          onClick={async () => {
+            const id = await handleSaveDraft()
+            if (id) onBack()
+          }}
+          className="px-5 py-2.5 rounded-md bg-gray-600 text-white hover:bg-gray-700 text-sm"
+        >
+          Save as Draft
+        </button>
+
+        <button
+          onClick={handleNextStepClick}
+          className="px-5 py-2.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 text-sm"
+        >
+          Customize Robot
+        </button>
+      </div>
     </div>
-  </div>
-);
+  )
 }
 
 export default CreateRentalRequestContent
