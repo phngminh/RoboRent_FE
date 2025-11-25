@@ -8,17 +8,21 @@ import { getProfile } from '../../../apis/auth.api'
 import CreateRentalRequestContent from '../RentalRequest/createRentalRequest'
 import CreateRentalDetailContent from '../RentalDetail/CreateRentalDetailContent'
 import Header from '../../../components/header'
+import ShareRentalRequestDetail from '../../rental/ShareRentalRequestDetail'
 
 const Profile = () => {
-  type ActiveTab =
-    | { name: 'dashboard' }
-    | { name: 'account' }
-    | { name: 'rental-requests' }
-    | { name: 'create-rental-request'; rentalId?: number }
-    | { name: 'create-rental-detail'; rentalId: number; activityTypeId: number }
+type ActiveTab =
+  | { name: 'dashboard' }
+  | { name: 'account' }
+  | { name: 'rental-requests' }
+  | { name: 'create-rental-request'; rentalId?: number }
+  | { name: 'create-rental-detail'; rentalId: number; activityTypeId: number }
+  | { name: 'rental-detail'; rentalId: number }   // ⭐ ADD THIS
   | { name: 'transactions' }
 
+
   const [activeTab, setActiveTab] = useState<ActiveTab>({ name: 'dashboard' })
+  const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const renderContent = () => {
     switch (activeTab.name) {
@@ -29,12 +33,17 @@ const Profile = () => {
         return <AccountContent />
 
       case 'rental-requests':
-        return (
-          <RentalRequestsContent
-            onCreate={() => setActiveTab({ name: 'create-rental-request' })}
-            onView={(rentalId: number) => setActiveTab({ name: 'create-rental-request', rentalId })}
-          />
-        )
+  return (
+    <RentalRequestsContent
+      onCreate={() => setActiveTab({ name: 'create-rental-request' })}
+      onView={(rentalId: number) => setActiveTab({ name: 'create-rental-request', rentalId })}
+      onDetaild={(rentalId: number) => {
+        setSelectedId(rentalId);
+        setActiveTab({ name: 'rental-detail', rentalId });
+      }}
+    />
+  );
+
 
       case 'create-rental-request':
         return (
@@ -46,7 +55,15 @@ const Profile = () => {
             }
           />
         )
-
+      case 'rental-detail':
+        return selectedId !== null ? (
+          <ShareRentalRequestDetail
+            rentalId={selectedId}
+            onBack={() => setActiveTab({name: "rental-requests"})}
+          />
+        ) : (
+          <div>No rental selected.</div>
+        )
       case 'create-rental-detail':
         return (
           <CreateRentalDetailContent

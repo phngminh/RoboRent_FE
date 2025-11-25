@@ -2,12 +2,22 @@ import React, { useEffect, useState } from 'react'
 import { getAllEventActivityAsync } from '../../../apis/eventactivity.api'
 import { getActivityTypeByEAIdAsync } from '../../../apis/activitytype.api'
 import { getAllProvincesAsync, getAllWardsAsync } from '../../../apis/address.api'
-import { ArrowLeft } from 'lucide-react'
 import { customerCreateRentalAsync, customerUpdateRentalAsync, getRentalByIdAsync } from '../../../apis/rental.customer.api'
-import TimePicker from 'react-time-picker'
 import 'react-time-picker/dist/TimePicker.css'
 import 'react-clock/dist/Clock.css'
 import { useAuth } from '../../../contexts/AuthContext'
+import { 
+  ArrowLeft,
+  MapPin,
+  Clock,
+  Home,
+  Map,
+  CalendarDays
+} from 'lucide-react'
+import BlockTimePicker from '../../../components/customer/BlockTimePicker'
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
 
 interface EventActivity {
   id: number
@@ -142,14 +152,14 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
         res = await customerCreateRentalAsync(body)
       }
 
-      if (res?.success === false && res?.errors?.length > 0) {
-        setErrors(res.errors)
-        return
-      }
+if (res?.success === false && res?.errors?.length > 0) {
+  setErrors(res.errors)
+  return
+}
 
-      alert(rentalId ? 'Draft updated successfully!' : 'Draft created successfully!')
-      setErrors([])
-      return res?.id ?? rentalId
+// no popup — return quietly
+setErrors([])
+return res?.id ?? rentalId
 
     } catch (err: any) {
       const beErrors = err.response?.data?.errors
@@ -265,168 +275,178 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
   }, [rentalId, provinces.length])
 
   return (
-    <div className='space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-200 w-full'>
-      <button
-        onClick={onBack}
-        className='flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 mb-2'
+  <div className="space-y-8 bg-white p-8 rounded-xl shadow border border-gray-200 w-full">
+    {/* Back */}
+    <button
+      onClick={onBack}
+      className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
+    >
+      <ArrowLeft size={18} />
+      Back
+    </button>
+
+    <h2 className="text-2xl font-semibold text-center mb-8">
+      {rentalId ? "Edit Rental Request" : "Create Rental Request"}
+    </h2>
+      {/* =========================
+      EVENT INFORMATION
+========================== */}
+<div className="p-6 border border-purple-300 rounded-xl space-y-6">
+  <div className="flex items-center gap-2">
+    <CalendarDays className="text-purple-600" size={20} />
+    <h3 className="font-semibold text-lg text-gray-800">Event Information</h3>
+  </div>
+  <p className="text-sm text-gray-500 -mt-3 ml-7">
+    Provide the main details about your event.
+  </p>
+
+  {/* Event Name */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      Event Name <span className="text-red-500">*</span>
+    </label>
+    <input
+      type="text"
+      placeholder="Enter event name"
+      value={eventName}
+      onChange={(e) => setEventName(e.target.value)}
+      className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
+    />
+  </div>
+
+  {/* Activity + Type */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Event Activity <span className="text-red-500">*</span>
+      </label>
+      <select
+        value={selectedActivityId}
+        onChange={(e) => setSelectedActivityId(Number(e.target.value) || "")}
+        className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
       >
-        <ArrowLeft size={18} />
-        Back
-      </button>
+        <option value="">Select activity...</option>
+        {eventActivities.map((ea) => (
+          <option key={ea.id} value={ea.id}>
+            {ea.name}
+          </option>
+        ))}
+      </select>
+    </div>
 
-      <h2 className='text-xl font-semibold text-gray-800 mb-2'>
-        {rentalId ? 'Edit Rental Request' : 'Create Rental Request'}
-      </h2>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Activity Type <span className="text-red-500">*</span>
+      </label>
+      <select
+        value={selectedTypeId}
+        onChange={(e) => setSelectedTypeId(Number(e.target.value) || "")}
+        disabled={!selectedActivityId}
+        className={`w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 ${
+          !selectedActivityId ? "bg-gray-100 cursor-not-allowed" : ""
+        }`}
+      >
+        <option value="">Select type...</option>
+        {activityTypes.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
 
-      {/* Event Information */}
-      <div className='p-5 border border-purple-300 rounded-lg space-y-4'>
+  {/* Description */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      Event Description
+    </label>
+    <textarea
+      placeholder="Describe your event..."
+      value={description}
+      onChange={(e) => setDescription(e.target.value)}
+      className="w-full border rounded-md px-4 py-2.5 text-sm min-h-[80px] focus:ring-2 focus:ring-purple-500"
+    ></textarea>
+  </div>
+</div>
+
+{/* =========================
+      CONTACT INFORMATION
+========================== */}
+<div className="p-6 border rounded-xl space-y-6">
+  <div className="flex items-center gap-2">
+    <Home className="text-purple-600" size={20} />
+    <h3 className="font-semibold text-lg text-gray-800">Contact Information</h3>
+  </div>
+  <p className="text-sm text-gray-500 -mt-3 ml-7">
+    How we can reach you for this request.
+  </p>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Phone Number <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="text"
+        placeholder="e.g. 0912345678"
+        value={phoneNumber}
+        onChange={(e) => setPhoneNumber(e.target.value)}
+        className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Email Address <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="email"
+        placeholder="e.g. example@mail.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
+      />
+    </div>
+  </div>
+</div>
+
+
+    {/* =====================================================
+        LOCATION + TIME ON THE SAME ROW (SIDE BY SIDE)
+    ====================================================== */}
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      {/* ============= LOCATION ============= */}
+      <div className="p-6 border rounded-xl space-y-6">
+        <div className="flex items-center gap-2">
+          <MapPin className="text-purple-600" size={20} />
+          <h3 className="font-semibold text-lg text-gray-800">Event Location</h3>
+        </div>
+
+        {/* Street */}
         <div>
-          <h3 className='font-semibold text-gray-800'>Event Information</h3>
-          <p className='text-sm text-gray-500'>Provide the main details about your event.</p>
-        </div>
-
-        <div className='grid grid-cols-2 gap-4'>
-          <div className='col-span-2'>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Event Name <span className='text-red-500'>*</span>
-            </label>
-            <input
-              required
-              type='text'
-              placeholder='Enter event name'
-              value={eventName}
-              onChange={(e) => setEventName(e.target.value)}
-              className='w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500'
-            />
-          </div>
-
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Event Activity <span className='text-red-500'>*</span>
-            </label>
-            <select
-              required
-              value={selectedActivityId}
-              onChange={(e) => setSelectedActivityId(Number(e.target.value) || '')}
-              className='w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500'
-            >
-              <option value=''>Select activity...</option>
-              {eventActivities.map((ea) => (
-                <option key={ea.id} value={ea.id}>
-                  {ea.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Activity Type <span className='text-red-500'>*</span>
-            </label>
-            <select
-              required
-              value={selectedTypeId}
-              onChange={(at) => setSelectedTypeId(Number(at.target.value) || '')}
-              disabled={!selectedActivityId}
-              className={`w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 ${!selectedActivityId ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-            >
-              <option value=''>Select type...</option>
-              {activityTypes.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Description */}
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-1'>
-            Event Description
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder='Describe your event...'
-            className='w-full border rounded-md px-3 py-2 text-sm min-h-[70px] focus:ring-2 focus:ring-blue-500'
-          ></textarea>
-        </div>
-      </div>
-
-      {/* Contact Information */}
-      <div className='p-5 border border-gray-200 rounded-lg space-y-4'>
-        <div>
-          <h3 className='font-semibold text-gray-800'>Contact Information</h3>
-          <p className='text-sm text-gray-500'>How we can reach you for this request.</p>
-        </div>
-
-        <div className='grid grid-cols-2 gap-4'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Phone Number <span className='text-red-500'>*</span>
-            </label>
-            <input
-              required
-              type='text'
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder='e.g. 0912345678'
-              className='w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500'
-            />
-          </div>
-
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Email Address <span className='text-red-500'>*</span>
-            </label>
-            <input
-              required
-              type='email'
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder='e.g. example@mail.com'
-              className='w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500'
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Event Location */}
-      <div className='p-5 border border-gray-200 rounded-lg space-y-4'>
-        <div>
-          <h3 className='font-semibold text-gray-800'>Event Location</h3>
-          <p className='text-sm text-gray-500'>Where the event will take place.</p>
-        </div>
-
-        {/* Street & House Number */}
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-1'>
-            Street & House Number <span className='text-red-500'>*</span>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Street & House Number <span className="text-red-500">*</span>
           </label>
           <input
-            required
-            type='text'
+            type="text"
+            placeholder="e.g. 600 Trường Sa"
             value={streetAddress}
             onChange={(e) => setStreetAddress(e.target.value)}
-            placeholder='e.g. 600 Trường Sa'
-            className='w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500'
+            className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
           />
         </div>
 
-        <div className='grid grid-cols-2 gap-4'>
-          {/* Province */}
+        {/* Province + Ward */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Province / City <span className='text-red-500'>*</span>
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Province *</label>
             <select
-              required
               value={selectedProvinceId}
-              onChange={(pi) => setSelectedProvinceId(Number(pi.target.value) || '')}
-              className='w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500'
+              onChange={(e) => setSelectedProvinceId(Number(e.target.value) || "")}
+              className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
             >
-              <option value=''>Select Province</option>
+              <option value="">Select Province</option>
               {provinces.map((p) => (
                 <option key={p.code} value={p.code}>
                   {p.name}
@@ -435,21 +455,19 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
             </select>
           </div>
 
-          {/* Ward */}
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Ward <span className='text-red-500'>*</span>
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ward *</label>
             <select
-              required
               value={selectedWardId}
-              onChange={(wi) => setSelectedWardId(Number(wi.target.value) || '')}
+              onChange={(e) => setSelectedWardId(Number(e.target.value) || "")}
               disabled={!selectedProvinceId}
-              className={`w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 ${!selectedProvinceId ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              className={`w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 ${
+                !selectedProvinceId ? "bg-gray-100 cursor-not-allowed" : ""
+              }`}
             >
-              <option value=''>Select Ward</option>
+              <option value="">Select Ward</option>
               {wards
-                .filter(w => w.province_code === selectedProvinceId)
+                .filter((w) => w.province_code === selectedProvinceId)
                 .map((w) => (
                   <option key={w.code} value={w.code}>
                     {w.name}
@@ -460,85 +478,72 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
         </div>
       </div>
 
-      {/* Event Time */}
-      <div className='p-5 border border-gray-200 rounded-lg space-y-4'>
-        <div>
-          <h3 className='font-semibold text-gray-800'>Event Time</h3>
+      {/* ============= TIME ============= */}
+      <div className="p-6 border rounded-xl space-y-6">
+        <div className="flex items-center gap-2">
+          <Clock className="text-purple-600" size={20} />
+          <h3 className="font-semibold text-lg text-gray-800">Event Time</h3>
         </div>
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-1'>
-            Event Date <span className='text-red-500'>*</span>
-          </label>
-          <input
-            required
-            type='date'
-            value={eventDate}
-            onChange={(e) => setEventDate(e.target.value)}
-            className='w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500'
-          />
-        </div>
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Event Date <span className="text-red-500">*</span>
+  </label>
 
-        <div className='grid grid-cols-2 gap-4'>
+  <DatePicker
+    selected={eventDate ? new Date(eventDate) : null}
+    onChange={(date: Date | null) => setEventDate(date ? date.toISOString().slice(0, 10) : "")}
+    className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500"
+    placeholderText="Select event date"
+    dateFormat="dd-MM-yyyy"
+    calendarStartDay={1}
+    showPopperArrow={false}
+  />
+</div>
+
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Start Time */}
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Start Time <span className='text-red-500'>*</span>
-            </label>
-            <TimePicker
-              onChange={(value) => setStartTime(value || '')}
-              value={startTime}
-              disableClock={true}
-              clearIcon={null}
-              format='HH:mm'
-            />
+<BlockTimePicker
+  label="Start Time"
+  value={startTime}
+  onChange={(val) => setStartTime(val)}
+/>
           </div>
 
+          {/* End Time */}
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              End Time <span className='text-red-500'>*</span>
-            </label>
-            <TimePicker
-              onChange={(value) => setEndTime(value || '')}
-              value={endTime}
-              disableClock={true}
-              clearIcon={null}
-              format='HH:mm'
-            />
+<BlockTimePicker
+  label="End Time"
+  value={endTime}
+  onChange={(val) => setEndTime(val)}
+/>
           </div>
         </div>
-      </div>
-
-      {errors.length > 0 && (
-        <div className='bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-md'>
-          <ul className='list-disc pl-5 space-y-1'>
-            {errors.map((err, i) => (
-              <li key={i}>{err}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* ACTION BUTTONS */}
-      <div className='flex justify-end gap-3 pt-2'>
-        <button
-          onClick={() => {
-            handleSaveDraft()
-            onBack()
-          }}
-          className='px-4 py-2 rounded-md bg-gray-500 text-white hover:bg-gray-600 text-sm'
-        >
-          Save as Draft
-        </button>
-
-        <button
-          onClick={handleNextStepClick}
-          className='px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 text-sm'
-        >
-          Customize Robot
-        </button>
       </div>
     </div>
-  )
+
+    {/* Buttons */}
+    <div className="flex justify-end gap-4 pt-4">
+<button
+  onClick={async () => {
+    const id = await handleSaveDraft();
+    if (id) onBack();
+  }}
+  className="px-5 py-2.5 rounded-md bg-gray-600 text-white hover:bg-gray-700 text-sm"
+>
+  Save as Draft
+</button>
+      <button
+        onClick={handleNextStepClick}
+        className="px-5 py-2.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 text-sm"
+      >
+        Customize Robot
+      </button>
+    </div>
+  </div>
+);
 }
 
 export default CreateRentalRequestContent

@@ -71,3 +71,27 @@ export const customerSendRentalAsync = async (
         throw error
     }
 }
+
+export const customerCancelRentalAsync = async (
+    rentalId: number
+) => {
+    try{
+        const res = await http.put(`${API_URL}/customer/cancel/rental/${rentalId}`)
+        return res.data
+    }catch (error: any){
+        console.error('Error send rental:', error)
+        throw error
+    }
+}
+
+export const customerDeleteRentalAsync = async (
+    rentalId: number
+) => {
+    try{
+        const res = await http.put(`${API_URL}/customer/delete/rental/${rentalId}`)
+        return res.data
+    }catch (error: any){
+        console.error('Error send rental:', error)
+        throw error
+    }
+}
