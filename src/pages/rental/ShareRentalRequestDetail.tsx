@@ -6,6 +6,7 @@ import { getRentalByIdAsync, staffRequestUpdateRentalAsync } from "../../apis/re
 import { getRentalDetailsByRentalIdAsync } from "../../apis/rentaldetail.api";
 import { useRef } from "react";
 import { getGroupScheduleByRentalIdForCustomerAsync } from "../../apis/groupSchedule.customer.api";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface ShareRentalRequestDetailProps {
   rentalId: number;
@@ -13,6 +14,8 @@ interface ShareRentalRequestDetailProps {
 }
 
 export default function ShareRentalRequestDetail({ rentalId, onBack }: ShareRentalRequestDetailProps) {
+const { user } = useAuth();
+const userRole = user?.role; // "Customer", "Staff", "Manager", etc.
 
   const [rental, setRental] = useState<any>(null);
   const [rentalDetails, setRentalDetails] = useState<any[]>([]);
@@ -261,29 +264,30 @@ const loadSchedule = async () => {
     Chat
   </button>
 
-  {/* 🔥 NEW REQUEST UPDATE BUTTON */}
-<button
-  onClick={async () => {
-    try {
-      const res = await staffRequestUpdateRentalAsync(rentalId);
+{/* REQUEST UPDATE BUTTON — hidden if Scheduled OR Customer */}
+{(userRole === "staff" && rental.status === "Received") && (
+  <button
+    onClick={async () => {
+      try {
+        const res = await staffRequestUpdateRentalAsync(rentalId);
 
-      if (res.success) {
-        alert("Request update has been sent successfully!");
-        onBack();  // 🔥 go back after success
-      } else {
-        alert(res.message || "Failed to request update.");
+        if (res.success) {
+          alert("Request update has been sent successfully!");
+          onBack();
+        } else {
+          alert(res.message || "Failed to request update.");
+        }
+
+      } catch (err) {
+        console.error("Failed to request update:", err);
+        alert("Something went wrong. Please try again.");
       }
-
-    } catch (err) {
-      console.error("Failed to request update:", err);
-      alert("Something went wrong. Please try again.");
-    }
-  }}
-  className="w-full bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-600"
->
-  Request Update
-</button>
-
+    }}
+    className="w-full bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-600"
+  >
+    Request Update
+  </button>
+)}
 
 </div>
 

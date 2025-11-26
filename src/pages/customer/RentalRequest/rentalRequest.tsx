@@ -389,33 +389,39 @@ const handleSendRequest = (rentalId: number) => {
 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
   <div className="flex justify-center space-x-6 min-w-[200px]">
 
-    {/* View */}
-    <button
-      onClick={() => {
-        if (request.status === "Received" || request.status === "Pending") {
-          onDetaild(request.id)
-        } else {
-          onView(request.id);
-        }
-      }}
-      className="text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1"
-    >
-      <Eye size={14} />
-      <span>{request.status === "Received" ? "Detail" : "View"}</span>
-    </button>
+{/* View / Detail button with new status logic */}
+<button
+  onClick={() => {
+    if (request.status !== "Draft") {
+      onDetaild(request.id);     // Detail mode
+    } else {
+      onView(request.id);        // View mode
+    }
+  }}
+  className="text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1"
+>
+  <Eye size={14} />
 
-    {/* Chat */}
-    {request.status === "Received" && (
-      <button
-        onClick={() =>
-          navigate(path.CUSTOMER_CHAT.replace(":rentalId", String(request.id)))
-        }
-        className="text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1"
-      >
-        <MessageCircle size={14} />
-        <span>Chat</span>
-      </button>
-    )}
+  <span>
+    {request.status !== "Draft"
+      ? "Detail"
+      : "View"}
+  </span>
+</button>
+
+{/* Chat — only show when NOT Draft or Pending */}
+{request.status !== "Draft" && request.status !== "Pending" && (
+  <button
+    onClick={() =>
+      navigate(path.CUSTOMER_CHAT.replace(":rentalId", String(request.id)))
+    }
+    className="text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1"
+  >
+    <MessageCircle size={14} />
+    <span>Chat</span>
+  </button>
+)}
+
 
 {/* Send — always allow clicking, but validate detail count */}
 {request.status === "Draft" && (

@@ -6,7 +6,7 @@ import {
   updateScheduleAsync 
 } from "../../apis/groupSchedule.staff.api";
 import { getReceivedRentalByStaffIdAsync } from "../../apis/rental.staff.api";
-import { useAuth } from "../../contexts/AuthContext";   // ⬅️ IMPORT AUTH
+import { useAuth } from "../../contexts/AuthContext";  
 
 // -------------------------
 // Types
