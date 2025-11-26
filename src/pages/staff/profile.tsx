@@ -59,7 +59,10 @@ const Profile = () => {
 
       case 'schedule-board':
         return selectedId !== null ? (
-          <ScheduleBoard groupId={selectedId} />
+          <ScheduleBoard 
+          groupId={selectedId} 
+          onBack={() => setActiveTab("robot-group")}
+          />
         ) : (
           <div>No group selected.</div>
         );

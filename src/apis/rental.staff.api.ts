@@ -40,3 +40,13 @@ export const receiveRentalAsync = async (rentalId: number, staffId: number) => {
         throw error
     }
 } 
+
+export const staffRequestUpdateRentalAsync = async (rentalId: number) => {
+    try {
+        const response = await http.put(`${API_URL}/staff/request/update/rental/${rentalId}`)
+        return response.data
+    } catch (error: any){
+        console.error('Error fetching rental infor:', error)
+        throw error
+    }
+} 

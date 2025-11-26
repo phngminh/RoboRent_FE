@@ -1,9 +1,11 @@
 import { 
-  CheckCircle, Clock, Phone, Mail, User, Hash, Calendar, PenSquare, ArrowLeft 
+  CheckCircle, Clock, Phone, Mail, User, Hash, Calendar, PenSquare, ArrowLeft, MapPin
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getRentalByIdAsync } from "../../apis/rental.staff.api";
+import { getRentalByIdAsync, staffRequestUpdateRentalAsync } from "../../apis/rental.staff.api";
 import { getRentalDetailsByRentalIdAsync } from "../../apis/rentaldetail.api";
+import { useRef } from "react";
+import { getGroupScheduleByRentalIdForCustomerAsync } from "../../apis/groupSchedule.customer.api";
 
 interface ShareRentalRequestDetailProps {
   rentalId: number;
@@ -15,6 +17,7 @@ export default function ShareRentalRequestDetail({ rentalId, onBack }: ShareRent
   const [rental, setRental] = useState<any>(null);
   const [rentalDetails, setRentalDetails] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+const detailRef = useRef<HTMLDivElement | null>(null);
 
   // Grouping state
   const [grouped, setGrouped] = useState<any[]>([]);
@@ -24,6 +27,10 @@ export default function ShareRentalRequestDetail({ rentalId, onBack }: ShareRent
 const imageModules = import.meta.glob("../../assets/*.{png,jpg,jpeg}", {
   eager: true,
 });
+
+const [schedule, setSchedule] = useState<any | null>(null);
+const scheduleRef = useRef<HTMLDivElement | null>(null);
+const [viewMode, setViewMode] = useState<"details" | "schedule">("details");
 
 // Normalize robot type name → usable filename
 const cleanFileName = (name: string) => {
@@ -44,6 +51,17 @@ const getRobotImage = (name: string) => {
   );
 
   return match ? (match[1] as any).default : "";
+};
+
+const loadSchedule = async () => {
+  try {
+    const res = await getGroupScheduleByRentalIdForCustomerAsync(rentalId);
+    if (res.success) {
+      setSchedule(res.data);
+    }
+  } catch (err) {
+    console.error("Failed to load schedule:", err);
+  }
 };
 
   // =======================
@@ -217,23 +235,58 @@ const getRobotImage = (name: string) => {
           <div className="bg-white p-5 rounded-xl shadow border border-gray-100">
             <h2 className="text-lg font-semibold mb-4 text-gray-800">Actions</h2>
 
-            <div className="space-y-3">
-              <button className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700">
-                Approve Request
-              </button>
+<div className="space-y-3">
 
-              <button className="w-full bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700">
-                Reject Request
-              </button>
+  <button
+    onClick={() => setViewMode("details")}
+    className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700"
+  >
+    View Details
+  </button>
 
-              <button className="w-full bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100">
-                Contact Client
-              </button>
+  <button
+    onClick={async () => {
+      setViewMode("schedule");
+      await loadSchedule();
+      if (scheduleRef.current) {
+        scheduleRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    }}
+    className="w-full bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700"
+  >
+    View Schedules
+  </button>
 
-              <button className="w-full bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100">
-                View Event Page
-              </button>
-            </div>
+  <button className="w-full bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100">
+    Chat
+  </button>
+
+  {/* 🔥 NEW REQUEST UPDATE BUTTON */}
+<button
+  onClick={async () => {
+    try {
+      const res = await staffRequestUpdateRentalAsync(rentalId);
+
+      if (res.success) {
+        alert("Request update has been sent successfully!");
+        onBack();  // 🔥 go back after success
+      } else {
+        alert(res.message || "Failed to request update.");
+      }
+
+    } catch (err) {
+      console.error("Failed to request update:", err);
+      alert("Something went wrong. Please try again.");
+    }
+  }}
+  className="w-full bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-600"
+>
+  Request Update
+</button>
+
+
+</div>
+
           </div>
 
         </div>
@@ -244,6 +297,7 @@ const getRobotImage = (name: string) => {
 <div className="lg:col-span-2 flex flex-col h-full pb-6">
 
   {/* TAB BUTTONS */}
+{viewMode === "details" && (
   <div className="flex flex-wrap gap-3 mb-4">
     {grouped.map((g) => (
       <button
@@ -264,10 +318,14 @@ const getRobotImage = (name: string) => {
       </button>
     ))}
   </div>
+)}
 
 {/* DETAIL CARD */}
-{currentItem && currentGroup ? (
-  <div className="bg-white p-6 rounded-xl shadow border border-gray-100 flex flex-col h-full">
+{viewMode === "details" && currentItem && currentGroup ? (
+<div
+  ref={detailRef}
+  className="bg-white p-6 rounded-xl shadow border border-gray-100 flex flex-col h-full"
+>
 
     <div className="flex flex-col lg:flex-row gap-8 flex-1">
 
@@ -361,8 +419,62 @@ const getRobotImage = (name: string) => {
 </div>
 
   </div>
-) : (
+) : viewMode === "details" ? (
   <p className="text-gray-500 italic">Select a robot type</p>
+) : null}
+
+{/* ======================= */}
+{/*   SCHEDULE SECTION      */}
+{/* ======================= */}
+{viewMode === "schedule" && (
+  <div ref={scheduleRef} className="mt-10">
+
+  <h2 className="text-xl font-semibold text-gray-800 mb-4">
+    Event Schedule
+  </h2>
+
+  {!schedule ? (
+    <p className="text-sm text-gray-500 italic">Click “View Schedules” to show event schedule.</p>
+  ) : (
+    <div className="bg-white p-6 rounded-xl shadow border border-gray-200 space-y-4">
+
+      {/* LOCATION */}
+      <div className="flex items-center gap-2">
+        <MapPin size={18} className="text-indigo-600" />
+        <span className="font-semibold text-gray-800">{schedule.eventLocation}</span>
+        <span className="text-gray-500 text-sm">({schedule.eventCity})</span>
+      </div>
+
+      {/* TIMES */}
+      <div className="text-sm text-gray-700 space-y-1">
+        <div><strong>Delivery:</strong> {schedule.deliveryTime}</div>
+        <div><strong>Start – End:</strong> {schedule.startTime} – {schedule.endTime}</div>
+        <div><strong>Finish:</strong> {schedule.finishTime}</div>
+      </div>
+
+      {/* STATUS BADGE */}
+      <div>
+        <span
+          className={`px-3 py-1 text-sm font-semibold rounded-lg 
+            ${schedule.status === "planned" ? "bg-yellow-200 text-yellow-900" : ""}
+            ${schedule.status === "completed" ? "bg-green-200 text-green-900" : ""}
+            ${schedule.status === "cancelled" ? "bg-red-200 text-red-900" : ""}
+          `}
+        >
+          {schedule.status}
+        </span>
+      </div>
+
+      {/* STAFF & CUSTOMER */}
+      <div className="text-xs text-gray-600 space-y-1">
+        <div><strong>Staff:</strong> {schedule.staffFullName}</div>
+        <div><strong>Customer:</strong> {schedule.customerFullName}</div>
+        <div><strong>Rental ID:</strong> {schedule.rentalId}</div>
+      </div>
+
+    </div>
+  )}
+</div>
 )}
 
 </div>

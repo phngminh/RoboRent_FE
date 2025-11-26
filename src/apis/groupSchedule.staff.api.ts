@@ -33,3 +33,26 @@ export const addScheduleAsync = async (
         throw error;
     }
 };
+
+export const updateScheduleAsync = async (
+    scheduleId: number,
+    payload: {
+        deliveryTime: string;
+        startTime: string;
+        endTime: string;
+        finishTime: string;
+        activityTypeGroupId: number;
+        rentalId: number;
+    }
+) => {
+    try {
+        const response = await http.put(
+            `${API_URL}/staff/update/${scheduleId}`,
+            payload
+        );
+        return response.data;
+    } catch (error: any) {
+        console.error("Error update schedule:", error);
+        throw error;
+    }
+};
