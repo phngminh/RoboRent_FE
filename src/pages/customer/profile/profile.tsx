@@ -23,6 +23,7 @@ type ActiveTab =
 
   const [activeTab, setActiveTab] = useState<ActiveTab>({ name: 'dashboard' })
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const renderContent = () => {
     switch (activeTab.name) {
@@ -32,9 +33,10 @@ type ActiveTab =
       case 'account':
         return <AccountContent />
 
-      case 'rental-requests':
+case 'rental-requests':
   return (
     <RentalRequestsContent
+      key={refreshKey}    // 🔥 forcing re-render
       onCreate={() => setActiveTab({ name: 'create-rental-request' })}
       onView={(rentalId: number) => setActiveTab({ name: 'create-rental-request', rentalId })}
       onDetaild={(rentalId: number) => {
@@ -44,12 +46,14 @@ type ActiveTab =
     />
   );
 
-
       case 'create-rental-request':
         return (
           <CreateRentalRequestContent
             rentalId={activeTab.rentalId}
-            onBack={() => setActiveTab({ name: 'rental-requests' })}
+onBack={() => {
+  setRefreshKey(prev => prev + 1);   // 🔥 FORCES LIST TO REFRESH
+  setActiveTab({ name: 'rental-requests' });
+}}
             onNextStep={(rentalId, activityTypeId) =>
               setActiveTab({ name: 'create-rental-detail', rentalId, activityTypeId })
             }
