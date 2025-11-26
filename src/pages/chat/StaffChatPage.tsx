@@ -7,7 +7,8 @@ import { signalRService } from '../../utils/signalr'
 import { 
   getChatMessages, 
   sendMessage,
-  getStaffChatRooms
+  getStaffChatRooms,
+  getMyChatRooms
 } from '../../apis/chat.api'
 import { getQuotesByRentalId } from '../../apis/priceQuote.api'
 import type { 
@@ -192,7 +193,7 @@ export default function StaffChatPage() {
       
       setIsLoadingChats(true)
       try {
-        const response = await getStaffChatRooms(user.id, 1, 50)
+        const response = await getMyChatRooms(1, 50)
         const mappedChats: CustomerChat[] = response.rooms.map(room => ({
           id: room.id,
           rentalId: room.rentalId,
