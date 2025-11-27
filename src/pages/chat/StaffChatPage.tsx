@@ -142,11 +142,14 @@ export default function StaffChatPage() {
   )
 
   // Send Demo button
-  const isSendDemoDisabled = rentalStatus !== 'PendingDemo' || hasPendingDemo
-  const sendDemoDisabledReason = 
-    rentalStatus !== 'PendingDemo' 
-      ? 'Rental status must be "Pending Demo"' 
-      : 'A demo is already pending customer review'
+const isSendDemoDisabled = 
+  !(rentalStatus === 'Scheduled' || rentalStatus === 'DeniedDemo') 
+  || hasPendingDemo
+const sendDemoDisabledReason =
+  !(rentalStatus === 'Scheduled' || rentalStatus === 'DeniedDemo')
+    ? 'Rental status must be "Scheduled" or "DeniedDemo"'
+    : 'A demo is already pending customer review'
+
 
   // Create Quote button
   const isCreateQuoteDisabled = !hasDemoAccepted || quotesData?.canCreateMore === false
@@ -187,43 +190,60 @@ export default function StaffChatPage() {
   }
 
   // Load customer chats from API
-  useEffect(() => {
-    const loadChats = async () => {
-      if (!user?.id) return
-      
-      setIsLoadingChats(true)
-      try {
-        const response = await getMyChatRooms(1, 50)
-        const mappedChats: CustomerChat[] = response.rooms.map(room => ({
-          id: room.id,
-          rentalId: room.rentalId,
-          customerName: room.customerName || 'Unknown Customer',
-          packageName: room.packageName || 'Unknown Package',
-          eventDate: room.eventDate || 'TBD',
-          status: room.status || 'Unknown',
-          lastMessage: room.lastMessage || 'No messages',
-          timestamp: room.lastMessageTime 
-            ? formatDistanceToNow(new Date(room.lastMessageTime), { addSuffix: true })
-            : 'No messages',
-          unread: room.unreadCount
-        }))
-        setCustomerChats(mappedChats)
+useEffect(() => {
+  const loadChats = async () => {
+    if (!user?.accountId) return
+    
+    setIsLoadingChats(true)
+    try {
+      const response = await getMyChatRooms(1, 50)
 
-        // Set rental status from selected chat
-        const currentChat = response.rooms.find(r => r.rentalId === parseInt(rentalId || '0'))
-        if (currentChat?.rentalStatus) {
-          setRentalStatus(currentChat.rentalStatus)
-        }
-      } catch (error) {
-        console.error('Failed to load chats:', error)
-        toast.error('Failed to load chat list')
-      } finally {
-        setIsLoadingChats(false)
+      console.log("=== DEBUG: getMyChatRooms RESPONSE ===")
+      console.log(JSON.stringify(response, null, 2))
+
+      const mappedChats: CustomerChat[] = response.rooms.map(room => ({
+        id: room.id,
+        rentalId: room.rentalId,
+        customerName: room.customerName || 'Unknown Customer',
+        packageName: room.packageName || 'Unknown Package',
+        eventDate: room.eventDate || 'TBD',
+        status: room.status || 'Unknown',
+        lastMessage: room.lastMessage || 'No messages',
+        timestamp: room.lastMessageTime 
+          ? formatDistanceToNow(new Date(room.lastMessageTime), { addSuffix: true })
+          : 'No messages',
+        unread: room.unreadCount
+      }))
+      setCustomerChats(mappedChats)
+
+      // Set rental status
+      const selectedRentalId = parseInt(rentalId || '0')
+
+      console.log("=== DEBUG: Selected rentalId ===", selectedRentalId)
+
+      const currentChat = response.rooms.find(r => r.rentalId === selectedRentalId)
+
+      console.log("=== DEBUG: currentChat FOUND ===")
+      console.log(currentChat)
+
+      console.log("=== DEBUG: currentChat.rentalStatus ===")
+      console.log(currentChat?.rentalStatus)
+
+      if (currentChat?.rentalStatus) {
+        setRentalStatus(currentChat.rentalStatus)
       }
-    }
 
-    loadChats()
-  }, [user?.id, rentalId])
+    } catch (error) {
+      console.error('Failed to load chats:', error)
+      toast.error('Failed to load chat list')
+    } finally {
+      setIsLoadingChats(false)
+    }
+  }
+
+  loadChats()
+}, [user?.id, rentalId])
+
 
   // Load messages
   useEffect(() => {
