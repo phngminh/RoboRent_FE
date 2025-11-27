@@ -1,6 +1,6 @@
 // src/components/chat/UpdateQuoteModal.tsx
 import { useState, useEffect } from 'react'
-import { X, AlertCircle, RefreshCw } from 'lucide-react'
+import { X, AlertCircle, RefreshCw, Truck } from 'lucide-react' // ✅ THÊM Truck
 import { getPriceQuoteById, updatePriceQuote } from '../../apis/priceQuote.api'
 import type { PriceQuoteResponse, CreatePriceQuoteRequest } from '../../types/chat.types'
 import { QuoteStatus } from '../../types/chat.types'
@@ -34,7 +34,11 @@ export default function UpdateQuoteModal({
   const depositNum = parseFloat(deposit) || 0
   const completeNum = parseFloat(complete) || 0
   const serviceNum = parseFloat(service) || 0
-  const total = deliveryNum + depositNum + completeNum + serviceNum
+  
+  // ✅ NEW: Tính subtotal (4 fields) + DeliveryFee
+  const subtotal = deliveryNum + depositNum + completeNum + serviceNum
+  const deliveryFee = quote?.deliveryFee || 0
+  const total = subtotal + deliveryFee
 
   // Load quote details
   useEffect(() => {
@@ -49,10 +53,10 @@ export default function UpdateQuoteModal({
       const data = await getPriceQuoteById(quoteId)
       
       if (data.status !== QuoteStatus.PendingManager && data.status !== QuoteStatus.RejectedManager) {
-      toast.error('Cannot edit quote with status: ' + data.status)
-      onClose()
-      return
-    }
+        toast.error('Cannot edit quote with status: ' + data.status)
+        onClose()
+        return
+      }
 
       setQuote(data)
       
@@ -80,7 +84,7 @@ export default function UpdateQuoteModal({
       return
     }
 
-    if (total <= 0) {
+    if (subtotal <= 0) {
       toast.error('Total amount must be greater than 0')
       return
     }
@@ -184,12 +188,44 @@ export default function UpdateQuoteModal({
               </div>
             )}
 
-            {/* Original vs New Comparison */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-blue-900 mb-2">Original Quote Total</p>
-              <p className="text-2xl font-bold text-blue-700">
-                ${quote.total.toLocaleString()}
-              </p>
+            {/* ✅ UPDATED: Original vs New Comparison */}
+            <div className="space-y-3">
+              {/* Delivery Fee Info (if exists) */}
+              {quote.deliveryFee && quote.deliveryFee > 0 && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <Truck className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-purple-900">Auto-Calculated Delivery Fee</p>
+                      <p className="text-xs text-purple-700 mt-1">
+                        {quote.deliveryDistance 
+                          ? `${quote.deliveryDistance} km distance (round-trip)`
+                          : 'HCM flat rate'}
+                      </p>
+                    </div>
+                    <p className="text-xl font-bold text-purple-700">
+                      ${quote.deliveryFee.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Original Total */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900">Original Quote Total</p>
+                    {quote.deliveryFee && quote.deliveryFee > 0 && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        (includes delivery fee: ${quote.deliveryFee.toLocaleString()})
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-2xl font-bold text-blue-700">
+                    ${quote.total.toLocaleString()}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Cost Breakdown */}
@@ -197,10 +233,10 @@ export default function UpdateQuoteModal({
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Update Cost Breakdown</h3>
               
               <div className="grid grid-cols-2 gap-4">
-                {/* Delivery Fee */}
+                {/* Delivery Fee (Manual) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Delivery Fee
+                    Delivery Fee (Manual)
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
@@ -283,29 +319,55 @@ export default function UpdateQuoteModal({
               </div>
             </div>
 
-            {/* New Total Calculation */}
+            {/* ✅ UPDATED: New Total Calculation with Breakdown */}
             <div className={`rounded-lg p-4 ${
               total !== quote.total ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
             }`}>
-              <div className="flex items-center justify-between">
-                <span className="text-xl font-bold text-gray-900">New Total Amount:</span>
-                <div className="text-right">
-                  <span className="text-3xl font-bold text-blue-600">
-                    ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div className="space-y-2">
+                {/* Subtotal */}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-700">Subtotal (your inputs):</span>
+                  <span className="font-semibold text-gray-900">
+                    ${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
-                  {total !== quote.total && (
-                    <p className="text-sm font-medium mt-1">
-                      {total > quote.total ? (
-                        <span className="text-red-600">
-                          +${(total - quote.total).toLocaleString()} increase
-                        </span>
-                      ) : (
-                        <span className="text-green-600">
-                          -${(quote.total - total).toLocaleString()} decrease
-                        </span>
-                      )}
-                    </p>
-                  )}
+                </div>
+                
+                {/* Delivery Fee (auto) */}
+                {deliveryFee > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-700 flex items-center gap-1">
+                      <Truck className="w-3 h-3" />
+                      + Delivery Fee (auto):
+                    </span>
+                    <span className="font-semibold text-purple-700">
+                      ${deliveryFee.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                
+                <div className="border-t pt-2 mt-2"></div>
+                
+                {/* Total */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xl font-bold text-gray-900">New Total:</span>
+                  <div className="text-right">
+                    <span className="text-3xl font-bold text-blue-600">
+                      ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                    {total !== quote.total && (
+                      <p className="text-sm font-medium mt-1">
+                        {total > quote.total ? (
+                          <span className="text-red-600">
+                            +${(total - quote.total).toLocaleString()} increase
+                          </span>
+                        ) : (
+                          <span className="text-green-600">
+                            -${(quote.total - total).toLocaleString()} decrease
+                          </span>
+                        )}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
