@@ -527,11 +527,11 @@ export default function DeliveryTrackingPage() {
     }
   }, []);
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(handleRefresh, 30000);
-    return () => clearInterval(interval);
-  }, [handleRefresh]);
+  // Auto-refresh every 30 seconds ← bỏ luôn cái này
+  // useEffect(() => {
+  //   const interval = setInterval(handleRefresh, 30000);
+  //   return () => clearInterval(interval);
+  // }, [handleRefresh]);
 
   // Status update handler
   const handleStatusUpdate = async (newStatus: DeliveryStatus, notes: string) => {
