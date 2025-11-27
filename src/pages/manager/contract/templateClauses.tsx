@@ -90,8 +90,6 @@ const Clauses: React.FC = () => {
     if (appliedTemplate) {
       filtered = filtered.filter((clause) => clause.contractTemplateTitle === appliedTemplate)
     }
-    
-    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     setFilteredClauses(filtered)
     setCurrentPage(1)

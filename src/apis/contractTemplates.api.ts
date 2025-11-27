@@ -81,7 +81,7 @@ export interface TemplateClausePayload {
 }
 
 export interface UpdateTemplateClausePayload {
-  clauseCode: number
+  clauseCode: string
   title: string
   body: string
   isMandatory: boolean

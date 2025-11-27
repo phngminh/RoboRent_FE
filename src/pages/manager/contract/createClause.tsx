@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
-import { Textarea } from '../../../components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { cn } from '../../../lib/utils'
 import { createClause, getAllTemplates, type ContractTemplateResponse } from '../../../apis/contractTemplates.api'
 import { toast } from 'react-toastify'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
+import { DialogDescription } from '@radix-ui/react-dialog'
 
 interface CreateTemplateClauseProps {
   open: boolean
@@ -38,6 +40,7 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
     isEditable: false,
   })
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
+  const quillRef = useRef<ReactQuill>(null)
 
   const fetchTemplates = async () => {
     try {
@@ -58,6 +61,54 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
   useEffect(() => {
     fetchTemplates()
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+
+    const resize = () => {
+      const container = (quill as any).container as HTMLDivElement
+      if (container) {
+        const scrollHeight = container.scrollHeight
+        container.style.minHeight = '150px'
+        container.style.height = scrollHeight < 150 ? '150px' : `${scrollHeight}px`
+      }
+    }
+
+    const handlePaste = (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.startsWith('image/')) {
+            event.preventDefault()
+            return false
+          }
+        }
+      }
+    }
+
+    quill.root.addEventListener('paste', handlePaste)
+    resize()
+    quill.on('text-change', resize)
+
+    return () => {
+      quill.root.removeEventListener('paste', handlePaste)
+      quill.off('text-change', resize)
+    }
+  }, [open])
+
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+
+    const container = (quill as any).container as HTMLDivElement
+    if (container) {
+      const borderColor = errors.body ? 'hsl(var(--destructive))' : 'hsl(var(--border))'
+      container.style.border = `1px solid ${borderColor}`
+      container.style.borderRadius = '0.375rem'
+    }
+  }, [errors.body])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -99,6 +150,10 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
       newErrors.titleOrCode = 'Title or Code is required!'
     }
 
+    if (!formData.body || formData.body.trim() === '' || formData.body === '<p><br></p>') {
+      newErrors.body = 'Body is required!'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -106,6 +161,7 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
   const handleSubmit = async () => {
     if (!validateForm()) return
     try {
+      console.log('Submitting form data:', formData)
       await createClause(formData)
       toast.success('Clause created successfully!')
 
@@ -132,6 +188,16 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
     <p className='text-sm text-destructive mt-1'>{message}</p>
   )
 
+  const handleQuillChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, body: value }))
+    if (errors.body) {
+      setErrors((prev) => {
+        const { body, ...rest } = prev
+        return rest
+      })
+    }
+  }
+
   return (
     <Dialog 
       open={open} 
@@ -142,11 +208,12 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
         }
       }}
     >
-      <DialogContent className='sm:max-w-[580px] flex flex-col max-h-[90vh] p-8'>
+      <DialogContent className='sm:max-w-[640px] flex flex-col max-h-[90vh] p-8'>
         <DialogHeader>
           <DialogTitle>Create New Clause</DialogTitle>
         </DialogHeader>
-        <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1'>
+        <DialogDescription></DialogDescription>
+        <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1 -mt-4'>
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
               <Label htmlFor='contractTemplateId'>Template</Label>
@@ -178,14 +245,28 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
             </div>
             <div className='space-y-2'>
               <Label htmlFor='body'>Body</Label>
-              <Textarea
-                id='body'
-                name='body'
-                value={formData.body}
-                onChange={handleInputChange}
-                placeholder='Enter body'
-                className={cn(errors.body && 'border-destructive')}
-              />
+              <div
+                className={cn(errors.body && 'border-destructive p-1')}
+                style={{
+                  minHeight: '150px',
+                  height: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                <ReactQuill
+                  ref={quillRef}
+                  theme='snow'
+                  value={formData.body}
+                  onChange={handleQuillChange}
+                  placeholder='Enter the content of the clause here...'
+                  style={{
+                    minHeight: '150px',
+                    height: 'auto',
+                    overflow: 'visible'
+                  }}
+                />
+              </div>
               {errors.body && <ErrorMessage message={errors.body} />}
             </div>
             <div className='space-y-2'>
