@@ -14,7 +14,7 @@ const API_URL = 'https://localhost:7249/api'
  */
 export const getMyDeliveries = async (): Promise<ActualDeliveryResponse[]> => {
   const response = await http.get(`${API_URL}/ActualDelivery/my-deliveries`)
-  return response.data.data
+return response.data.data
 }
 
 /**
