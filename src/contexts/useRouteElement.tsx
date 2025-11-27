@@ -21,6 +21,7 @@ import Clauses from '../pages/manager/contract/templateClauses'
 import BreachReports from '../pages/manager/report/breachReports'
 import ContractTemplates from '../pages/manager/contract/allContracts'
 import ShareRentalRequestDetail from '../pages/rental/ShareRentalRequestDetail'
+import DeliveryTrackingPage from '../pages/staff/DeliveryTrackingPage'
 
 export default function useRouteElements() {
   const routeElements = useRoutes([
@@ -59,7 +60,8 @@ export default function useRouteElements() {
             { path: 'account', element: <AccountProfile /> },
             { path: 'rental-requests', element: <StaffRentalRequestsContent /> },
             { path: 'transactions', element: <TransactionsContent /> },
-            { path: 'rental/:id', element: <ShareRentalRequestDetail />}
+            { path: 'rental/:id', element: <ShareRentalRequestDetail />},
+            { path: 'deliveries', element: <DeliveryTrackingPage /> }  
           ]
         },
         {
