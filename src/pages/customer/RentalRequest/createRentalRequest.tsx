@@ -73,6 +73,28 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
 
+  const validateStreetAddress = (value: string): string | null => {
+  if (!value.trim()) return "Street & House Number is required.";
+
+  // Must contain a comma
+  if (!value.includes(",")) 
+    return 'Address must follow format: "number, Street name".';
+
+  const [num, street] = value.split(",").map(s => s.trim());
+
+  // Validate number part
+  if (!num) return "House number is required.";
+  if (!/^[0-9A-Za-z]+$/.test(num))
+    return "House number must be alphanumeric (e.g., 12 or 12A).";
+
+  // Validate street name
+  if (!street) return "Street name is required.";
+  if (/^\d+$/.test(street))
+    return "Street name cannot be numbers only.";
+
+  return null;
+};
+
   
   const parseAddress = (addr?: string) => {
     if (!addr) return { street: '', wardName: ''
@@ -109,7 +131,8 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
     if (!selectedTypeId) fe.selectedTypeId = ['Activity Type is required.']
     if (!phoneNumber.trim()) fe.phoneNumber = ['Phone Number is required.']
     if (!email.trim()) fe.email = ['Email Address is required.']
-    if (!streetAddress.trim()) fe.streetAddress = ['Street & House Number is required.']
+const streetError = validateStreetAddress(streetAddress);
+if (streetError) fe.streetAddress = [streetError];
     if (!selectedProvinceId) fe.selectedProvinceId = ['Province is required.']
     if (!selectedWardId) fe.selectedWardId = ['Ward is required.']
     if (!eventDate) fe.eventDate = ['Event Date is required.']
@@ -328,18 +351,6 @@ const matchedWard = allWards.find(
         {rentalId ? 'Edit Rental Request' : 'Create Rental Request'}
       </h2>
 
-      {/* ERROR PANEL */}
-      {errors.length > 0 && (
-        <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-4 rounded-xl mb-6 shadow-sm">
-          <p className="font-semibold mb-2">Please fix the following issues:</p>
-          <ul className="list-disc pl-6 space-y-1 text-sm">
-            {errors.map((e, i) => (
-              <li key={i}>{e}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {/* ================= EVENT INFO ================= */}
       <div className="p-6 border border-purple-300 rounded-xl space-y-6">
         <div className="flex items-center gap-2">
@@ -506,33 +517,45 @@ const matchedWard = allWards.find(
           </div>
 
           {/* Event Date */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1">Event Date *</label>
-            <DatePicker
-              selected={eventDate ? new Date(eventDate) : null}
-              onChange={d =>
-                setEventDate(d ? d.toISOString().slice(0, 10) : '')
-              }
-              className="w-full border rounded-md px-4 py-2.5 text-sm"
-              dateFormat="dd-MM-yyyy"
-            />
-            <FieldError name="eventDate" />
-          </div>
+<div className="flex flex-col">
+  <label className="text-sm font-medium text-gray-700 mb-1">Event Date *</label>
+
+  <DatePicker
+    selected={eventDate ? new Date(eventDate) : null}
+    onChange={(d) => setEventDate(d ? d.toISOString().slice(0, 10) : '')}
+    className="w-full border rounded-md px-4 py-2.5 text-sm"
+    dateFormat="dd-MM-yyyy"
+  />
+
+  <FieldError name="eventDate" />
+</div>
 
           {/* Time Picker */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <BlockTimePicker label="Start Time" value={startTime} onChange={setStartTime} />
-              <FieldError name="startTime" />
-            </div>
-            <div>
-              <BlockTimePicker label="End Time" value={endTime} onChange={setEndTime} />
-              <FieldError name="endTime" />
-            </div>
+<div className="flex flex-col">
+  <BlockTimePicker label="Start Time" value={startTime} onChange={setStartTime} />
+  <FieldError name="startTime" />
+</div>
+<div className="flex flex-col">
+  <BlockTimePicker label="End Time" value={endTime} onChange={setEndTime} />
+  <FieldError name="endTime" />
+</div>
+
           </div>
         </div>
       </div>
+      {/* ERROR PANEL */}
+{errors.length > 0 && (
+  <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-4 rounded-xl mb-6 shadow-sm">
+    <p className="font-semibold mb-2">Please fix the following issues:</p>
 
+    <div className="space-y-1 text-sm">
+      {errors.map((e, i) => (
+        <p key={i} className="ml-1">• {e}</p>
+      ))}
+    </div>
+  </div>
+)}
       {/* BUTTONS */}
       <div className="flex justify-end gap-4 pt-4">
         <button

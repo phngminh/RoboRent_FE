@@ -11,9 +11,10 @@ import { useAuth } from "../../contexts/AuthContext";
 interface ShareRentalRequestDetailProps {
   rentalId: number;
   onBack: () => void;
+  onNavigateToScheduleBoard?: (groupId: number) => void;
 }
 
-export default function ShareRentalRequestDetail({ rentalId, onBack }: ShareRentalRequestDetailProps) {
+export default function ShareRentalRequestDetail({ rentalId, onBack, onNavigateToScheduleBoard }: ShareRentalRequestDetailProps) {
 const { user } = useAuth();
 const userRole = user?.role; // "Customer", "Staff", "Manager", etc.
 
@@ -260,9 +261,11 @@ const loadSchedule = async () => {
     View Schedules
   </button>
 
+{(rental.status !== "Draft" && rental.status !== "Pending") && (
   <button className="w-full bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100">
     Chat
   </button>
+)}
 
 {/* REQUEST UPDATE BUTTON — hidden if Scheduled OR Customer */}
 {(userRole === "staff" && rental.status === "Received") && (
@@ -475,7 +478,18 @@ const loadSchedule = async () => {
         <div><strong>Customer:</strong> {schedule.customerFullName}</div>
         <div><strong>Rental ID:</strong> {schedule.rentalId}</div>
       </div>
-
+{(userRole === "staff") && (
+<button
+  onClick={() => {
+    if (schedule && onNavigateToScheduleBoard) {
+      onNavigateToScheduleBoard(schedule.activityTypeGroupId);
+    }
+  }}
+  className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 mt-4"
+>
+  View Full Schedule Board
+</button>
+)}
     </div>
   )}
 </div>

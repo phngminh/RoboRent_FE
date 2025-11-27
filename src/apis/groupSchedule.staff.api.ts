@@ -29,8 +29,10 @@ export const addScheduleAsync = async (
         );
         return response.data;
     } catch (error: any) {
-        console.error("Error adding schedule:", error);
-        throw error;
+    return {
+      success: false,
+      message: error.response?.data?.message || "Unexpected error"
+    };
     }
 };
 
@@ -52,7 +54,9 @@ export const updateScheduleAsync = async (
         );
         return response.data;
     } catch (error: any) {
-        console.error("Error update schedule:", error);
-        throw error;
+    return {
+      success: false,
+      message: error.response?.data?.message || "Unexpected error"
+    };
     }
 };

@@ -7,6 +7,7 @@ import {
 } from "../../apis/groupSchedule.staff.api";
 import { getReceivedRentalByStaffIdAsync } from "../../apis/rental.staff.api";
 import { useAuth } from "../../contexts/AuthContext";  
+import ModalPortal from "../../components/staff/ModalPortal";
 
 // -------------------------
 // Types
@@ -137,6 +138,10 @@ const loggedStaffId = user?.accountId ? Number(user.accountId) : undefined;
   const [openModal, setOpenModal] = useState(false);
   const [isUpdate, setIsUpdate] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  
+const scheduledRentalIds = schedules
+  .flatMap(g => g.items)
+  .map(i => i.rentalId);
 
   const [form, setForm] = useState({
     deliveryTime: "",
@@ -181,19 +186,22 @@ const loggedStaffId = user?.accountId ? Number(user.accountId) : undefined;
   // -------------------------
   // CREATE
   // -------------------------
-  const handleCreate = async () => {
-    if (!isFormValid()) {
-      setFormError("Please complete all fields");
-      return;
-    }
+const handleCreate = async () => {
+  if (!isFormValid()) {
+    setFormError("Please complete all fields");
+    return;
+  }
 
-    const res = await addScheduleAsync(Number(loggedStaffId), form);
+  const res = await addScheduleAsync(Number(loggedStaffId), form);
 
-    if (res.success === false) return setFormError(res.message);
+  if (!res.success) {
+    setFormError(res.message);
+    return;
+  }
 
-    setOpenModal(false);
-    await loadData();
-  };
+  setOpenModal(false);
+  await loadData();
+};
 
   // -------------------------
   // UPDATE
@@ -239,27 +247,27 @@ const handleUpdate = async () => {
   // -------------------------
   // OPEN UPDATE MODAL
   // -------------------------
-  const openUpdateModal = (item: ScheduleItem) => {
+const openUpdateModal = (item: ScheduleItem) => {
+  if (item.staffId !== loggedStaffId) {
+    alert("❌ You can only update schedules you created.");
+    return;
+  }
 
-    if (item.staffId !== loggedStaffId) {
-      alert("❌ You can only update schedules you created.");
-      return;
-    }
+  setIsUpdate(true);
+  setEditingId(item.id);
 
-    setIsUpdate(true);
-    setEditingId(item.id);
+  setForm({
+    deliveryTime: item.deliveryTime,
+    startTime: item.startTime,
+    endTime: item.endTime,
+    finishTime: item.finishTime,
+    rentalId: item.rentalId,
+    activityTypeGroupId: item.activityTypeGroupId,
+  });
 
-    setForm({
-      deliveryTime: item.deliveryTime,
-      startTime: item.startTime,
-      endTime: item.endTime,
-      finishTime: item.finishTime,
-      rentalId: item.rentalId,
-      activityTypeGroupId: item.activityTypeGroupId,
-    });
-
-    setOpenModal(true);
-  };
+  setFormError("");   // <---- IMPORTANT
+  setOpenModal(true);
+};
 
   // -------------------------
   // Filter Schedules
@@ -279,7 +287,7 @@ const handleUpdate = async () => {
   if (loading) return <p className="p-6 text-gray-500">Loading schedules...</p>;
 
   return (
-    <div className="p-6 space-y-6">
+  <div className="min-h-screen p-6 space-y-6 bg-gray-50">
       {/* ===================== */}
       {/*        BACK BTN       */}
       {/* ===================== */}
@@ -305,6 +313,7 @@ const handleUpdate = async () => {
               rentalId: 0,
               activityTypeGroupId: groupId,
             });
+            setFormError("");
             setOpenModal(true);
           }}
           className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
@@ -357,7 +366,8 @@ const handleUpdate = async () => {
       {/* MODAL */}
 {openModal && (
   // Overlay wrapper
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+    <ModalPortal>
+<div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-40 flex items-center justify-center z-[9999] p-4">
     <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
       {/* Close Button */}
       <button
@@ -385,18 +395,32 @@ const handleUpdate = async () => {
           </label>
 <select
   value={form.rentalId}
-  disabled={isUpdate} // ⬅️ DISABLE WHEN UPDATING
-  onChange={(e) => updateForm("rentalId", Number(e.target.value))}
+  disabled={isUpdate}
+  onChange={(e) => {
+    const rid = Number(e.target.value);
+    updateForm("rentalId", rid);
+
+    if (!isUpdate) {
+      const rental = receivedRentals.find((r: any) => r.id === rid);
+      if (rental) {
+        updateForm("startTime", rental.startTime);
+        updateForm("endTime", rental.endTime);
+      }
+    }
+  }}
   className={`w-full px-3 py-2 border border-gray-300 rounded-lg bg-white 
               ${isUpdate ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "cursor-pointer"}
               focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
 >
   <option value={0}>-- Select a rental --</option>
-  {receivedRentals.map((r: any) => (
-    <option key={r.id} value={r.id}>
-      #{r.id} — {r.eventName}
-    </option>
-  ))}
+
+  {receivedRentals
+    .filter((r: any) => isUpdate || !scheduledRentalIds.includes(r.id))
+    .map((r: any) => (
+      <option key={r.id} value={r.id}>
+        #{r.id} — {r.eventName}
+      </option>
+    ))}
 </select>
 
         </div>
@@ -422,6 +446,7 @@ const handleUpdate = async () => {
           <input
             type="time"
             value={form.startTime}
+            disabled={true}
             onChange={(e) => updateForm("startTime", e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
@@ -435,6 +460,7 @@ const handleUpdate = async () => {
           <input
             type="time"
             value={form.endTime}
+            disabled={true}
             onChange={(e) => updateForm("endTime", e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
@@ -462,6 +488,7 @@ const handleUpdate = async () => {
       </button>
     </div>
   </div>
+  </ModalPortal>
 )}
 
     </div>

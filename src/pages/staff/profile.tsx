@@ -41,6 +41,10 @@ const Profile = () => {
           <ShareRentalRequestDetail
             rentalId={selectedId}
             onBack={() => setActiveTab("rental-requests")}
+                  onNavigateToScheduleBoard={(groupId) => {
+          setSelectedId(groupId);       
+          setActiveTab("schedule-board");
+      }}
           />
         ) : (
           <div>No rental selected.</div>

@@ -15,6 +15,7 @@ import CustomerQuoteDetailModal from '../../components/chat/CustomerQuoteDetailM
 import { toast } from 'react-toastify'
 import { formatDistanceToNow } from 'date-fns'
 import Header from '../../components/header'
+import { getRentalByIdAsync } from '../../apis/rental.customer.api'
 
 // Interface cho rental trong sidebar
 interface CustomerRental {
@@ -48,6 +49,7 @@ export default function CustomerChatPage() {
   const [sidebarWidth, setSidebarWidth] = useState(320)
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true)
   const [lastViewedQuoteTime, setLastViewedQuoteTime] = useState<Date | null>(null)
+  const [rentalInfo, setRentalInfo] = useState<any | null>(null)
 
   const hasPendingDemo = messages.some(
     msg => msg.messageType === MessageType.Demo && msg.status === DemoStatus.Pending
@@ -81,24 +83,23 @@ export default function CustomerChatPage() {
     rental.eventDate.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // Placeholder rental data
-  const [rentalDetails] = useState<RentalDetailsPlaceholder>({
-    id: parseInt(rentalId || '0'),
-    eventDate: 'June 15-16, 2025',
-    eventTime: '9:00 AM - 5:00 PM',
-    eventAddress: 'Tech Convention Center, 123 Innovation Blvd, San Francisco, CA',
-    packageName: 'Registration Assistant Package',
-    robotsRequested: 4,
-    customizationNotes: 'Company branding on display screens, welcome message in 3 languages, integration with event app for badge scanning',
-    companyName: 'TechConf Inc.',
-    customerName: user?.name || 'Customer',
-    phoneNumber: '(555) 123-4567',
-    email: user?.email || 'customer@example.com'
-  })
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+
+  useEffect(() => {
+  const loadRentalInfo = async () => {
+    if (!rentalId) return
+      try {
+        const data = await getRentalByIdAsync(parseInt(rentalId))
+        setRentalInfo(data)
+      } catch (err) {
+        console.error("Failed to load rental info:", err)
+      }
+    }
+
+    loadRentalInfo()
+  }, [rentalId])
 
   // Load messages
   useEffect(() => {
@@ -490,7 +491,7 @@ export default function CustomerChatPage() {
                     Chat with Staff
                   </h1>
                   <p className="text-sm text-gray-500">
-                    Rental ID: #{rentalId} • <span className="text-blue-600">Demo Phase</span>
+                    Event Name: {rentalInfo.eventName} • <span className="text-blue-600">{rentalInfo.status}</span>
                   </p>
                 </div>
               </div>
@@ -570,48 +571,64 @@ export default function CustomerChatPage() {
         {/* Right Sidebar */}
         {isRightSidebarOpen && (
           <div className="w-96 border-l border-gray-200 bg-gray-50 overflow-y-auto">
-            {/* Rental Request Info */}
-            <div className="p-6 bg-white border-b border-gray-200">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">
-                Your Rental Request
-              </h2>
+{/* Rental Request Info */}
+<div className="p-6 bg-white border-b border-gray-200">
+  <h2 className="text-lg font-bold text-gray-900 mb-4">
+    Your Rental Request
+  </h2>
 
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {rentalDetails.eventDate}
-                    </p>
-                    <p className="text-xs text-gray-600">{rentalDetails.eventTime}</p>
-                  </div>
-                </div>
+  {!rentalInfo ? (
+    <p className="text-gray-500 text-sm">Loading...</p>
+  ) : (
+    <div className="space-y-4">
 
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm text-gray-900">{rentalDetails.eventAddress}</p>
-                  </div>
-                </div>
+      {/* DATE + TIME */}
+      <div className="flex items-start gap-3">
+        <Calendar className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-sm font-medium text-gray-900">
+            {new Date(rentalInfo.eventDate).toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric"
+            })}
+          </p>
 
-                <div className="flex items-start gap-3">
-                  <Package className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {rentalDetails.packageName}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {rentalDetails.robotsRequested} robots requested for ~{rentalDetails.robotsRequested * 100} attendees
-                    </p>
-                  </div>
-                </div>
-              </div>
+          <p className="text-xs text-gray-600">
+            {rentalInfo.startTime?.substring(0,5)} - {rentalInfo.endTime?.substring(0,5)}
+          </p>
+        </div>
+      </div>
 
-              <button className="w-full mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
-                Edit Request
-              </button>
-            </div>
+      {/* LOCATION */}
+      <div className="flex items-start gap-3">
+        <MapPin className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-sm text-gray-900">
+            {rentalInfo.address}
+          </p>
+          <p className="text-xs text-gray-600">
+            {rentalInfo.city}
+          </p>
+        </div>
+      </div>
 
+      {/* PACKAGE */}
+      <div className="flex items-start gap-3">
+        <Package className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-sm font-medium text-gray-900">
+            {rentalInfo.eventActivityName}
+          </p>
+          <p className="text-xs text-gray-600">
+            {rentalInfo.activityTypeName}
+          </p>
+        </div>
+      </div>
+
+    </div>
+  )}
+</div>
             {/* Quotes Received */}
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
