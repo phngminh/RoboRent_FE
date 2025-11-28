@@ -21,6 +21,9 @@ import Clauses from '../pages/manager/contract/templateClauses'
 import BreachReports from '../pages/manager/report/breachReports'
 import ContractTemplates from '../pages/manager/contract/allContracts'
 import ShareRentalRequestDetail from '../pages/rental/ShareRentalRequestDetail'
+import DeliveryTrackingPage from '../pages/staff/DeliveryTrackingPage'
+import RobotGroupContent from '../pages/staff/robotGroup'
+import ScheduleBoard from '../pages/staff/scheduleBoard'
 
 export default function useRouteElements() {
   const routeElements = useRoutes([
@@ -39,7 +42,7 @@ export default function useRouteElements() {
           children: [
             { path: 'dashboard', element: <DashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
-            { path: 'rental-requests', element: <CustomerRentalRequestsContent /> },
+            { path: 'rental-requests', element: <CustomerRentalRequestsContent onCreate={() => {}} onView={() => {}} /> },
             { path: 'transactions', element: <TransactionsContent /> }
           ]
         },
@@ -57,14 +60,17 @@ export default function useRouteElements() {
           children: [
             { path: 'dashboard', element: <DashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
-            { path: 'rental-requests', element: <StaffRentalRequestsContent /> },
+            { path: 'rental-requests', element: <StaffRentalRequestsContent onCreate={() => {}} onView={() => {}} /> },
             { path: 'transactions', element: <TransactionsContent /> },
-            { path: 'rental/:id', element: <ShareRentalRequestDetail />}
+            { path: 'rental/:id', element: <ShareRentalRequestDetail onBack={() => {}} />},
+            { path: 'deliveries', element: <DeliveryTrackingPage /> },
+            { path: 'robot-group', element: <RobotGroupContent /> },
+            { path: 'schedule-board/:groupId', element: <ScheduleBoard /> }
           ]
         },
         {
           path: 'chat/:rentalId', element: <StaffChatPage />
-        }
+        },
       ]
     },
     //================ Manager routes ================

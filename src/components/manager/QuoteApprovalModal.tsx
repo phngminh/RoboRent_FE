@@ -1,6 +1,6 @@
 // src/components/manager/QuoteApprovalModal.tsx
 import { useState, useEffect } from 'react'
-import { X, CheckCircle, XCircle, AlertCircle, Calendar, Package, User } from 'lucide-react'
+import { X, CheckCircle, XCircle, AlertCircle, Calendar, Package, User, Truck } from 'lucide-react'
 import { getPriceQuoteById, managerAction } from '../../apis/priceQuote.api'
 import type { PriceQuoteResponse } from '../../types/chat.types'
 import { toast } from 'react-toastify'
@@ -119,6 +119,27 @@ export default function QuoteApprovalModal({
             {/* Cost Breakdown */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
+              
+              {/* Delivery Fee Info Banner */}
+              {quote.deliveryFee && quote.deliveryFee > 0 && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <Truck className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-purple-900">Auto-Calculated Delivery Fee</p>
+                      <p className="text-xs text-purple-700 mt-1">
+                        {quote.deliveryDistance 
+                          ? `${quote.deliveryDistance} km distance (round-trip)`
+                          : 'HCM flat rate'}
+                      </p>
+                    </div>
+                    <p className="text-xl font-bold text-purple-700">
+                      ${quote.deliveryFee.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
               <div className="bg-gray-50 rounded-lg overflow-hidden">
                 <table className="w-full">
                   <thead>
@@ -128,8 +149,19 @@ export default function QuoteApprovalModal({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
+                    {/* Delivery Fee (Auto) */}
+                    {quote.deliveryFee && quote.deliveryFee > 0 && (
+                      <tr className="bg-purple-50">
+                        <td className="px-4 py-3 text-purple-900 font-medium">
+                          Delivery Fee (Auto-calculated)
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-purple-900">
+                          ${quote.deliveryFee?.toLocaleString() || '0.00'}
+                        </td>
+                      </tr>
+                    )}
                     <tr>
-                      <td className="px-4 py-3 text-gray-900">Delivery & Setup</td>
+                      <td className="px-4 py-3 text-gray-900">Delivery & Setup (Manual)</td>
                       <td className="px-4 py-3 text-right font-semibold text-gray-900">
                         ${quote.delivery?.toLocaleString() || '0.00'}
                       </td>

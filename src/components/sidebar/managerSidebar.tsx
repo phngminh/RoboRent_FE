@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Calendar, CreditCard, ChevronRight, ChartColumn, Newspaper, ChevronDown } from 'lucide-react'
+import path from '../../constants/path'
 
 interface ProfileSidebarProps {
   activeTab: string
@@ -11,16 +12,16 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   const [contractsExpanded, setContractsExpanded] = useState(false)
 
   const menuItems = [
-    { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard },
-    { id: 'rental-requests', label: 'Rental Requests', icon: Calendar },
-    { id: 'quotes', label: 'Price Quotes', icon: CreditCard },
+    { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_MANAGER },
+    { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.MANAGER_REQUESTS },
+    { id: 'quotes', label: 'Price Quotes', icon: CreditCard, path: path.MANAGER_QUOTES },
     { id: 'contracts', label: 'Contracts', icon: Newspaper, hasSubItems: true },
-    { id: 'reports', label: 'Reports', icon: ChartColumn },
+    { id: 'reports', label: 'Reports', icon: ChartColumn, path: path.MANAGER_REPORTS },
   ]
 
   const contractSubItems = [
-    { id: 'contract-templates', label: 'Contract Templates' },
-    { id: 'templates-clauses', label: 'Template Clauses' },
+    { id: 'contract-templates', label: 'Contract Templates', path: path.MANAGER_CONTRACT },
+    { id: 'templates-clauses', label: 'Template Clauses', path: path.MANAGER_CLAUSES },
   ]
 
   useEffect(() => {
@@ -38,13 +39,13 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
     } else {
       setContractsExpanded(true)
       if (!isContractsActive) {
-        navigate('contract-templates')
+        navigate(path.MANAGER_CONTRACT)
       }
     }
   }
 
-  const handleSubItemClick = (subItemId: string) => {
-    navigate(subItemId)
+  const handleSubItemClick = (subItemPath: string) => {
+    navigate(subItemPath)
     setContractsExpanded(true)
   }
 
@@ -61,15 +62,15 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
                 <div key={item.id}>
                   <button
                     onClick={handleContractClick}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors duration-200 ${
                       isActive
                         ? 'bg-gray-100 text-gray-800'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                     }`}
                   >
                     <div className='flex items-center space-x-3'>
-                      <Icon size={20} />
-                      <span className='font-medium'>{item.label}</span>
+                      <Icon size={20} className='shrink-0' />
+                      <span className='font-medium whitespace-nowrap'>{item.label}</span>
                     </div>
                     {shouldShowSubItems ? (
                       <ChevronDown size={16} />
@@ -85,14 +86,14 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
                         return (
                           <button
                             key={subItem.id}
-                            onClick={() => handleSubItemClick(subItem.id)}
-                            className={`w-full flex items-center px-4 py-2 rounded-lg transition-all duration-200 text-sm ${
+                            onClick={() => handleSubItemClick(subItem.path)}
+                            className={`w-full flex items-center px-4 py-2 rounded-lg transition-colors duration-200 text-sm ${
                               isSubActive
                                 ? 'bg-blue-100 text-blue-800 font-medium'
                                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                             }`}
                           >
-                            <span>{subItem.label}</span>
+                            <span className='whitespace-nowrap'>{subItem.label}</span>
                           </button>
                         )
                       })}
@@ -105,16 +106,16 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
             return (
               <button
                 key={item.id}
-                onClick={() => navigate(item.id)}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
+                onClick={() => navigate(item.path!)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors duration-200 ${
                   isActive
                     ? 'bg-gray-100 text-gray-800'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                 }`}
               >
                 <div className='flex items-center space-x-3'>
-                  <Icon size={20} />
-                  <span className='font-medium'>{item.label}</span>
+                  <Icon size={20} className='shrink-0' />
+                  <span className='font-medium whitespace-nowrap'>{item.label}</span>
                 </div>
                 {isActive && <ChevronRight size={16} />}
               </button>

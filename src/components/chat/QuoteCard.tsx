@@ -1,5 +1,5 @@
 // src/components/chat/QuoteCard.tsx
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Truck } from 'lucide-react' // ✅ ADD Truck
 import type { PriceQuoteResponse } from '../../types/chat.types'
 import { QuoteStatus } from '../../types/chat.types'
 
@@ -77,10 +77,20 @@ export default function QuoteCard({ quote, onViewDetails, isNew = false }: Quote
         </span>
       </div>
 
-      {/* Price breakdown */}
+      {/* ✅ UPDATED: Price breakdown with DeliveryFee */}
       <div className="space-y-1 mb-3 text-sm">
+        {/* Delivery Fee (Auto) - Prominent if exists */}
+        {quote.deliveryFee && quote.deliveryFee > 0 && (
+          <div className="flex justify-between text-purple-700 bg-purple-50 -mx-2 px-2 py-1 rounded">
+            <span className="flex items-center gap-1 font-medium">
+              <Truck className="w-3 h-3" />
+              Delivery Fee (Auto)
+            </span>
+            <span className="font-semibold">${quote.deliveryFee?.toLocaleString() || '0.00'}</span>
+          </div>
+        )}
         <div className="flex justify-between text-gray-600">
-          <span>Delivery</span>
+          <span>Delivery (Manual)</span>
           <span>${quote.delivery?.toLocaleString() || '0.00'}</span>
         </div>
         <div className="flex justify-between text-gray-600">
