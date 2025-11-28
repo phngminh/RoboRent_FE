@@ -144,6 +144,14 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
       newErrors.body = 'Body is required!'
     }
 
+    if (formData.clauseCode.trim().length > 100) {
+      newErrors.clauseCode = 'Clause code must not exceed 100 characters!'
+    }
+
+    if (formData.title.trim().length > 100) {
+      newErrors.title = 'Title must not exceed 100 characters!'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }

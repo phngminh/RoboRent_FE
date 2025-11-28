@@ -154,6 +154,10 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
       newErrors.body = 'Body is required!'
     }
 
+    if (formData.titleOrCode.trim().length > 100) {
+      newErrors.titleOrCode = 'Title or Code must not exceed 100 characters!'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }

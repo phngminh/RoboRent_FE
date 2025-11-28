@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from '../../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Button } from '../../../components/ui/button'
-import { Search, Plus, Eye, Edit, Trash2 } from 'lucide-react'
+import { Search, Plus, Eye, Edit, Lock, Unlock } from 'lucide-react'
 import { getAllTemplates, type ContractTemplateResponse } from '../../../apis/contractTemplates.api'
 import DetailContractTemplate from './detailContractTemplate'
 import CreateContractTemplate from './createContractTemplate'
@@ -66,14 +66,16 @@ const ContractTemplates: React.FC = () => {
     setCurrentPage(1)
   }, [templates, search, appliedStatus])
 
-  const statusOptions = ['All Status', 'Initiated', 'Completed']
+  const statusOptions = ['All Status', 'Initiated', 'Updated', 'Disabled']
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Initiated':
         return 'bg-gray-100 text-gray-800'
-      case 'Completed':
+      case 'Updated':
         return 'bg-green-100 text-green-800'
+      case 'Disabled':
+        return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
@@ -143,6 +145,27 @@ const ContractTemplates: React.FC = () => {
       className: 'w-[200px] whitespace-nowrap',
     },
   ]
+
+  const getActionButton = (template: ContractTemplateResponse) => {
+    const isDisabled = template.status === 'Disabled'
+    const baseClass = 'flex items-center space-x-1 rounded px-2 py-1 text-sm transition-colors'
+    const actionClass = isDisabled 
+      ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+      : 'bg-red-100 text-red-800 hover:bg-red-200'
+    const Icon = isDisabled ? Unlock : Lock
+    return (
+      <button
+        onClick={() => {
+          setSelectedTemplate(template)
+          setIsDeleteModalVisible(true)
+        }}
+        className={`${baseClass} ${actionClass}`}
+      >
+        <Icon size={14} />
+        <span>{isDisabled ? 'Activate' : 'Disable'}</span>
+      </button>
+    )
+  }
 
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
@@ -263,13 +286,13 @@ const ContractTemplates: React.FC = () => {
                             content = new Date(template.createdAt).toLocaleDateString()
                           } else if (column.key === 'actions') {
                             content = (
-                              <div className='flex items-center justify-center space-x-3 text-sm text-gray-600'>
+                              <div className='flex items-center justify-center space-x-2 text-sm'>
                                 <button
                                   onClick={() => {
                                     setSelectedTemplate(template)
                                     setIsDetailModalVisible(true)
                                   }}
-                                  className='flex items-center space-x-1 hover:text-gray-800'
+                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
                                 >
                                   <Eye size={14} />
                                   <span>View</span>
@@ -279,21 +302,12 @@ const ContractTemplates: React.FC = () => {
                                     setSelectedTemplate(template)
                                     setIsEditModalVisible(true)
                                   }}
-                                  className='flex items-center space-x-1 hover:text-gray-800'
+                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors'
                                 >
                                   <Edit size={14} />
                                   <span>Edit</span>
                                 </button>
-                                <button
-                                   onClick={() => {
-                                    setSelectedTemplate(template)
-                                    setIsDeleteModalVisible(true)
-                                  }}
-                                  className='flex items-center space-x-1 hover:text-gray-800'
-                                >
-                                  <Trash2 size={14} />
-                                  <span>Delete</span>
-                                </button>
+                                {getActionButton(template)}
                               </div>
                             )
                           } else {

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '../../../components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import type { ContractTemplateResponse } from '../../../apis/contractTemplates.api'
 
@@ -27,6 +27,7 @@ const DetailContractTemplate: React.FC<DetailContractTemplateProps> = ({ open, o
         <DialogHeader>
           <DialogTitle className='text-center text-2xl'>{template.title}</DialogTitle>
         </DialogHeader>
+        <DialogDescription></DialogDescription>
         <div className='flex-1 overflow-y-auto overflow-x-visible pr-3 pl-3 space-y-6'>
           <div className='space-y-2'>
             <div

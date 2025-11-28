@@ -21,7 +21,17 @@ export interface ContractTemplateResponse {
   updatedByName: string
 }
 
-export interface ContractTemplateWithBodyPayload {
+export interface CreateContractTemplatePayload {
+  templateCode: string
+  title: string
+  description: string
+  bodyJson: string
+  status: string
+  version: string
+  createdBy: number
+}
+
+export interface CreateContractTemplateWithBodyPayload {
   templateCode: string
   title: string
   description: string
@@ -48,7 +58,11 @@ export const getTemplateById = (id: number) => {
   return http.get(`/ContractTemplates/${id}`)
 }
 
-export const createTemplateWithBody = (data: ContractTemplateWithBodyPayload) => {
+export const createTemplate = (data: CreateContractTemplatePayload) => {
+  return http.post('/ContractTemplates', data)
+}
+
+export const createTemplateWithBody = (data: CreateContractTemplateWithBodyPayload) => {
   return http.post('/ContractTemplates/create-with-body', data)
 }
 
@@ -56,8 +70,12 @@ export const editTemplate = (id: number, data: UpdateContractTemplatePayload) =>
   return http.put(`/ContractTemplates/${id}`, data)
 }
 
-export const deleteTemplate = (id: number) => {
+export const disableTemplate = (id: number) => {
   return http.delete(`/ContractTemplates/${id}`)
+}
+
+export const activateTemplate = (id: number) => {
+  return http.patch(`/ContractTemplates/${id}/activate`)
 }
 
 export interface TemplateClauseResponse {
