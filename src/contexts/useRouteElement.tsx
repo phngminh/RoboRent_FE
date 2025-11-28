@@ -22,6 +22,7 @@ import BreachReports from '../pages/manager/report/breachReports'
 import ContractTemplates from '../pages/manager/contract/allContracts'
 import ShareRentalRequestDetail from '../pages/rental/ShareRentalRequestDetail'
 import DeliveryTrackingPage from '../pages/staff/DeliveryTrackingPage'
+import StaffAssignmentPage from '../pages/manager/StaffAssignmentPage'
 
 export default function useRouteElements() {
   const routeElements = useRoutes([
@@ -84,8 +85,12 @@ export default function useRouteElements() {
             { path: 'quotes', element: <ManagerQuotesPage /> },
             { path: 'contract-templates', element: <ContractTemplates /> },
             { path: 'templates-clauses', element: <Clauses /> },
-            { path: 'reports', element: <BreachReports /> }
+            { path: 'reports', element: <BreachReports /> },
           ]
+        },
+        { 
+          path: 'staff-assignment', 
+          element: <StaffAssignmentPage /> 
         }
       ]
     },

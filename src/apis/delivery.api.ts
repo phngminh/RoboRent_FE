@@ -3,7 +3,11 @@ import http from '../utils/http'
 import type {
   ActualDeliveryResponse,
   UpdateStatusRequest,
-  UpdateNotesRequest
+  UpdateNotesRequest,
+  ConflictCheckResponse,
+  AssignStaffRequest,
+  StaffListResponse,
+  PendingDeliveriesResponse
 } from '../types/delivery.types'
 
 const API_URL = 'https://localhost:7249/api'
@@ -51,5 +55,75 @@ export const updateDeliveryNotes = async (
   request: UpdateNotesRequest
 ): Promise<ActualDeliveryResponse> => {
   const response = await http.put(`${API_URL}/ActualDelivery/${id}/notes`, request)
+  return response.data
+}
+
+/**
+ * GET /api/ActualDelivery/pending
+ * Query params: page, pageSize, searchTerm, sortBy (date|name|customer|location)
+ * Returns: Paginated list of pending deliveries (not assigned yet)
+ */
+export const getPendingDeliveries = async (
+  page: number = 1,
+  pageSize: number = 50,
+  searchTerm?: string,
+  sortBy: 'date' | 'name' | 'customer' | 'location' = 'date'
+): Promise<PendingDeliveriesResponse> => {
+  const params: any = { page, pageSize, sortBy }
+  if (searchTerm) params.searchTerm = searchTerm
+
+  const response = await http.get(`${API_URL}/ActualDelivery/pending`, { params })
+  return response.data
+}
+
+/**
+ * GET /api/Admin/staff
+ * Query params: page, pageSize, status, searchTerm
+ * Returns: Paginated list of staff members
+ */
+export const getStaffList = async (
+  page: number = 1,
+  pageSize: number = 100,
+  status?: string,
+  searchTerm?: string
+): Promise<StaffListResponse> => {
+  const params: any = { page, pageSize }
+  if (status) params.status = status
+  if (searchTerm) params.searchTerm = searchTerm
+
+  const response = await http.get(`${API_URL}/Admin/staff`, { params })
+  return response.data
+}
+
+/**
+ * GET /api/ActualDelivery/check-conflict
+ * Query params: staffId, groupScheduleId
+ * Returns: Conflict check result with list of conflicting deliveries
+ */
+export const checkStaffConflict = async (
+  staffId: number,
+  groupScheduleId: number
+): Promise<ConflictCheckResponse> => {
+  const response = await http.get(`${API_URL}/ActualDelivery/check-conflict`, {
+    params: { staffId, groupScheduleId }
+  })
+  return response.data
+}
+
+/**
+ * PUT /api/ActualDelivery/{id}/assign-staff
+ * Body: { staffId: number, notes?: string }
+ * Returns: Updated delivery with assigned staff
+ * Validates: Delivery must be Pending, checks for schedule conflicts
+ * Changes status: Pending → Assigned
+ */
+export const assignStaff = async (
+  deliveryId: number,
+  request: AssignStaffRequest
+): Promise<ActualDeliveryResponse> => {
+  const response = await http.put(
+    `${API_URL}/ActualDelivery/${deliveryId}/assign-staff`,
+    request
+  )
   return response.data
 }

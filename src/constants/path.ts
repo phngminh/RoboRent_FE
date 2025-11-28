@@ -32,6 +32,7 @@ const path = {
   MANAGER_REPORTS: '/manager/reports',
   MANAGER_CONTRACT: '/manager/contract-templates',
   MANAGER_CLAUSES: '/manager/templates-clauses',
+  MANAGER_STAFF_ASSIGNMENT: '/manager/staff-assignment',
   
   //============= Admin ============
   BASE_ADMIN: '/admin',
