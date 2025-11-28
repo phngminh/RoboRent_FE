@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Send, Calendar, MapPin, Package, CheckCircle2, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { signalRService } from '../../utils/signalr'
-import { getChatMessages, sendMessage, getCustomerChatRooms } from '../../apis/chat.api'
+import { getChatMessages, sendMessage, getCustomerChatRooms, getMyChatRooms } from '../../apis/chat.api'
 import { getQuotesByRentalId, customerAction, getPriceQuoteById } from '../../apis/priceQuote.api'
 import type { ChatMessageResponse, RentalDetailsPlaceholder, RentalQuotesResponse, PriceQuoteResponse } from '../../types/chat.types'
 import { MessageType, DemoStatus, QuoteStatus } from '../../types/chat.types'
@@ -160,7 +160,7 @@ export default function CustomerChatPage() {
       
       setIsLoadingRentals(true)
       try {
-        const response = await getCustomerChatRooms(user.id, 1, 50)
+        const response = await getMyChatRooms(1, 50)
         const mappedRentals: CustomerRental[] = response.rooms.map(room => ({
           id: room.id,
           rentalId: room.rentalId,

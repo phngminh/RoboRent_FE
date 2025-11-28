@@ -20,8 +20,11 @@ const path = {
   DASHBOARD_STAFF: '/staff/dashboard',
   STAFF_PROFILE: '/staff/profile',
   STAFF_REQUESTS: '/staff/rental-requests',
+  STAFF_DELIVERIES: '/staff/deliveries',
   STAFF_TRANSACTIONS: '/staff/transactions',
   STAFF_CHAT: '/staff/chat/:rentalId',
+  STAFF_ACCOUNT: '/staff/account',
+  STAFF_ROBOT_GROUP: '/staff/robot-group',
 
   //============= Manager ============
   BASE_MANAGER: '/manager',
