@@ -9,6 +9,7 @@ import Header from '../../components/header'
 import ShareRentalRequestDetail from '../rental/ShareRentalRequestDetail'
 import RobotGroupContent from './robotGroup'
 import ScheduleBoard from './scheduleBoard'
+import DeliveryTrackingPage from './DeliveryTrackingPage'
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -35,6 +36,9 @@ const Profile = () => {
 
       case 'transactions':
         return <TransactionsContent />
+
+      case 'deliveries':  
+        return <DeliveryTrackingPage />  
 
       case 'rental-detail':
         return selectedId !== null ? (

@@ -1,5 +1,5 @@
 import React from 'react'
-import { LayoutDashboard, Calendar, CreditCard,ChevronRight, User } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard,ChevronRight, User, Truck } from 'lucide-react'
 
 interface ProfileSidebarProps {
   activeTab: string
@@ -10,6 +10,7 @@ const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab, onTabChange })
   const menuItems = [
     { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard },
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar },
+    // { id: 'deliveries', label: 'Delivery Tracking', icon: <Truck /> },
     { id: 'transactions', label: 'Transactions', icon: CreditCard },
     { id: 'account', label: 'Account', icon: User },
     { id: 'robot-group', label: 'Robot Groups', icon: Calendar}

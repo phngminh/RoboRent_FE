@@ -56,6 +56,16 @@ export const getUnreadCount = async (rentalId: number): Promise<{ rentalId: numb
   return response.data
 }
 
+export const getMyChatRooms = async (
+  page: number = 1,
+  pageSize: number = 50
+): Promise<ChatRoomListResponse> => {
+  const response = await http.get(`${API_URL}/Chat/rooms`, {
+    params: { page, pageSize }
+  })
+  return response.data
+}
+
 export const getStaffChatRooms = async (
   staffId: number,
   page: number = 1,
