@@ -44,23 +44,17 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   }
 
   const handleSendRequest = async (rentalId: number) => {
-  try {
-    setLoading(true);
-
-    // Step 1: Send rental to manager (same as CreateRentalDetailContent)
-    await customerSendRentalAsync(rentalId);
-
-    // Step 2: Refresh rentals list
-    await fetchData();
-
-  } catch (err: any) {
-    console.error("Error sending rental:", err);
-    alert(err?.response?.data?.message || "Failed to send rental");
-  } finally {
-    setLoading(false);
+    try {
+      setLoading(true)
+      await customerSendRentalAsync(rentalId)
+      await fetchData()
+    } catch (err: any) {
+      console.error("Error sending rental:", err)
+      alert(err?.response?.data?.message || "Failed to send rental")
+    } finally {
+      setLoading(false)
+    }
   }
-};
-
 
   const filterData = () => {
     let filtered = [...allRentals]
@@ -288,40 +282,32 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{eventDate}</td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{createdDate}</td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center'>
-                <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center'>
-                  <div className='flex justify-center space-x-3'>
-
-                    {/* View */}
-                    <button 
-                    onClick={() => onView(request.id)}
-                    className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
-    >
-      <Eye size={14} />
-      <span>View</span>
-    </button>
-
-    {/* Chat */}
-    <button
-      onClick={() => navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))}
-      className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
-    >
-                    <MessageCircle size={14} />
-                      <span>Chat</span>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center'>
+                      <div className='flex justify-center space-x-3'>
+                        <button 
+                          onClick={() => onView(request.id)}
+                          className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
+                        >
+                          <Eye size={14} />
+                          <span>View</span>
                         </button>
-
-    {/* Send */}
-    <button
-      onClick={() => handleSendRequest(request.id)}
-      className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
-      disabled={loading}
-    >
-      📤
-      <span>Send</span>
-    </button>
-
+                        <button
+                          onClick={() => navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))}
+                          className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
+                        >
+                          <MessageCircle size={14} />
+                          <span>Chat</span>
+                        </button>
+                        <button
+                          onClick={() => handleSendRequest(request.id)}
+                          className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
+                          disabled={loading}
+                        >
+                          📤
+                          <span>Send</span>
+                        </button>
                           </div>
                         </td>
-
                       </td>
                     </tr>
                   )

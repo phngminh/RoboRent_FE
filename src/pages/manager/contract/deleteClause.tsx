@@ -1,5 +1,5 @@
 import React from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '../../../components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import { type TemplateClauseResponse, deleteClause } from '../../../apis/contractTemplates.api'
 import { toast } from 'react-toastify'
@@ -43,6 +43,7 @@ const DeleteTemplateClause: React.FC<DeleteTemplateClauseProps> = ({ open, onClo
             Are you sure you want to remove clause <span className='text-blue-600'>"{decodeHtml(clause?.title || '')}"</span> from "{decodeHtml(clause?.contractTemplateTitle || '')}"?
           </DialogTitle>
         </DialogHeader>
+        <DialogDescription></DialogDescription>
         <div className='pb-1 -mt-2'>
           <p className='text-base text-gray-600'>
             This action <span className='font-semibold'>cannot be undone</span>.

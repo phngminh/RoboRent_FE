@@ -90,8 +90,6 @@ const Clauses: React.FC = () => {
     if (appliedTemplate) {
       filtered = filtered.filter((clause) => clause.contractTemplateTitle === appliedTemplate)
     }
-    
-    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     setFilteredClauses(filtered)
     setCurrentPage(1)
@@ -284,7 +282,8 @@ const Clauses: React.FC = () => {
           </h2>
           <Button
             onClick={() => setIsCreateModalVisible(true)}
-            className='absolute right-6 top-3.5 bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2'
+            disabled={templateOptions.length === 0}
+            className='absolute right-6 top-3.5 bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600'
           >
             <Plus size={18} />
             <span>Create</span>
@@ -348,13 +347,13 @@ const Clauses: React.FC = () => {
                             content = new Date(clause.createdAt).toLocaleDateString()
                           } else if (column.key === 'actions') {
                             content = (
-                              <div className='flex items-center justify-center space-x-2 text-sm text-gray-600'>
+                              <div className='flex items-center justify-center space-x-2 text-sm'>
                                 <button
                                   onClick={() => {
                                     setSelectedClause(clause)
                                     setIsDetailModalVisible(true)
                                   }}
-                                  className='flex items-center space-x-1 hover:text-gray-800'
+                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
                                 >
                                   <Eye size={14} />
                                   <span>View</span>
@@ -364,7 +363,7 @@ const Clauses: React.FC = () => {
                                     setSelectedClause(clause)
                                     setIsEditModalVisible(true)
                                   }}
-                                  className='flex items-center space-x-1 hover:text-gray-800'
+                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors'
                                 >
                                   <Edit size={14} />
                                   <span>Edit</span>
@@ -374,7 +373,7 @@ const Clauses: React.FC = () => {
                                     setSelectedClause(clause)
                                     setIsDeleteModalVisible(true)
                                   }}
-                                  className='flex items-center space-x-1 hover:text-gray-800'
+                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-red-100 text-red-800 hover:bg-red-200 transition-colors'
                                 >
                                   <Trash2 size={14} />
                                   <span>Delete</span>

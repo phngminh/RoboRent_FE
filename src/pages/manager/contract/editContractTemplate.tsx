@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '../../../components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
@@ -80,6 +80,14 @@ const EditContractTemplate: React.FC<EditContractTemplateProps> = ({ open, onClo
       newErrors.version = 'Version is required!'
     }
 
+    if (formData.templateCode.trim().length > 100) {
+      newErrors.templateCode = 'Template code must not exceed 100 characters!'
+    }
+
+    if (formData.title.trim().length > 100) {
+      newErrors.title = 'Title must not exceed 100 characters!'
+    }
+
     if (formData.description.trim().length > 200) {
       newErrors.description = 'Description must not exceed 200 characters!'
     }
@@ -147,6 +155,7 @@ const EditContractTemplate: React.FC<EditContractTemplateProps> = ({ open, onClo
         <DialogHeader>
           <DialogTitle>Edit Contract Template</DialogTitle>
         </DialogHeader>
+        <DialogDescription></DialogDescription>
         <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1'>
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>

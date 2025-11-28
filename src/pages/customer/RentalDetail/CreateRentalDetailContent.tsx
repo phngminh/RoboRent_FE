@@ -4,11 +4,10 @@ import { getRobotTypesOfActivityAsync } from '../../../apis/robottypeofactivity.
 import { createRentalDetailsBulkAsync, getRentalDetailsByRentalIdAsync, updateRentalDetailsAsync } from '../../../apis/rentaldetail.api'
 import { getRoboTypesByIdsAsync } from '../../../apis/robotype.api'
 import { customerSendRentalAsync } from '../../../apis/rental.customer.api'
+import { useParams } from 'react-router-dom'
 
 interface CreateRentalDetailContentProps {
   onBack: (rentalId: number) => void
-  rentalId: number
-  activityTypeId: number
   onSave: () => void
 }
 
@@ -24,12 +23,11 @@ type DetailRow = {
   isDeleted?: boolean
 }
 
-const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
-  onBack,
-  rentalId,
-  activityTypeId,
-  onSave
-}) => {
+const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({ onBack, onSave }) => {
+  const { rentalId: rentalIdString } = useParams<{ rentalId: string }>()
+  const rentalId = rentalIdString ? parseInt(rentalIdString, 10) : 0
+  const { activityTypeId: activityTypeIdString } = useParams<{ activityTypeId: string }>()
+  const activityTypeId = activityTypeIdString ? parseInt(activityTypeIdString, 10) : 0
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
   const [rows, setRows] = useState<DetailRow[]>([])

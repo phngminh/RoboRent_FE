@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
-import { Textarea } from '../../../components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { cn } from '../../../lib/utils'
 import { editClause, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
 import { toast } from 'react-toastify'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
+import { DialogDescription } from '@radix-ui/react-dialog'
 
 interface EditTemplateClauseProps {
   open: boolean
@@ -17,7 +19,8 @@ interface EditTemplateClauseProps {
 }
 
 interface FormData {
-  titleOrCode: string
+  clauseCode: string
+  title: string
   body: string
   isMandatory: boolean
   isEditable: boolean
@@ -25,23 +28,27 @@ interface FormData {
 
 const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, onSuccess, clause }) => {
   const [formData, setFormData] = useState<FormData>({
-    titleOrCode: '',
+    clauseCode: '',
+    title: '',
     body: '',
     isMandatory: false,
     isEditable: false,
   })
   const [originalFormData, setOriginalFormData] = useState<FormData>({
-    titleOrCode: '',
+    clauseCode: '',
+    title: '',
     body: '',
     isMandatory: false,
     isEditable: false,
   })
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
+  const quillRef = useRef<ReactQuill>(null)
 
   useEffect(() => {
     if (open && clause) {
       const newFormData: FormData = {
-        titleOrCode: clause.title,
+        clauseCode: clause.clauseCode,
+        title: clause.title,
         body: clause.body,
         isMandatory: clause.isMandatory,
         isEditable: clause.isEditable,
@@ -52,7 +59,55 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
     }
   }, [open, clause])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  useEffect(() => {
+    if (!open) return
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+
+    const resize = () => {
+      const container = (quill as any).container as HTMLDivElement
+      if (container) {
+        const scrollHeight = container.scrollHeight
+        container.style.minHeight = '150px'
+        container.style.height = scrollHeight < 150 ? '150px' : `${scrollHeight}px`
+      }
+    }
+
+    const handlePaste = (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.startsWith('image/')) {
+            event.preventDefault()
+            return false
+          }
+        }
+      }
+    }
+
+    quill.root.addEventListener('paste', handlePaste)
+    resize()
+    quill.on('text-change', resize)
+
+    return () => {
+      quill.root.removeEventListener('paste', handlePaste)
+      quill.off('text-change', resize)
+    }
+  }, [open])
+
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+
+    const container = (quill as any).container as HTMLDivElement
+    if (container) {
+      const borderColor = errors.body ? 'hsl(var(--destructive))' : 'hsl(var(--border))'
+      container.style.border = `1px solid ${borderColor}`
+      container.style.borderRadius = '0.375rem'
+    }
+  }, [errors.body])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
     if (Object.keys(errors).length > 0) {
@@ -77,12 +132,24 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {}
 
-    if (!formData.titleOrCode.trim()) {
-      newErrors.titleOrCode = 'Title or Code is required!'
+    if (!formData.clauseCode.trim()) {
+      newErrors.clauseCode = 'Clause code is required!'
     }
 
-    if (!formData.body.trim()) {
+    if (!formData.title.trim()) {
+      newErrors.title = 'Title is required!'
+    }
+
+    if (!formData.body || formData.body.trim() === '' || formData.body === '<p><br></p>') {
       newErrors.body = 'Body is required!'
+    }
+
+    if (formData.clauseCode.trim().length > 100) {
+      newErrors.clauseCode = 'Clause code must not exceed 100 characters!'
+    }
+
+    if (formData.title.trim().length > 100) {
+      newErrors.title = 'Title must not exceed 100 characters!'
     }
 
     setErrors(newErrors)
@@ -93,8 +160,8 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
     if (!validateForm() || !hasChanges() || !clause) return
     try {
       const payload = {
-        clauseCode: clause.id,
-        title: formData.titleOrCode,
+        clauseCode: clause.clauseCode,
+        title: formData.title,
         body: formData.body,
         isMandatory: formData.isMandatory,
         isEditable: formData.isEditable,
@@ -112,13 +179,15 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
 
   const resetForm = () => {
     setFormData({
-      titleOrCode: '',
+      clauseCode: '',
+      title: '',
       body: '',
       isMandatory: false,
       isEditable: false,
     })
     setOriginalFormData({
-      titleOrCode: '',
+      clauseCode: '',
+      title: '',
       body: '',
       isMandatory: false,
       isEditable: false,
@@ -130,6 +199,16 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
     <p className='text-sm text-destructive mt-1'>{message}</p>
   )
 
+  const handleQuillChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, body: value }))
+    if (errors.body) {
+      setErrors((prev) => {
+        const { body, ...rest } = prev
+        return rest
+      })
+    }
+  }
+
   return (
     <Dialog 
       open={open} 
@@ -140,38 +219,65 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
         }
       }}
     >
-      <DialogContent className='sm:max-w-[580px] flex flex-col max-h-[90vh] p-8'>
+      <DialogContent className='sm:max-w-[640px] flex flex-col max-h-[90vh] p-8'>
         <DialogHeader>
           <DialogTitle>Edit Clause</DialogTitle>
         </DialogHeader>
-        <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1'>
+        <DialogDescription></DialogDescription>
+        <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1 -mt-4'>
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
-              <Label htmlFor='titleOrCode'>Title or Code</Label>
+              <Label htmlFor='clauseCode'>Clause Code</Label>
               <Input
-                id='titleOrCode'
-                name='titleOrCode'
-                value={formData.titleOrCode}
+                id='clauseCode'
+                name='clauseCode'
+                value={formData.clauseCode}
                 onChange={handleInputChange}
-                placeholder='Enter title or code'
-                className={cn(errors.titleOrCode && 'border-destructive')}
+                placeholder='Enter clause code'
+                className={cn(errors.clauseCode && 'border-destructive')}
               />
-              {errors.titleOrCode && <ErrorMessage message={errors.titleOrCode} />}
+              {errors.clauseCode && <ErrorMessage message={errors.clauseCode} />}
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='title'>Title</Label>
+              <Input
+                id='title'
+                name='title'
+                value={formData.title}
+                onChange={handleInputChange}
+                placeholder='Enter title'
+                className={cn(errors.title && 'border-destructive')}
+              />
+              {errors.title && <ErrorMessage message={errors.title} />}
             </div>
             <div className='space-y-2'>
               <Label htmlFor='body'>Body</Label>
-              <Textarea
-                id='body'
-                name='body'
-                value={formData.body}
-                onChange={handleInputChange}
-                placeholder='Enter body'
-                className={cn(errors.body && 'border-destructive')}
-              />
+              <div
+                className={cn(errors.body && 'border-destructive p-1')}
+                style={{
+                  minHeight: '150px',
+                  height: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                <ReactQuill
+                  ref={quillRef}
+                  theme='snow'
+                  value={formData.body}
+                  onChange={handleQuillChange}
+                  placeholder='Enter the content of the clause here...'
+                  style={{
+                    minHeight: '150px',
+                    height: 'auto',
+                    overflow: 'visible'
+                  }}
+                />
+              </div>
               {errors.body && <ErrorMessage message={errors.body} />}
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='isMandatory'>Mandatory</Label>
+              <Label htmlFor='isMandatory'>Mandatory?</Label>
               <Select value={formData.isMandatory ? 'Mandatory' : 'Optional'} onValueChange={handleMandatoryChange}>
                 <SelectTrigger className='w-full'>
                   <SelectValue placeholder='Select Mandatory Status' />
@@ -183,7 +289,7 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
               </Select>
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='isEditable'>Editable</Label>
+              <Label htmlFor='isEditable'>Editable?</Label>
               <Select value={formData.isEditable ? 'Editable' : 'Non-Editable'} onValueChange={handleEditableChange}>
                 <SelectTrigger className='w-full'>
                   <SelectValue placeholder='Select Editable Status' />
