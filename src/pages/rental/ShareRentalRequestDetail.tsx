@@ -1,17 +1,16 @@
-import { 
-  CheckCircle, Clock, Phone, Mail, User, Hash, Calendar, PenSquare, ArrowLeft 
-} from "lucide-react";
+import { Clock, Phone, Mail, User, Hash, Calendar, PenSquare, ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getRentalByIdAsync } from "../../apis/rental.staff.api";
 import { getRentalDetailsByRentalIdAsync } from "../../apis/rentaldetail.api";
+import { useParams } from "react-router-dom";
 
 interface ShareRentalRequestDetailProps {
-  rentalId: number;
   onBack: () => void;
 }
 
-export default function ShareRentalRequestDetail({ rentalId, onBack }: ShareRentalRequestDetailProps) {
-
+export default function ShareRentalRequestDetail({ onBack }: ShareRentalRequestDetailProps) {
+  const { id: rentalIdString } = useParams<{ id: string }>()
+  const rentalId = rentalIdString ? parseInt(rentalIdString, 10) : 0
   const [rental, setRental] = useState<any>(null);
   const [rentalDetails, setRentalDetails] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

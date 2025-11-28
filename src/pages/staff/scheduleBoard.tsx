@@ -3,6 +3,7 @@ import { MapPin, MoreHorizontal, Plus, X } from "lucide-react";
 import { getAllScheduleByGroupIdAsync } from "../../apis/groupSchedule.staff.api";
 import { addScheduleAsync } from "../../apis/groupSchedule.staff.api"; // <-- make sure this path is correct
 import { getReceivedRentalByStaffIdAsync } from "../../apis/rental.staff.api";
+import { useParams } from "react-router-dom";
 
 // -------------------------
 // Types
@@ -106,7 +107,9 @@ const ScheduleCard = ({ item }: { item: ScheduleItem }) => {
 // -------------------------
 // Main Component
 // -------------------------
-const ScheduleBoard = ({ groupId }: { groupId: number }) => {
+const ScheduleBoard: React.FC = () => {
+  const { groupId: groupIdString } = useParams<{ groupId: string }>()
+  const groupId = groupIdString ? parseInt(groupIdString, 10) : 0
   const [schedules, setSchedules] = useState<ScheduleGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
