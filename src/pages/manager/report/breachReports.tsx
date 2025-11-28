@@ -4,7 +4,7 @@ import ReportDetail from './reportDetail'
 
 const BreachReports: React.FC = () => {
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All Statuses')
+  const [statusFilter, setStatusFilter] = useState('All Status')
   const [categoryFilter, setCategoryFilter] = useState('All Categories')
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
 
@@ -61,7 +61,7 @@ const BreachReports: React.FC = () => {
     }
   ]
 
-  const statuses = ['All Statuses', 'Pending', 'Under Review', 'Resolved', 'Rejected']
+  const statuses = ['All Status', 'Pending', 'Under Review', 'Resolved', 'Rejected']
   const categories = ['All Categories', 'Financial', 'Service Level', 'Compliance', 'Intellectual Property']
 
   const handleViewDetail = (reportId: string) => {
