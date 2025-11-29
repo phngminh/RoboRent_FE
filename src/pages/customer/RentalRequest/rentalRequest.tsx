@@ -1,19 +1,27 @@
 import React, { useEffect, useState } from 'react'
 import { Eye, MessageCircle, Plus, Search } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '../../../components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
+import { Input } from '../../../components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
+import { Button } from '../../../components/ui/button'
 import { getRequestByCustomer, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
+import { getDraftsByRentalId, type ContractDraftResponse } from '../../../apis/contractDraft.api'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import path from '../../../constants/path'
 import { customerSendRentalAsync } from '../../../apis/rental.customer.api'
 
 interface RentalRequestsContentProps {
+  onViewContract: (rentalId: number) => void
   onCreate: () => void
   onView: (rentalId: number) => void
 }
 
-const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate, onView }) => {
+const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate, onViewContract, onView }) => {
   const [allRentals, setAllRentals] = useState<RentalRequestResponse[]>([])
   const [filteredRentals, setFilteredRentals] = useState<RentalRequestResponse[]>([])
+  const [draftsMap, setDraftsMap] = useState<Record<number, ContractDraftResponse[]>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
@@ -34,8 +42,8 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
     try {
       setLoading(true)
       const data = await getRequestByCustomer(user.accountId)
-      console.log('Fetched rentals:', data)
       setAllRentals(data)
+      setDraftsMap({})
     } catch (error) {
       console.error('Error fetching rentals:', error)
     } finally {
@@ -43,24 +51,36 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
     }
   }
 
-  const handleSendRequest = async (rentalId: number) => {
-  try {
-    setLoading(true);
-
-    // Step 1: Send rental to manager (same as CreateRentalDetailContent)
-    await customerSendRentalAsync(rentalId);
-
-    // Step 2: Refresh rentals list
-    await fetchData();
-
-  } catch (err: any) {
-    console.error("Error sending rental:", err);
-    alert(err?.response?.data?.message || "Failed to send rental");
-  } finally {
-    setLoading(false);
+  const fetchDraftsForRentals = async () => {
+    for (const rental of allRentals.filter(rental => !draftsMap[rental.id!])) {
+      try {
+        const drafts = await getDraftsByRentalId(rental.id)
+        setDraftsMap(prev => ({ ...prev, [rental.id]: drafts }))
+      } catch (error) {
+        console.error(`Error fetching drafts for ${rental.id}:`, error)
+        setDraftsMap(prev => ({ ...prev, [rental.id!]: [] }))
+      }
+    }
   }
-};
 
+  useEffect(() => {
+    if (allRentals.length > 0) {
+      fetchDraftsForRentals()
+    }
+  }, [allRentals])
+
+  const handleSendRequest = async (rentalId: number) => {
+    try {
+      setLoading(true)
+      await customerSendRentalAsync(rentalId)
+      await fetchData()
+    } catch (err: any) {
+      console.error('Error sending rental:', err)
+      alert(err?.response?.data?.message || 'Failed to send rental')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filterData = () => {
     let filtered = [...allRentals]
@@ -134,242 +154,258 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
     setCurrentPage(page)
   }
 
+  const statusOptions = ['All Status', 'Draft', 'Pending', 'Received', 'Rejected', 'Completed']
+
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
-      {/* Filter Section */}
-      <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
-        <h2 className='text-lg font-semibold text-gray-800 mb-4 text-center'>Filter Requests</h2>
+      <Card className='rounded-xl shadow-sm border border-gray-100'>
+        <CardHeader className='pb-0'>
+          <h2 className='text-lg font-semibold text-gray-800 text-center mb-3'>Filter Requests</h2>
+        </CardHeader>
+        <CardContent className='p-6 pt-0'>
+          <div className='flex flex-col gap-4 md:flex-row md:items-end md:gap-4'>
+            <div className='flex flex-1 md:gap-4'>
+              <div className='w-full md:w-40'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
+                    <SelectValue placeholder='Status' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Status</label>
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
-              <option>All Status</option>
-              <option>Pending</option>
-              <option>AcceptedDemo</option>
-              <option>Draft</option>
-              <option>Rejected</option>
-              <option>Completed</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</label>
-            <input 
-              type='date'
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-          
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</label>
-            <input 
-              type='date'
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-          
-          <div className='flex items-end space-x-2'>
-            <button 
-              onClick={applyFilters}
-              className='flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'>
-              Apply Filters
-            </button>
-            <button 
-              onClick={clearFilters}
-              className='bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors'>
-              Clear
-            </button>
-          </div>
-        </div>
+              <div className='w-full md:w-40'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</label>
+                <Input 
+                  type='date'
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                />
+              </div>
 
-        <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Event Name</label>
-        <div className='flex gap-3 mb-4'>
-          <div className='relative flex-1'>
-            <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
-            <input
-              type='text'
-              placeholder='Search by event name...'
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className='w-full pl-10 pr-4 py-2 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-        </div>
-      </div>
+              <div className='w-full md:w-40'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</label>
+                <Input 
+                  type='date'
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                />
+              </div>
 
-      <div className='bg-white rounded-xl shadow-sm border border-gray-100'>
-        <div className='p-6 border-b border-gray-100 flex items-center justify-between gap-4'>
-          <div className='flex flex-col items-center text-center flex-1 ml-32'>
-            <h2 className='text-xl font-semibold text-gray-800'>All Rental Requests</h2>
-            <p className='text-gray-600 mt-1'>Manage your rental requests and track their status.</p>
+              <div className='flex-1'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Event Name</label>
+                <div className='relative'>
+                  <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
+                  <Input
+                    placeholder='Search by event name...'
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className='w-full pl-10 pr-4 py-2 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className='flex gap-2'>
+              <Button
+                onClick={applyFilters}
+                className='px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors'
+              >
+                Apply Filters
+              </Button>
+              <Button
+                onClick={clearFilters}
+                variant='outline'
+                size='sm'
+                className='px-3 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors'
+              >
+                Clear
+              </Button>
+            </div>
           </div>
-          <button
+        </CardContent>
+      </Card>
+
+      <Card className='rounded-xl shadow-sm border border-gray-300 relative'>
+        <CardHeader className='p-6 border-b border-gray-100 relative'>
+          <h2 className='text-xl font-semibold text-gray-800 text-center w-full'>
+            All Rental Requests
+          </h2>
+          <p className='text-gray-600 mt-1 text-center'>Manage your rental requests and track their status.</p>
+          <Button
             onClick={onCreate}
-            className='bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2'
+            className='absolute right-6 top-6 bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2'
           >
             <Plus size={18} />
             <span>Create</span>
-          </button>
-        </div>
-        
-        <div className='overflow-x-auto'>
-          <table className='w-full'>
-            <thead className='bg-gray-50'>
-              <tr>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Name</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Address</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Status</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Activity</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Activity Type</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Date</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Created Date</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Actions</th>
-              </tr>
-            </thead>
-            <tbody className='bg-white divide-y divide-gray-200'>
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
-                    Loading...
-                  </td>
-                </tr>
-              ) : paginatedRentals.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
-                    No rental requests found.
-                  </td>
-                </tr>
-              ) : (
-                paginatedRentals.map((request) => {
-                  const badgeClass =
-                    (request.status === 'Accepted' || request.status === 'AcceptedDemo')
-                      ? 'bg-green-100 text-green-800'
-                      : request.status === 'Completed'
-                      ? 'bg-blue-100 text-blue-800'
-                      : request.status === 'Pending'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : request.status === 'Draft'
-                      ? 'bg-gray-100 text-gray-800'
-                      : request.status === 'Rejected'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-blue-100 text-blue-800'
+          </Button>
+        </CardHeader>
 
-                  const eventDate = request.eventDate
-                    ? new Date(request.eventDate).toLocaleDateString()
-                    : '—'
+        <CardContent className='p-0'>
+          <div className='overflow-x-auto'>
+            <div className='rounded-md border overflow-hidden'>
+              <Table>
+                <TableHeader className='bg-gray-50'>
+                  <TableRow>
+                    <TableHead className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Name</TableHead>
+                    <TableHead className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Address</TableHead>
+                    <TableHead className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Status</TableHead>
+                    <TableHead className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Activity</TableHead>
+                    <TableHead className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Activity Type</TableHead>
+                    <TableHead className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Date</TableHead>
+                    <TableHead className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Created Date</TableHead>
+                    <TableHead className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedRentals.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
+                        No rental requests found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedRentals.map((request) => {
+                      const badgeClass =
+                        (request.status === 'Accepted' || request.status === 'AcceptedDemo')
+                          ? 'bg-green-100 text-green-800'
+                          : request.status === 'Completed'
+                          ? 'bg-blue-100 text-blue-800'
+                          : request.status === 'Pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : request.status === 'Draft'
+                          ? 'bg-gray-100 text-gray-800'
+                          : request.status === 'Rejected'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-blue-100 text-blue-800'
 
-                  const createdDate = request.createdDate
-                    ? new Date(request.createdDate).toLocaleDateString()
-                    : '—'
+                      const eventDate = request.eventDate
+                        ? new Date(request.eventDate).toLocaleDateString()
+                        : '—'
 
-                  return (
-                    <tr key={request.id ?? request.accountId} className='hover:bg-gray-50'>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>
-                        {request.eventName ?? '—'}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.address ?? '—'}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-center'>
-                        <div className='flex items-center justify-center space-x-2'>
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`}>
-                            {request.status}
-                          </span>
-                        </div>
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.eventActivityName}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.activityTypeName}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{eventDate}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{createdDate}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center'>
-                <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center'>
-                  <div className='flex justify-center space-x-3'>
+                      const createdDate = request.createdDate
+                        ? new Date(request.createdDate).toLocaleDateString()
+                        : '—'
 
-                    {/* View */}
-                    <button 
-                    onClick={() => onView(request.id)}
-                    className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
-    >
-      <Eye size={14} />
-      <span>View</span>
-    </button>
+                      const drafts = draftsMap[request.id] ?? []
+                      const hasDrafts = drafts.length > 0
 
-    {/* Chat */}
-    <button
-      onClick={() => navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))}
-      className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
-    >
-                    <MessageCircle size={14} />
-                      <span>Chat</span>
-                        </button>
-
-    {/* Send */}
-    <button
-      onClick={() => handleSendRequest(request.id)}
-      className='text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1'
-      disabled={loading}
-    >
-      📤
-      <span>Send</span>
-    </button>
-
-                          </div>
-                        </td>
-
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
-          <div className='flex space-x-2'>
-            <button
-              className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </button>
-            {Array.from({ length: totalPages }, (_, index) => {
-              const pageNumber = index + 1
-              const isActive = pageNumber === currentPage
-              return (
-                <button
-                  key={pageNumber}
-                  onClick={() => handlePageChange(pageNumber)}
-                  className={`px-3 py-1 text-sm rounded ${
-                    isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 hover:text-gray-800 transition-colors'
-                  }`}
-                >
-                  {pageNumber}
-                </button>
-              )
-            })}
-            <button
-              className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages || filteredRentals.length === 0}
-            >
-              Next
-            </button>
+                      return (
+                        <TableRow key={request.id ?? request.accountId} className='hover:bg-gray-50'>
+                          <TableCell className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>
+                            {request.eventName ?? '—'}
+                          </TableCell>
+                          <TableCell className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.address ?? '—'}</TableCell>
+                          <TableCell className='px-6 py-4 whitespace-nowrap text-center'>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`}>
+                              {request.status}
+                            </span>
+                          </TableCell>
+                          <TableCell className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.eventActivityName}</TableCell>
+                          <TableCell className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.activityTypeName}</TableCell>
+                          <TableCell className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{eventDate}</TableCell>
+                          <TableCell className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{createdDate}</TableCell>
+                          <TableCell className='px-6 py-4 whitespace-nowrap text-sm font-medium text-center'>
+                            <div className='flex justify-center space-x-3'>
+                              <button 
+                                onClick={() => onView(request.id)}
+                                className='flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
+                              >
+                                <Eye size={14} />
+                                <span>View Details</span>
+                              </button>
+                              {hasDrafts && (
+                                <button 
+                                  onClick={() => onViewContract(request.id)}
+                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-orange-100 text-orange-800 hover:bg-orange-200 transition-colors'
+                                >
+                                  <Eye size={14} />
+                                  <span>View Contract</span>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))}
+                                className='flex items-center space-x-1 rounded px-2 py-1 bg-purple-100 text-purple-800 hover:bg-purple-200 transition-colors'
+                              >
+                                <MessageCircle size={14} />
+                                <span>Chat</span>
+                              </button>
+                              <button
+                                onClick={() => handleSendRequest(request.id)}
+                                className='flex items-center space-x-1 rounded px-2 py-1 bg-green-100 text-green-800 hover:bg-green-200 transition-colors'
+                                disabled={loading}
+                              >
+                                <span>📤</span>
+                                <span>Send</span>
+                              </button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
-          <div className='text-sm text-gray-500'>
-            Showing {paginatedRentals.length} of {filteredRentals.length} request{filteredRentals.length === 1 ? '' : 's'}
+
+          <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
+            <div className='flex space-x-2'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-3 py-1 text-sm transition-colors ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-800'}`}
+              >
+                Previous
+              </Button>
+              {Array.from({ length: totalPages }, (_, index) => {
+                const pageNumber = index + 1
+                const isActive = pageNumber === currentPage
+                return (
+                  <Button
+                    key={pageNumber}
+                    variant={isActive ? 'default' : 'outline'}
+                    size='sm'
+                    onClick={() => handlePageChange(pageNumber)}
+                    className='px-3 py-1 text-sm rounded transition-colors'
+                  >
+                    {pageNumber}
+                  </Button>
+                )
+              })}
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages || filteredRentals.length === 0}
+                className={`px-3 py-1 text-sm transition-colors ${currentPage === totalPages || filteredRentals.length === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-800'}`}
+              >
+                Next
+              </Button>
+            </div>
+            <div className='text-sm text-gray-500'>
+              Showing {paginatedRentals.length} of {filteredRentals.length} request{filteredRentals.length === 1 ? '' : 's'}
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

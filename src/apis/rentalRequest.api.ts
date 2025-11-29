@@ -29,3 +29,8 @@ export const getAllRequests = async () => {
   const response = await http.get<RentalRequestResponse[]>(`Rental/all`)
   return response.data
 }
+
+export const getRequestById = async (requestId: number) => {
+  const response = await http.get<RentalRequestResponse>(`Rental/${requestId}`)
+  return response.data
+}

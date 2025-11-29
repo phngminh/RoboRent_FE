@@ -1,87 +1,20 @@
-import { useEffect, useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 import ProfileSidebar from '../../../components/sidebar/customerSidebar'
-import DashboardContent from '../dashboard'
-import AccountContent from './account'
-import RentalRequestsContent from '../RentalRequest/rentalRequest'
-import TransactionsContent from '../transactions'
-import { getProfile } from '../../../apis/auth.api'
-import CreateRentalRequestContent from '../RentalRequest/createRentalRequest'
-import CreateRentalDetailContent from '../RentalDetail/CreateRentalDetailContent'
 import Header from '../../../components/header'
 
 const Profile = () => {
-  type ActiveTab =
-    | { name: 'dashboard' }
-    | { name: 'account' }
-    | { name: 'rental-requests' }
-    | { name: 'create-rental-request'; rentalId?: number }
-    | { name: 'create-rental-detail'; rentalId: number; activityTypeId: number }
-  | { name: 'transactions' }
-
-  const [activeTab, setActiveTab] = useState<ActiveTab>({ name: 'dashboard' })
-
-  const renderContent = () => {
-    switch (activeTab.name) {
-      case 'dashboard':
-        return <DashboardContent />
-
-      case 'account':
-        return <AccountContent />
-
-      case 'rental-requests':
-        return (
-          <RentalRequestsContent
-            onCreate={() => setActiveTab({ name: 'create-rental-request' })}
-            onView={(rentalId: number) => setActiveTab({ name: 'create-rental-request', rentalId })}
-          />
-        )
-
-      case 'create-rental-request':
-        return (
-          <CreateRentalRequestContent
-            rentalId={activeTab.rentalId}
-            onBack={() => setActiveTab({ name: 'rental-requests' })}
-            onNextStep={(rentalId, activityTypeId) =>
-              setActiveTab({ name: 'create-rental-detail', rentalId, activityTypeId })
-            }
-          />
-        )
-
-      case 'create-rental-detail':
-        return (
-          <CreateRentalDetailContent
-            rentalId={activeTab.rentalId}
-            activityTypeId={activeTab.activityTypeId}
-            onBack={(rentalId) => setActiveTab({ name: 'create-rental-request', rentalId })}
-            onSave={() => setActiveTab({ name: 'rental-requests'})}
-          />
-        )
-
-      case 'transactions':
-        return <TransactionsContent />
-
-      default:
-        return <DashboardContent />
-    }
-  }
-
-  useEffect(() => {
-    const user = getProfile()
-    console.log('Fetched user profile:', user)
-  }, [])
-
+  const location = useLocation()
+  const activeTab = location.pathname.split('/')[2] || 'dashboard'
+  
   return (
     <div className='flex flex-col h-screen'>
       <Header />
       
       <div className='flex flex-1 pt-12 overflow-hidden'>
-        <ProfileSidebar
-          activeTab={activeTab.name}
-          onTabChange={(tab: string) => setActiveTab({ name: tab as any })}
-        />
+        <ProfileSidebar activeTab={activeTab} />
         <div className='flex-1 overflow-y-auto'>
           <div className='p-8'>
-            {renderContent()}
+            <Outlet />
           </div>
         </div>
       </div>

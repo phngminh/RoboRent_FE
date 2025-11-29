@@ -20,8 +20,12 @@ const path = {
   DASHBOARD_STAFF: '/staff/dashboard',
   STAFF_PROFILE: '/staff/profile',
   STAFF_REQUESTS: '/staff/rental-requests',
+  STAFF_DELIVERIES: '/staff/deliveries',
   STAFF_TRANSACTIONS: '/staff/transactions',
   STAFF_CHAT: '/staff/chat/:rentalId',
+  STAFF_ACCOUNT: '/staff/account',
+  STAFF_ROBOT_GROUP: '/staff/robot-group',
+  STAFF_CONTRACT_DRAFTS: '/staff/contract-drafts',
 
   //============= Manager ============
   BASE_MANAGER: '/manager',
@@ -30,6 +34,7 @@ const path = {
   MANAGER_REQUESTS: '/manager/rental-requests',
   MANAGER_QUOTES: '/manager/quotes',
   MANAGER_REPORTS: '/manager/reports',
+  MANAGER_DRAFTS: '/manager/contract-drafts',
   MANAGER_CONTRACT: '/manager/contract-templates',
   MANAGER_CLAUSES: '/manager/templates-clauses',
   MANAGER_STAFF_ASSIGNMENT: '/manager/staff-assignment',

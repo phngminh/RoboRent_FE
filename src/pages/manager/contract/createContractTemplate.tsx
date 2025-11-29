@@ -1,12 +1,15 @@
-import React, { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '../../../components/ui/dialog'
+import React, { useEffect, useState, useRef } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { Textarea } from '../../../components/ui/textarea'
 import { cn } from '../../../lib/utils'
-import { createTemplateWithBody } from '../../../apis/contractTemplates.api'
+import { createTemplateWithBody, createTemplate } from '../../../apis/contractTemplates.api'
 import { toast } from 'react-toastify'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
+import { useAuth } from '../../../contexts/AuthContext'
 
 interface CreateContractTemplateProps {
   open: boolean
@@ -23,6 +26,7 @@ interface FormData {
 }
 
 const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, onClose, onSuccess }) => {
+  const { user } = useAuth()
   const [withBody, setWithBody] = useState(false)
   const [formData, setFormData] = useState<FormData>({
     templateCode: '',
@@ -32,6 +36,7 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
     body: '',
   })
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
+  const quillRef = useRef<ReactQuill>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -56,8 +61,16 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
       newErrors.version = 'Version is required!'
     }
 
-    if (!withBody && !formData.body.trim()) {
+    if (!withBody && (!formData.body || formData.body.trim() === '' || formData.body === '<p><br></p>')) {
       newErrors.body = 'Body is required!'
+    }
+
+    if (formData.templateCode.trim().length > 100) {
+      newErrors.templateCode = 'Template code must not exceed 100 characters!'
+    }
+
+    if (formData.title.trim().length > 100) {
+      newErrors.title = 'Title must not exceed 100 characters!'
     }
 
     if (formData.description.trim().length > 200) {
@@ -71,14 +84,26 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
   const handleSubmit = async () => {
     if (!validateForm()) return
     try {
-      const payload = {
-        templateCode: formData.templateCode,
-        title: formData.title,
-        description: formData.description,
-        version: formData.version,
-        body: withBody ? undefined : formData.body,
+      if (withBody) {
+        const payload = {
+          templateCode: formData.templateCode,
+          title: formData.title,
+          description: formData.description,
+          version: formData.version,
+        }
+        await createTemplateWithBody(payload)
+      } else {
+        const payload = {
+          templateCode: formData.templateCode,
+          title: formData.title,
+          description: formData.description,
+          bodyJson: formData.body,
+          status: 'Initiated',
+          version: formData.version,
+          createdBy: user?.accountId,
+        }
+        await createTemplate(payload)
       }
-      await createTemplateWithBody(payload)
       toast.success('Template created successfully!')
 
       resetForm()
@@ -104,6 +129,50 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
     <p className='text-sm text-destructive mt-1'>{message}</p>
   )
 
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+
+    const handlePaste = (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items
+      if (!items) return
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          event.preventDefault()
+          return
+        }
+      }
+    }
+
+    quill.root.addEventListener('paste', handlePaste)
+    return () => {
+      quill.root.removeEventListener('paste', handlePaste)
+    }
+  }, [open])
+
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+
+    const container = (quill as any).container as HTMLDivElement
+    if (container) {
+      const borderColor = errors.body ? 'hsl(var(--destructive))' : 'hsl(var(--border))'
+      container.style.border = `1px solid ${borderColor}`
+      container.style.borderRadius = '0.375rem'
+    }
+  }, [errors.body])
+
+  const handleQuillChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, body: value }))
+    if (errors.body) {
+      setErrors((prev) => {
+        const { body, ...rest } = prev
+        return rest
+      })
+    }
+  }
+
   return (
     <Dialog 
       open={open} 
@@ -114,10 +183,10 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
         }
       }}
     >
-      <DialogContent className='sm:max-w-[580px] flex flex-col max-h-[90vh] p-8'>
+      <DialogContent className='sm:max-w-[680px] flex flex-col max-h-[90vh] p-8'>
         <DialogHeader>
           <DialogTitle></DialogTitle>
-          <div className='flex rounded-md border bg-background p-1 py-2 mt-4'>
+          <div className='flex rounded-md border bg-background p-1 py-2'>
             <Button
               type='button'
               variant={withBody ? 'ghost' : 'default'}
@@ -136,7 +205,8 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
             </Button>
           </div>
         </DialogHeader>
-        <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1'>
+        <DialogDescription></DialogDescription>
+        <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1 -mt-8'>
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
               <Label htmlFor='templateCode'>Template Code</Label>
@@ -174,6 +244,34 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
               />
               {errors.description && <ErrorMessage message={errors.description} />}
             </div>
+            {!withBody && (
+              <div className='space-y-2'>
+                <Label htmlFor='body'>Body</Label>
+                <div
+                  className={cn(errors.body && 'border-destructive p-1')}
+                  style={{
+                    minHeight: '150px',
+                    height: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                >
+                  <ReactQuill
+                    ref={quillRef}
+                    theme='snow'
+                    value={formData.body}
+                    onChange={handleQuillChange}
+                    placeholder='Enter the template body here...'
+                    style={{
+                      minHeight: '150px',
+                      height: 'auto',
+                      overflow: 'visible'
+                    }}
+                  />
+                </div>
+                {errors.body && <ErrorMessage message={errors.body} />}
+              </div>
+            )}
             <div className='space-y-2'>
               <Label htmlFor='version'>Version</Label>
               <Input
@@ -186,20 +284,6 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
               />
               {errors.version && <ErrorMessage message={errors.version} />}
             </div>
-            {!withBody && (
-              <div className='space-y-2'>
-                <Label htmlFor='body'>Body</Label>
-                <Textarea
-                  id='body'
-                  name='body'
-                  value={formData.body}
-                  onChange={handleInputChange}
-                  placeholder='Enter body'
-                  className={cn(errors.body && 'border-destructive')}
-                />
-                {errors.body && <ErrorMessage message={errors.body} />}
-              </div>
-            )}
           </div>
         </div>
         <DialogFooter>
