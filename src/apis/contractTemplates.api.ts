@@ -111,6 +111,11 @@ export const getAllClauses = async (): Promise<TemplateClauseResponse[]> => {
   return response.data.success ? response.data.data : []
 }
 
+export const getClausesByTemplate = async (templateId: number): Promise<TemplateClauseResponse[]> => {
+  const response = await http.get<ApiResponse<TemplateClauseResponse>>(`TemplateClauses/contract-template/${templateId}`)
+  return response.data.success ? response.data.data : []
+}
+
 export const createClause = (data: TemplateClausePayload) => {
   return http.post('/TemplateClauses', data)
 }

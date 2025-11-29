@@ -26,6 +26,8 @@ import RobotGroupContent from '../pages/staff/robotGroup'
 import ScheduleBoard from '../pages/staff/scheduleBoard'
 import CreateRentalRequestContent from '../pages/customer/RentalRequest/createRentalRequest'
 import CreateRentalDetailContent from '../pages/customer/RentalDetail/CreateRentalDetailContent'
+import ContractDrafts from '../pages/manager/contractDraft/contractDrafts'
+import DetailContractDraft from '../pages/manager/contractDraft/detailContractDraft'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -143,6 +145,20 @@ export default function useRouteElements() {
             { path: 'account', element: <AccountProfile /> },
             { path: 'rental-requests', element: <ManagerRentalRequestsContent /> },
             { path: 'quotes', element: <ManagerQuotesPage /> },
+            { 
+              path: 'contract-drafts', 
+              element: 
+              <ContractDrafts 
+                onView={(draftId) => navigate(`${path.BASE_MANAGER}/contract-drafts/${draftId}`)}
+              /> 
+            },
+            { 
+              path: 'contract-drafts/:draftId', 
+              element: 
+              <DetailContractDraft 
+                onBack={() => navigate(`${path.BASE_MANAGER}/contract-drafts`)}
+              /> 
+            },
             { path: 'contract-templates', element: <ContractTemplates /> },
             { path: 'templates-clauses', element: <Clauses /> },
             { path: 'reports', element: <BreachReports /> }

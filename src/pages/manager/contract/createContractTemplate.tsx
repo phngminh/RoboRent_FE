@@ -183,7 +183,7 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
         }
       }}
     >
-      <DialogContent className='sm:max-w-[580px] flex flex-col max-h-[90vh] p-8'>
+      <DialogContent className='sm:max-w-[680px] flex flex-col max-h-[90vh] p-8'>
         <DialogHeader>
           <DialogTitle></DialogTitle>
           <div className='flex rounded-md border bg-background p-1 py-2'>

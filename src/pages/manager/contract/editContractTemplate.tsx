@@ -151,7 +151,7 @@ const EditContractTemplate: React.FC<EditContractTemplateProps> = ({ open, onClo
         }
       }}
     >
-      <DialogContent className='sm:max-w-[580px] flex flex-col max-h-[90vh] p-8'>
+      <DialogContent className='sm:max-w-[680px] flex flex-col max-h-[90vh] p-8'>
         <DialogHeader>
           <DialogTitle>Edit Contract Template</DialogTitle>
         </DialogHeader>
