@@ -26,6 +26,9 @@ import RobotGroupContent from '../pages/staff/robotGroup'
 import ScheduleBoard from '../pages/staff/scheduleBoard'
 import CreateRentalRequestContent from '../pages/customer/RentalRequest/createRentalRequest'
 import CreateRentalDetailContent from '../pages/customer/RentalDetail/CreateRentalDetailContent'
+import ContractDrafts from '../pages/manager/contractDraft/contractDrafts'
+import DetailContractDraft from '../pages/manager/contractDraft/detailContractDraft'
+import CustomerContractDraft from '../pages/customer/contract/customerContractDraft'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -51,6 +54,15 @@ export default function useRouteElements() {
                 <CustomerRentalRequestsContent 
                   onCreate={() => navigate(`${path.BASE_CUSTOMER}/create-rental-request`)}
                   onView={(rentalId) => navigate(`${path.BASE_CUSTOMER}/create-rental-request/${rentalId}`)}
+                  onViewContract={(rentalId) => navigate(`${path.BASE_CUSTOMER}/contract-draft/${rentalId}`)}
+                />
+              )
+            },
+            {
+              path: 'contract-draft/:rentalId',
+              element: (
+                <CustomerContractDraft
+                  onBack={() => navigate(`${path.BASE_CUSTOMER}/rental-requests`)}
                 />
               )
             },
@@ -112,6 +124,22 @@ export default function useRouteElements() {
                 onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
               /> 
             },
+            { 
+              path: 'contract-drafts', 
+              element: 
+              <StaffRentalRequestsContent 
+                onCreate={() => {}}
+                onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
+              /> 
+            },
+            { 
+              path: 'contract-drafts/:draftId', 
+              element: 
+              <StaffRentalRequestsContent 
+                onCreate={() => {}}
+                onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
+              /> 
+            },
             { path: 'transactions', element: <TransactionsContent /> },
             { 
               path: 'rental/:id', 
@@ -143,6 +171,20 @@ export default function useRouteElements() {
             { path: 'account', element: <AccountProfile /> },
             { path: 'rental-requests', element: <ManagerRentalRequestsContent /> },
             { path: 'quotes', element: <ManagerQuotesPage /> },
+            { 
+              path: 'contract-drafts', 
+              element: 
+              <ContractDrafts 
+                onView={(draftId) => navigate(`${path.BASE_MANAGER}/contract-drafts/${draftId}`)}
+              /> 
+            },
+            { 
+              path: 'contract-drafts/:draftId', 
+              element: 
+              <DetailContractDraft 
+                onBack={() => navigate(`${path.BASE_MANAGER}/contract-drafts`)}
+              /> 
+            },
             { path: 'contract-templates', element: <ContractTemplates /> },
             { path: 'templates-clauses', element: <Clauses /> },
             { path: 'reports', element: <BreachReports /> }

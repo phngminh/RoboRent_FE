@@ -212,7 +212,7 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
         }
       }}
     >
-      <DialogContent className='sm:max-w-[640px] flex flex-col max-h-[90vh] p-8'>
+      <DialogContent className='sm:max-w-[680px] flex flex-col max-h-[90vh] p-8'>
         <DialogHeader>
           <DialogTitle>Create New Clause</DialogTitle>
         </DialogHeader>

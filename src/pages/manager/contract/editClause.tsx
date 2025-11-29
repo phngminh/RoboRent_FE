@@ -219,7 +219,7 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
         }
       }}
     >
-      <DialogContent className='sm:max-w-[640px] flex flex-col max-h-[90vh] p-8'>
+      <DialogContent className='sm:max-w-[680px] flex flex-col max-h-[90vh] p-8'>
         <DialogHeader>
           <DialogTitle>Edit Clause</DialogTitle>
         </DialogHeader>
