@@ -6,7 +6,7 @@ import { Textarea } from '../../../components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
 import { ArrowLeft, Eye } from 'lucide-react'
-import { getDraftById, managerRejects, managerSigns, type ContractDraftResponse } from '../../../apis/contractDraft'
+import { getDraftById, managerRejects, managerSigns, type ContractDraftResponse } from '../../../apis/contractDraft.api'
 import { getClausesByTemplate, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
 import { getRequestById, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
 import { useParams } from 'react-router-dom'
@@ -170,7 +170,10 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
                   <SelectContent>
                     <SelectItem value='Draft'>Draft</SelectItem>
                     <SelectItem value='PendingManagerSignature'>PendingManagerSignature</SelectItem>
-                    <SelectItem value='Approved'>Approved</SelectItem>
+                    <SelectItem value='PendingCustomerSignature'>PendingCustomerSignature</SelectItem>
+                    <SelectItem value='ChangeRequested'>ChangeRequested</SelectItem>
+                    <SelectItem value='Expired'>Expired</SelectItem>
+                    <SelectItem value='Active'>Active</SelectItem>
                     <SelectItem value='Rejected'>Rejected</SelectItem>
                   </SelectContent>
                 </Select>

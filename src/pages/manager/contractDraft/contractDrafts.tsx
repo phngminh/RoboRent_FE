@@ -5,13 +5,15 @@ import { Input } from '../../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Button } from '../../../components/ui/button'
 import { Search, SettingsIcon } from 'lucide-react'
-import { getAllDrafts, type ContractDraftResponse } from '../../../apis/contractDraft'
+import { getDraftsByManager, type ContractDraftResponse } from '../../../apis/contractDraft.api'
+import { useAuth } from '../../../contexts/AuthContext'
 
 interface ContractDraftsProps {
   onView: (draftId: number) => void
 }
 
 const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
+  const { user } = useAuth()
   const [drafts, setDrafts] = useState<ContractDraftResponse[]>([])
   const [filteredDrafts, setFilteredDrafts] = useState<ContractDraftResponse[]>([])
   const [search, setSearch] = useState('')
@@ -27,7 +29,7 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
   const fetchDrafts = async () => {
     try {
       setLoading(true)
-      const draftsData = await getAllDrafts()
+      const draftsData = await getDraftsByManager(user?.accountId)
       console.log('Fetched drafts:', draftsData)
       setDrafts(draftsData)
       setFilteredDrafts(draftsData)

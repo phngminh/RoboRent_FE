@@ -25,6 +25,7 @@ const path = {
   STAFF_CHAT: '/staff/chat/:rentalId',
   STAFF_ACCOUNT: '/staff/account',
   STAFF_ROBOT_GROUP: '/staff/robot-group',
+  STAFF_CONTRACT_DRAFTS: '/staff/contract-drafts',
 
   //============= Manager ============
   BASE_MANAGER: '/manager',

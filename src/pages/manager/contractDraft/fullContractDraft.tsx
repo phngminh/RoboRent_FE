@@ -1,7 +1,7 @@
 import React from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
-import type { ContractDraftResponse } from '../../../apis/contractDraft'
+import type { ContractDraftResponse } from '../../../apis/contractDraft.api'
 
 interface ViewContractDraftProps {
   open: boolean

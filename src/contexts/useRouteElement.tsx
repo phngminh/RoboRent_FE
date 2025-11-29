@@ -28,6 +28,7 @@ import CreateRentalRequestContent from '../pages/customer/RentalRequest/createRe
 import CreateRentalDetailContent from '../pages/customer/RentalDetail/CreateRentalDetailContent'
 import ContractDrafts from '../pages/manager/contractDraft/contractDrafts'
 import DetailContractDraft from '../pages/manager/contractDraft/detailContractDraft'
+import CustomerContractDraft from '../pages/customer/contract/customerContractDraft'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -53,6 +54,15 @@ export default function useRouteElements() {
                 <CustomerRentalRequestsContent 
                   onCreate={() => navigate(`${path.BASE_CUSTOMER}/create-rental-request`)}
                   onView={(rentalId) => navigate(`${path.BASE_CUSTOMER}/create-rental-request/${rentalId}`)}
+                  onViewContract={(rentalId) => navigate(`${path.BASE_CUSTOMER}/contract-draft/${rentalId}`)}
+                />
+              )
+            },
+            {
+              path: 'contract-draft/:rentalId',
+              element: (
+                <CustomerContractDraft
+                  onBack={() => navigate(`${path.BASE_CUSTOMER}/rental-requests`)}
                 />
               )
             },
@@ -108,6 +118,22 @@ export default function useRouteElements() {
             { path: 'account', element: <AccountProfile /> },
             { 
               path: 'rental-requests', 
+              element: 
+              <StaffRentalRequestsContent 
+                onCreate={() => {}}
+                onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
+              /> 
+            },
+            { 
+              path: 'contract-drafts', 
+              element: 
+              <StaffRentalRequestsContent 
+                onCreate={() => {}}
+                onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
+              /> 
+            },
+            { 
+              path: 'contract-drafts/:draftId', 
               element: 
               <StaffRentalRequestsContent 
                 onCreate={() => {}}
