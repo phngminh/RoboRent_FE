@@ -57,33 +57,9 @@ const STATUS_CONFIG: Record<DeliveryStatus, {
     icon: <Package className="w-4 h-4" />,
     label: 'Delivered'
   },
-  Collecting: { 
-    color: 'text-sky-600', 
-    bg: 'bg-sky-100', 
-    border: 'border-sky-300',
-    gradient: 'from-sky-400 to-blue-500',
-    icon: <RefreshCw className="w-4 h-4" />,
-    label: 'Collecting'
-  },
-  Collected: { 
-    color: 'text-indigo-600', 
-    bg: 'bg-indigo-100', 
-    border: 'border-indigo-300',
-    gradient: 'from-indigo-400 to-purple-500',
-    icon: <CheckCircle2 className="w-4 h-4" />,
-    label: 'Collected'
-  },
-  Completed: { 
-    color: 'text-rose-600', 
-    bg: 'bg-rose-100', 
-    border: 'border-rose-300',
-    gradient: 'from-rose-400 to-pink-500',
-    icon: <Sparkles className="w-4 h-4" />,
-    label: 'Completed'
-  },
 };
 
-const STATUS_ORDER: DeliveryStatus[] = ['Pending', 'Assigned', 'Delivering', 'Delivered', 'Collecting', 'Collected', 'Completed'];
+const STATUS_ORDER: DeliveryStatus[] = ['Pending', 'Assigned', 'Delivering', 'Delivered'];
 
 // Helper functions
 const getNextStatus = (current: DeliveryStatus): DeliveryStatus | null => {
@@ -180,11 +156,11 @@ const StatusUpdateModal: React.FC<{
           </div>
 
           {/* Auto-fill notice */}
-          {(nextStatus === 'Delivered' || nextStatus === 'Collected') && (
+          {nextStatus === 'Delivered' && (
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200">
               <Timer className="w-5 h-5 text-amber-600" />
               <p className="text-sm text-amber-800">
-                <span className="font-semibold">Auto-timestamp:</span> {nextStatus === 'Delivered' ? 'Actual delivery' : 'Actual pickup'} time will be recorded automatically.
+                <span className="font-semibold">Auto-timestamp:</span> Actual delivery time will be recorded automatically.
               </p>
             </div>
           )}

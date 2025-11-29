@@ -1,6 +1,6 @@
 // src/types/delivery.types.ts
 
-export type DeliveryStatus = 'Pending' | 'Assigned' | 'Delivering' | 'Delivered' | 'Collecting' | 'Collected' | 'Completed';
+export type DeliveryStatus = 'Pending' | 'Assigned' | 'Delivering' | 'Delivered';
 
 export interface ActualDeliveryResponse {
   id: number;
