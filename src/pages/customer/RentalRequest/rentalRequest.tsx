@@ -319,63 +319,56 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
                         <TableCell className='text-center'>{request.activityTypeName}</TableCell>
                         <TableCell className='text-center'>{eventDate}</TableCell>
                         <TableCell className='text-center'>{createdDate}</TableCell>
+                        <TableCell className='text-center'>
+                          <div className='flex justify-center space-x-3'>
+                            <button
+                              onClick={() => {
+                                if (request.status === "Draft") {
+                                  onView(request.id)
+                                } else {
+                                  onDetaild(request.id)
+                                }
+                              }}
+                              className='flex items-center space-x-1 bg-blue-100 text-blue-800 hover:bg-blue-200 px-2 py-1 rounded whitespace-nowrap'
+                            >
+                              <Eye size={14} />
+                              <span>{request.status === "Draft" ? "View" : "Detail"}</span>
+                            </button>
 
-{/* ACTIONS */}
-<TableCell className='text-center'>
-  <div className='flex justify-center space-x-3'>
+                            {hasDrafts && (
+                              <button
+                                onClick={() => onViewContract(request.id)}
+                                className='flex items-center space-x-1 bg-orange-100 text-orange-800 hover:bg-orange-200 px-2 py-1 rounded whitespace-nowrap'
+                              >
+                                <Eye size={14} />
+                                <span>View Contract</span>
+                              </button>
+                            )}
 
-    {/* 🔵 View / Detail Logic (correct onDetaild) */}
-    <button
-      onClick={() => {
-        if (request.status === "Draft") {
-          onView(request.id);       // View mode
-        } else {
-          onDetaild(request.id);    // Detail mode
-        }
-      }}
-      className='flex items-center space-x-1 bg-blue-100 text-blue-800 hover:bg-blue-200 px-2 py-1 rounded'
-    >
-      <Eye size={14} />
-      <span>{request.status === "Draft" ? "View" : "Detail"}</span>
-    </button>
+                            {request.status !== "Draft" && request.status !== "Pending" && (
+                              <button
+                                onClick={() =>
+                                  navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))
+                                }
+                                className='flex items-center space-x-1 bg-purple-100 text-purple-800 hover:bg-purple-200 px-2 py-1 rounded'
+                              >
+                                <MessageCircle size={14} />
+                                <span>Chat</span>
+                              </button>
+                            )}
 
-    {/* 🟠 View Contract (if drafts exist) */}
-    {hasDrafts && (
-      <button
-        onClick={() => onViewContract(request.id)}
-        className='flex items-center space-x-1 bg-orange-100 text-orange-800 hover:bg-orange-200 px-2 py-1 rounded'
-      >
-        <Eye size={14} />
-        <span>View Contract</span>
-      </button>
-    )}
+                            {request.status === "Draft" && (
+                              <button
+                                onClick={() => handleSendRequest(request.id)}
+                                className='flex items-center space-x-1 bg-green-100 text-green-800 hover:bg-green-200 px-2 py-1 rounded'
+                              >
+                                <span>📤</span>
+                                <span>Send</span>
+                              </button>
+                            )}
 
-    {/* 🟣 Chat — visible only when NOT Draft and NOT Pending */}
-    {request.status !== "Draft" && request.status !== "Pending" && (
-      <button
-        onClick={() =>
-          navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))
-        }
-        className='flex items-center space-x-1 bg-purple-100 text-purple-800 hover:bg-purple-200 px-2 py-1 rounded'
-      >
-        <MessageCircle size={14} />
-        <span>Chat</span>
-      </button>
-    )}
-
-    {/* 🟢 Send — visible only Draft */}
-    {request.status === "Draft" && (
-      <button
-        onClick={() => handleSendRequest(request.id)}
-        className='flex items-center space-x-1 bg-green-100 text-green-800 hover:bg-green-200 px-2 py-1 rounded'
-      >
-        <span>📤</span>
-        <span>Send</span>
-      </button>
-    )}
-
-  </div>
-</TableCell>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     )
                   })
