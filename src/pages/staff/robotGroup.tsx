@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { getAllActivityTypeGroupAsync } from "../../apis/robotGroup.staff.api";
+import { useNavigate } from "react-router-dom";
 
-interface RobotGroupContentProps {
-  onSchedule: (groupId: number) => void;
-}
-
-const RobotGroupContent: React.FC<RobotGroupContentProps> = ({ onSchedule }) => {
+const RobotGroupContent: React.FC = () => {
+  const navigate = useNavigate()
   const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("");
@@ -110,7 +108,7 @@ const RobotGroupContent: React.FC<RobotGroupContentProps> = ({ onSchedule }) => 
                   </td>
                   <td className="py-3 px-4 text-right">
                     <button
-                      onClick={() => onSchedule(item.id)} // <= SEND GROUP ID
+                      onClick={() => navigate(`/staff/schedule-board/${item.id}`)}
                       className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                     >
                       Schedule

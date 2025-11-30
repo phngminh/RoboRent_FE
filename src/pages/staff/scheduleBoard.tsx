@@ -8,6 +8,7 @@ import {
 import { getReceivedRentalByStaffIdAsync } from "../../apis/rental.staff.api";
 import { useAuth } from "../../contexts/AuthContext";  
 import ModalPortal from "../../components/staff/ModalPortal";
+import { useParams } from "react-router-dom";
 
 // -------------------------
 // Types

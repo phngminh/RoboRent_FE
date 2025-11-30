@@ -1,23 +1,22 @@
-import { 
-  CheckCircle, Clock, Phone, Mail, User, Hash, Calendar, PenSquare, ArrowLeft, MapPin
-} from "lucide-react";
+import { Clock, Phone, Mail, User, Hash, Calendar, PenSquare, ArrowLeft, MapPin} from "lucide-react";
 import { useEffect, useState } from "react";
 import { getRentalByIdAsync, staffRequestUpdateRentalAsync } from "../../apis/rental.staff.api";
 import { getRentalDetailsByRentalIdAsync } from "../../apis/rentaldetail.api";
 import { useRef } from "react";
 import { getGroupScheduleByRentalIdForCustomerAsync } from "../../apis/groupSchedule.customer.api";
 import { useAuth } from "../../contexts/AuthContext";
+import { useParams } from "react-router-dom";
 
 interface ShareRentalRequestDetailProps {
-  rentalId: number;
   onBack: () => void;
   onNavigateToScheduleBoard?: (groupId: number) => void;
 }
 
-export default function ShareRentalRequestDetail({ rentalId, onBack, onNavigateToScheduleBoard }: ShareRentalRequestDetailProps) {
+export default function ShareRentalRequestDetail({ onBack, onNavigateToScheduleBoard }: ShareRentalRequestDetailProps) {
 const { user } = useAuth();
 const userRole = user?.role; // "Customer", "Staff", "Manager", etc.
-
+  const { id: rentalIdString } = useParams<{ id: string }>()
+  const rentalId = rentalIdString ? parseInt(rentalIdString, 10) : 0
   const [rental, setRental] = useState<any>(null);
   const [rentalDetails, setRentalDetails] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

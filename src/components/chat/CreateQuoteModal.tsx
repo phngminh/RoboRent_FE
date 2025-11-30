@@ -1,6 +1,6 @@
 // src/components/chat/CreateQuoteModal.tsx
 import { useState, useEffect } from 'react'
-import { X, AlertCircle } from 'lucide-react'
+import { X, AlertCircle, Truck } from 'lucide-react'
 import { createPriceQuote, checkCanCreateMoreQuotes } from '../../apis/priceQuote.api'
 import type { CreatePriceQuoteRequest } from '../../types/chat.types'
 import { toast } from 'react-toastify'
@@ -33,7 +33,10 @@ export default function CreateQuoteModal({
   const depositNum = parseFloat(deposit) || 0
   const completeNum = parseFloat(complete) || 0
   const serviceNum = parseFloat(service) || 0
-  const total = deliveryNum + depositNum + completeNum + serviceNum
+  
+  // ⚠️ NOTE: DeliveryFee sẽ được backend tự động tính
+  // Total hiển thị ở đây chỉ là preview (chưa có DeliveryFee)
+  const subtotal = deliveryNum + depositNum + completeNum + serviceNum
   const distanceNum = parseFloat(distance)
 
   const quoteNumber = currentQuoteCount + 1
@@ -59,7 +62,7 @@ export default function CreateQuoteModal({
       return
     }
 
-    if (total <= 0) {
+    if (subtotal <= 0) {
       toast.error('Total amount must be greater than 0')
       return
     }
@@ -160,53 +163,42 @@ export default function CreateQuoteModal({
             </div>
           )}
 
+          {/* ✅ NEW: Delivery Fee Info Banner */}
+          <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <Truck className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-blue-900">Delivery Fee Auto-Calculated</p>
+              <p className="text-xs text-blue-700 mt-1">
+                The delivery fee will be automatically calculated based on the customer's city and added to the total.
+              </p>
+            </div>
+          </div>
+
           {/* Cost Breakdown */}
-<div>
-  <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
-  
-  <div className="grid grid-cols-2 gap-4">
-
-    {/* Delivery Distance */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Delivery Distance (km)
-      </label>
-      <div className="relative">
-        <input
-          type="number"
-          step="0.1"
-          value={distance}
-          onChange={(e) => setDistance(e.target.value)}
-          placeholder="Enter distance"
-          className="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <p className="text-xs text-gray-500 mt-1">
-        Distance from HQ to event location.
-      </p>
-    </div>
-
-    {/* Delivery Fee */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Delivery Fee
-      </label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-        <input
-          type="number"
-          step="0.01"
-          value={delivery}
-          onChange={(e) => setDelivery(e.target.value)}
-          placeholder="0.00"
-          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <p className="text-xs text-gray-500 mt-1">
-        Cost for delivering the rental items.
-        <span className="text-red-600 ml-1">Cannot be negative.</span>
-      </p>
-    </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              {/* Delivery Fee */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Delivery Fee (Manual)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={delivery}
+                    onChange={(e) => setDelivery(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Additional delivery charges (if any).
+                </p>
+              </div>
 
     {/* Deposit */}
     <div>
@@ -275,14 +267,18 @@ export default function CreateQuoteModal({
 </div>
 
 
-          {/* Total Calculation */}
-          <div className="bg-gray-50 rounded-lg p-4">
+          {/* ✅ UPDATED: Subtotal Preview (before auto DeliveryFee) */}
+          <div className="bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-300">
             <div className="flex items-center justify-between">
-              <span className="text-xl font-bold text-gray-900">Total Amount:</span>
-              <span className="text-3xl font-bold text-blue-600">
-                ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="text-lg font-semibold text-gray-700">Subtotal (Preview):</span>
+              <span className="text-2xl font-bold text-gray-900">
+                ${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
+            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+              <Truck className="w-3 h-3" />
+              Auto-calculated delivery fee will be added to this amount
+            </p>
           </div>
 
           {/* Notes */}

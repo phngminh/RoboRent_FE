@@ -1,21 +1,31 @@
 import React, { useEffect, useState } from 'react'
 import { Eye, MessageCircle, Plus, Search } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '../../../components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
+import { Input } from '../../../components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
+import { Button } from '../../../components/ui/button'
 import { getRequestByCustomer, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
+import { getDraftsByRentalId, type ContractDraftResponse } from '../../../apis/contractDraft.api'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import path from '../../../constants/path'
-import { customerCancelRentalAsync, customerDeleteRentalAsync, customerSendRentalAsync } from '../../../apis/rental.customer.api'
-import { getRentalDetailsByRentalIdAsync } from '../../../apis/rentaldetail.api'
+import { customerSendRentalAsync } from '../../../apis/rental.customer.api'
 
 interface RentalRequestsContentProps {
+  onViewContract: (rentalId: number) => void
   onCreate: () => void
   onView: (rentalId: number) => void
-  onDetaild: (rentalId: number) => void
 }
 
-const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate, onView, onDetaild }) => {
+const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
+  onCreate,
+  onViewContract,
+  onView
+}) => {
   const [allRentals, setAllRentals] = useState<RentalRequestResponse[]>([])
   const [filteredRentals, setFilteredRentals] = useState<RentalRequestResponse[]>([])
+  const [draftsMap, setDraftsMap] = useState<Record<number, ContractDraftResponse[]>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
@@ -27,44 +37,23 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   const [appliedDateTo, setAppliedDateTo] = useState('')
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [viewMode, setViewMode] = useState<"all" | "cancelled">("all");
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [confirmCallback, setConfirmCallback] = useState<() => void>(() => {});
-  const [confirmLabel, setConfirmLabel] = useState("Confirm");
-  const [detailsMap, setDetailsMap] = useState<Record<number, number>>({});
-
-
-const isRecentlyCreated = (createdDate: string) => {
-  const now = new Date();
-  const created = new Date(createdDate);
-  const diff = (now.getTime() - created.getTime()) / 1000; // seconds
-  return diff < 300; // 5 minutes
-};
 
   const pageSize = 5
   const totalPages = Math.max(1, Math.ceil(filteredRentals.length / pageSize))
-  const paginatedRentals = filteredRentals.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const paginatedRentals = filteredRentals.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  )
 
+  // -------------------------------
+  // FETCH RENTALS
+  // -------------------------------
   const fetchData = async () => {
     try {
       setLoading(true)
       const data = await getRequestByCustomer(user.accountId)
-      console.log('Fetched rentals:', data)
       setAllRentals(data)
-      // Load detail count for each rental
-const detailCounts: Record<number, number> = {};
-
-for (const r of data) {
-  try {
-    const details = await getRentalDetailsByRentalIdAsync(r.id);
-    detailCounts[r.id] = details?.data?.length ?? 0;
-  } catch {
-    detailCounts[r.id] = 0;
-  }
-}
-
-setDetailsMap(detailCounts);
-
+      setDraftsMap({})
     } catch (error) {
       console.error('Error fetching rentals:', error)
     } finally {
@@ -72,119 +61,84 @@ setDetailsMap(detailCounts);
     }
   }
 
-const handleCancelDraft = (rentalId: number) => {
-  setConfirmLabel("Cancel");
-  setConfirmCallback(() => async () => {
-    try {
-      setLoading(true);
-      await customerCancelRentalAsync(rentalId);
-      await fetchData();
-    } catch (err) {
-      console.error("Cancel draft failed:", err);
-      alert("Failed to cancel draft.");
-    } finally {
-      setLoading(false);
-      setShowConfirm(false);
+  // -------------------------------
+  // FETCH CONTRACT DRAFTS FOR EACH RENTAL
+  // -------------------------------
+  const fetchDraftsForRentals = async () => {
+    for (const rental of allRentals.filter(r => !draftsMap[r.id!])) {
+      try {
+        const drafts = await getDraftsByRentalId(rental.id)
+        setDraftsMap(prev => ({ ...prev, [rental.id]: drafts }))
+      } catch (error) {
+        console.error(`Error fetching drafts for ${rental.id}:`, error)
+        setDraftsMap(prev => ({ ...prev, [rental.id]: [] }))
+      }
     }
-  });
-  setShowConfirm(true);
-};
+  }
 
-const handleDeleteRental = (rentalId: number) => {
-  setConfirmLabel("Delete");
-  setConfirmCallback(() => async () => {
+  useEffect(() => {
+    if (allRentals.length > 0) fetchDraftsForRentals()
+  }, [allRentals])
+
+  // -------------------------------
+  // SEND RENTAL REQUEST
+  // -------------------------------
+  const handleSendRequest = async (rentalId: number) => {
     try {
-      setLoading(true);
-      await customerDeleteRentalAsync(rentalId);
-      await fetchData();
-    } catch (err) {
-      console.error("Delete rental failed:", err);
-      alert("Failed to delete rental.");
-    } finally {
-      setLoading(false);
-      setShowConfirm(false);
-    }
-  });
-  setShowConfirm(true);
-};
-
-const handleSendRequest = (rentalId: number) => {
-  setConfirmLabel("Send");
-  setConfirmCallback(() => async () => {
-    try {
-      setLoading(true);
-
-      // Send to manager
-      await customerSendRentalAsync(rentalId);
-
-      // Refresh list
-      await fetchData();
+      setLoading(true)
+      await customerSendRentalAsync(rentalId)
+      await fetchData()
     } catch (err: any) {
-      console.error("Error sending rental:", err);
-      alert(err?.response?.data?.message || "Failed to send rental");
+      console.error('Error sending rental:', err)
+      alert(err?.response?.data?.message || 'Failed to send rental')
     } finally {
-      setLoading(false);
-      setShowConfirm(false);
+      setLoading(false)
     }
-  });
+  }
 
-  setShowConfirm(true);
-};
-
+  // -------------------------------
+  // FILTERING LOGIC
+  // -------------------------------
   const filterData = () => {
     let filtered = [...allRentals]
 
-    if (viewMode === "cancelled") {
-  filtered = filtered.filter(r => r.status === "Cancelled");
-} else {
-  filtered = filtered.filter(r => r.status !== "Cancelled");
-}
-
     if (appliedStatus !== 'All Status') {
-      filtered = filtered.filter((r) => r.status === appliedStatus)
+      filtered = filtered.filter(r => r.status === appliedStatus)
     }
 
     if (appliedDateFrom) {
-      const fromDate = new Date(appliedDateFrom)
-      filtered = filtered.filter((r) => new Date(r.createdDate) >= fromDate)
+      const from = new Date(appliedDateFrom)
+      filtered = filtered.filter(r => new Date(r.createdDate) >= from)
     }
 
     if (appliedDateTo) {
-      const toDate = new Date(appliedDateTo)
-      toDate.setHours(23, 59, 59, 999)
-      filtered = filtered.filter((r) => new Date(r.createdDate) <= toDate)
+      const to = new Date(appliedDateTo)
+      to.setHours(23, 59, 59, 999)
+      filtered = filtered.filter(r => new Date(r.createdDate) <= to)
     }
 
     if (search.trim()) {
-      filtered = filtered.filter((r) =>
+      filtered = filtered.filter(r =>
         r.eventName?.toLowerCase().includes(search.toLowerCase().trim())
       )
     }
 
+    filtered.sort((a, b) => a.id - b.id)
     setFilteredRentals(filtered)
     setCurrentPage(1)
   }
 
   useEffect(() => {
-    if (user?.accountId) {
-      fetchData()
-    }
+    if (user?.accountId) fetchData()
   }, [user?.accountId])
 
   useEffect(() => {
     filterData()
-  }, [allRentals, search, appliedStatus, appliedDateFrom, appliedDateTo, viewMode])
+  }, [allRentals, search, appliedStatus, appliedDateFrom, appliedDateTo])
 
-  useEffect(() => {
-    const newTotalPages = Math.max(1, Math.ceil(filteredRentals.length / pageSize))
-    if (currentPage > newTotalPages) {
-      setCurrentPage(newTotalPages)
-    }
-    if (filteredRentals.length === 0 && currentPage !== 1) {
-      setCurrentPage(1)
-    }
-  }, [filteredRentals.length, currentPage])
-
+  // -------------------------------
+  // FILTER FORM APPLY & CLEAR
+  // -------------------------------
   const applyFilters = () => {
     setAppliedStatus(statusFilter)
     setAppliedDateFrom(dateFrom)
@@ -202,380 +156,261 @@ const handleSendRequest = (rentalId: number) => {
     setCurrentPage(1)
   }
 
-  const handlePageChange = (page: number) => {
-    if (page < 1 || page > totalPages) return
-    setCurrentPage(page)
-  }
+  const statusOptions = ['All Status', 'Draft', 'Pending', 'Received', 'Rejected', 'Completed']
 
+  // -------------------------------
+  // UI
+  // -------------------------------
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
-      {/* Filter Section */}
-      <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
-        <h2 className='text-lg font-semibold text-gray-800 mb-4 text-center'>Filter Requests</h2>
+      {/* FILTER CARD */}
+      <Card className='rounded-xl shadow-sm border border-gray-100'>
+        <CardHeader className='pb-0'>
+          <h2 className='text-lg font-semibold text-gray-800 text-center mb-3'>Filter Requests</h2>
+        </CardHeader>
 
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Status</label>
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
-              <option>All Status</option>
-              <option>Pending</option>
-              <option>AcceptedDemo</option>
-              <option>Draft</option>
-              <option>Rejected</option>
-              <option>Completed</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</label>
-            <input 
-              type='date'
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-          
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</label>
-            <input 
-              type='date'
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-          
-          <div className='flex items-end space-x-2'>
-            <button 
-              onClick={applyFilters}
-              className='flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'>
-              Apply Filters
-            </button>
-            <button 
-              onClick={clearFilters}
-              className='bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors'>
-              Clear
-            </button>
-          </div>
-        </div>
+        <CardContent className='p-6 pt-0'>
+          <div className='flex flex-col gap-4 md:flex-row md:items-end md:gap-4'>
+            <div className='flex flex-1 md:gap-4'>
+              {/* Status Filter */}
+              <div className='w-full md:w-40'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className='w-full'>
+                    <SelectValue placeholder='Status' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map(status => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Event Name</label>
-        <div className='flex gap-3 mb-4'>
-          <div className='relative flex-1'>
-            <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
-            <input
-              type='text'
-              placeholder='Search by event name...'
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className='w-full pl-10 pr-4 py-2 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-        </div>
-      </div>
+              {/* Date From */}
+              <div className='w-full md:w-40'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</label>
+                <Input type='date' value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+              </div>
 
-      <div className='bg-white rounded-xl shadow-sm border border-gray-100'>
-        <div className='p-6 border-b border-gray-100 flex items-center justify-between gap-4'>
-          <div className='flex flex-col items-center text-center flex-1 ml-32'>
-            <h2 className='text-xl font-semibold text-gray-800'>All Rental Requests</h2>
-            <p className='text-gray-600 mt-1'>Manage your rental requests and track their status.</p>
+              {/* Date To */}
+              <div className='w-full md:w-40'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</label>
+                <Input type='date' value={dateTo} onChange={e => setDateTo(e.target.value)} />
+              </div>
+
+              {/* Search */}
+              <div className='flex-1'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Search Event</label>
+                <div className='relative'>
+                  <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
+                  <Input
+                    placeholder='Search by event name...'
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className='pl-10'
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className='flex gap-2'>
+              <Button onClick={applyFilters}>Apply</Button>
+              <Button
+                variant='outline'
+                onClick={clearFilters}
+                className='bg-gray-200 text-gray-700 hover:bg-gray-300'
+              >
+                Clear
+              </Button>
+            </div>
           </div>
-          <button
+        </CardContent>
+      </Card>
+
+      {/* MAIN TABLE */}
+      <Card className='rounded-xl shadow-sm border border-gray-300 relative'>
+        <CardHeader className='p-6 border-b border-gray-100 relative'>
+          <h2 className='text-xl font-semibold text-gray-800 text-center'>
+            All Rental Requests
+          </h2>
+          <p className='text-gray-600 mt-1 text-center'>Manage your rental requests and track status.</p>
+
+          <Button
             onClick={onCreate}
-            className='bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2'
+            className='absolute right-6 top-6 bg-green-600 hover:bg-green-700 text-white'
           >
             <Plus size={18} />
-            <span>Create</span>
-          </button>
-        </div>
-        
-        <div className='overflow-x-auto'>
-          <div className="flex justify-end gap-3 mb-4 pr-6">
-  <button
-    onClick={() => setViewMode("all")}
-    className={`px-4 py-2 rounded-lg text-sm font-medium ${
-      viewMode === "all" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
-    }`}
-  >
-    All Requests
-  </button>
+            <span className='ml-1'>Create</span>
+          </Button>
+        </CardHeader>
 
-  <button
-    onClick={() => setViewMode("cancelled")}
-    className={`px-4 py-2 rounded-lg text-sm font-medium ${
-      viewMode === "cancelled" ? "bg-red-600 text-white" : "bg-gray-200 text-gray-700"
-    }`}
-  >
-    Cancelled
-  </button>
-</div>
+        <CardContent className='p-0'>
+          <div className='overflow-x-auto'>
+            <Table>
+              <TableHeader className='bg-gray-50'>
+                <TableRow>
+                  <TableHead className='text-center'>Event Name</TableHead>
+                  <TableHead className='text-center'>Address</TableHead>
+                  <TableHead className='text-center'>Status</TableHead>
+                  <TableHead className='text-center'>Event Activity</TableHead>
+                  <TableHead className='text-center'>Activity Type</TableHead>
+                  <TableHead className='text-center'>Event Date</TableHead>
+                  <TableHead className='text-center'>Created Date</TableHead>
+                  <TableHead className='text-center'>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
 
-          <table className='w-full'>
-            <thead className='bg-gray-50'>
-              <tr>
-                <th className="w-6"></th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Name</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Address</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Status</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Activity</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Activity Type</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Date</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Created Date</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Actions</th>
-              </tr>
-            </thead>
-            <tbody className='bg-white divide-y divide-gray-200'>
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
-                    Loading...
-                  </td>
-                </tr>
-              ) : paginatedRentals.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
-                    No rental requests found.
-                  </td>
-                </tr>
-              ) : (
-                paginatedRentals.map((request) => {
-                  const badgeClass =
-                    (request.status === 'Accepted' || request.status === 'AcceptedDemo')
-                      ? 'bg-green-100 text-green-800'
-                      : request.status === 'Completed'
-                      ? 'bg-blue-100 text-blue-800'
-                      : request.status === 'Pending'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : request.status === 'Draft'
-                      ? 'bg-gray-100 text-gray-800'
-                      : request.status === 'Rejected'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-blue-100 text-blue-800'
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className='text-center py-6 text-gray-500'>
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedRentals.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className='text-center py-6 text-gray-500'>
+                      No rental requests found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedRentals.map(request => {
+                    const badgeClass =
+                      request.status === 'Accepted' || request.status === 'AcceptedDemo'
+                        ? 'bg-green-100 text-green-800'
+                        : request.status === 'Completed'
+                        ? 'bg-blue-100 text-blue-800'
+                        : request.status === 'Pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : request.status === 'Draft'
+                        ? 'bg-gray-100 text-gray-800'
+                        : request.status === 'Rejected'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-blue-100 text-blue-800'
 
-                  const eventDate = request.eventDate
-                    ? new Date(request.eventDate).toLocaleDateString()
-                    : '—'
+                    const eventDate = request.eventDate
+                      ? new Date(request.eventDate).toLocaleDateString()
+                      : '—'
 
-                  const createdDate = request.createdDate
-                    ? new Date(request.createdDate).toLocaleDateString()
-                    : '—'
+                    const createdDate = request.createdDate
+                      ? new Date(request.createdDate).toLocaleDateString()
+                      : '—'
 
-                  return (
-<tr key={request.id ?? request.accountId} className="hover:bg-gray-50">
-  <td className="px-4 py-4 text-center w-6">
-{isRecentlyCreated(request.createdDate) && request.status !== "Cancelled" && (
-<span className="inline-block h-2.5 w-2.5 rounded-full bg-[#48d368] shadow-[0_0_4px_1px_rgba(72,211,104,0.7)]"></span>
-    )}
-  </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>
-                        {request.eventName ?? '—'}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.address ?? '—'}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-center'>
-                        <div className='flex items-center justify-center space-x-2'>
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`}>
+                    const drafts = draftsMap[request.id] ?? []
+                    const hasDrafts = drafts.length > 0
+
+                    return (
+                      <TableRow key={request.id} className='hover:bg-gray-50'>
+                        <TableCell className='text-center'>{request.eventName}</TableCell>
+                        <TableCell className='text-center'>{request.address}</TableCell>
+                        <TableCell className='text-center'>
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`}
+                          >
                             {request.status}
                           </span>
-                        </div>
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.eventActivityName}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{request.activityTypeName}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{eventDate}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>{createdDate}</td>
-<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
-  <div className="flex justify-center space-x-6 min-w-[200px]">
+                        </TableCell>
+                        <TableCell className='text-center'>{request.eventActivityName}</TableCell>
+                        <TableCell className='text-center'>{request.activityTypeName}</TableCell>
+                        <TableCell className='text-center'>{eventDate}</TableCell>
+                        <TableCell className='text-center'>{createdDate}</TableCell>
 
-{/* View / Detail button with new status logic */}
-<button
-  onClick={() => {
-    if (request.status !== "Draft") {
-      onDetaild(request.id);     // Detail mode
-    } else {
-      onView(request.id);        // View mode
-    }
-  }}
-  className="text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1"
->
-  <Eye size={14} />
+                        {/* ACTIONS */}
+                        <TableCell className='text-center'>
+                          <div className='flex justify-center space-x-3'>
+                            {/* View Details */}
+                            <button
+                              onClick={() => onView(request.id)}
+                              className='flex items-center space-x-1 bg-blue-100 text-blue-800 hover:bg-blue-200 px-2 py-1 rounded'
+                            >
+                              <Eye size={14} />
+                              <span>View</span>
+                            </button>
 
-  <span>
-    {request.status !== "Draft"
-      ? "Detail"
-      : "View"}
-  </span>
-</button>
+                            {/* View Contract (Restored!) */}
+                            {hasDrafts && (
+                              <button
+                                onClick={() => onViewContract(request.id)}
+                                className='flex items-center space-x-1 bg-orange-100 text-orange-800 hover:bg-orange-200 px-2 py-1 rounded'
+                              >
+                                <Eye size={14} />
+                                <span>View Contract</span>
+                              </button>
+                            )}
 
-{/* Chat — only show when NOT Draft or Pending */}
-{request.status !== "Draft" && request.status !== "Pending" && (
-  <button
-    onClick={() =>
-      navigate(path.CUSTOMER_CHAT.replace(":rentalId", String(request.id)))
-    }
-    className="text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1"
-  >
-    <MessageCircle size={14} />
-    <span>Chat</span>
-  </button>
-)}
+                            {/* Chat */}
+                            <button
+                              onClick={() =>
+                                navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))
+                              }
+                              className='flex items-center space-x-1 bg-purple-100 text-purple-800 hover:bg-purple-200 px-2 py-1 rounded'
+                            >
+                              <MessageCircle size={14} />
+                              <span>Chat</span>
+                            </button>
 
+                            {/* Send */}
+                            <button
+                              onClick={() => handleSendRequest(request.id)}
+                              className='flex items-center space-x-1 bg-green-100 text-green-800 hover:bg-green-200 px-2 py-1 rounded'
+                            >
+                              <span>📤</span>
+                              <span>Send</span>
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
-{/* Send — always allow clicking, but validate detail count */}
-{request.status === "Draft" && (
-  <button
-    onClick={() => {
-      if (detailsMap[request.id] === 0) {
-        // Show warning dialog, not the send dialog
-        setConfirmLabel("MissingDetails");
-        setShowConfirm(true);
-      } else {
-        handleSendRequest(request.id);
-      }
-    }}
-    className="text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1"
-  >
-    📤
-    <span>Send</span>
-  </button>
-)}
+          {/* PAGINATION */}
+          <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
+            <div className='flex space-x-2'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
 
-
-
-    {/* Cancel — only Draft */}
-    {request.status === "Draft" && (
-      <button
-        onClick={() => handleCancelDraft(request.id)}
-        className="text-red-600 hover:text-red-800 transition-colors flex items-center space-x-1"
-      >
-        ❌
-        <span>Cancel</span>
-      </button>
-    )}
-    {/* Delete — only Cancelled */}
-{request.status === "Cancelled" && (
-  <button
-    onClick={() => handleDeleteRental(request.id)}
-    className="text-red-600 hover:text-red-800 transition-colors flex items-center space-x-1"
-  >
-    🗑️
-    <span>Delete</span>
-  </button>
-)}
-
-
-  </div>
-</td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
-          <div className='flex space-x-2'>
-            <button
-              className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </button>
-            {Array.from({ length: totalPages }, (_, index) => {
-              const pageNumber = index + 1
-              const isActive = pageNumber === currentPage
-              return (
-                <button
-                  key={pageNumber}
-                  onClick={() => handlePageChange(pageNumber)}
-                  className={`px-3 py-1 text-sm rounded ${
-                    isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 hover:text-gray-800 transition-colors'
-                  }`}
+              {Array.from({ length: totalPages }, (_, i) => (
+                <Button
+                  key={i}
+                  size='sm'
+                  variant={i + 1 === currentPage ? 'default' : 'outline'}
+                  onClick={() => setCurrentPage(i + 1)}
                 >
-                  {pageNumber}
-                </button>
-              )
-            })}
-            <button
-              className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages || filteredRentals.length === 0}
-            >
-              Next
-            </button>
+                  {i + 1}
+                </Button>
+              ))}
+
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+
+            <div className='text-sm text-gray-500'>
+              Showing {paginatedRentals.length} of {filteredRentals.length}
+            </div>
           </div>
-          <div className='text-sm text-gray-500'>
-            Showing {paginatedRentals.length} of {filteredRentals.length} request{filteredRentals.length === 1 ? '' : 's'}
-          </div>
-        </div>
-      </div>
-      {/* Custom Confirm Dialog */}
-{showConfirm && (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-    <div className="bg-white rounded-xl shadow-lg p-6 w-[90%] max-w-md">
-
-      <h2 className="text-lg font-semibold text-gray-800 text-center mb-3">
-        Confirm Action
-      </h2>
-
-      <p className="text-gray-600 text-center mb-6">
-        {confirmLabel === "Delete"
-          ? "Are you sure you want to delete this cancelled request?"
-          : confirmLabel === "Send"
-          ? "Once sent, this request cannot be edited while it is pending."
-          : confirmLabel === "MissingDetails"
-          ? "You have not made your robot customization yet."
-          : "Are you sure you want to cancel this draft request?"}
-      </p>
-
-      {/* Buttons */}
-      <div className="flex justify-center space-x-4">
-
-        {/* Only OK button when MissingDetails */}
-        {confirmLabel === "MissingDetails" ? (
-          <button
-            onClick={() => setShowConfirm(false)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            OK
-          </button>
-        ) : (
-          <>
-            {/* YES button */}
-            <button
-              onClick={confirmCallback}
-              className={
-                confirmLabel === "Send"
-                  ? "px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                  : "px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-              }
-            >
-              Yes, {confirmLabel}
-            </button>
-
-            {/* NO button */}
-            <button
-              onClick={() => setShowConfirm(false)}
-              className="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition"
-            >
-              No
-            </button>
-          </>
-        )}
-
-      </div>
-
+        </CardContent>
+      </Card>
     </div>
-  </div>
-)}
-    </div>
-    
-)}
+  )
+}
 
 export default RentalRequestsContent

@@ -1,16 +1,9 @@
-import { useEffect, useState } from 'react'
-import ProfileSidebar from '../../components/sidebar/staffSidebar'
-import DashboardContent from './dashboard'
-import AccountContent from './account'
-import RentalRequestsContent from './rentalRequest'
-import TransactionsContent from './transactions'
-import { getProfile } from '../../apis/auth.api'
+import { Outlet, useLocation } from 'react-router-dom'
+import StaffSidebar from '../../components/sidebar/staffSidebar'
 import Header from '../../components/header'
-import ShareRentalRequestDetail from '../rental/ShareRentalRequestDetail'
-import RobotGroupContent from './robotGroup'
-import ScheduleBoard from './scheduleBoard'
 
 const Profile = () => {
+<<<<<<< HEAD
   const [activeTab, setActiveTab] = useState('dashboard')
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
@@ -80,15 +73,22 @@ const Profile = () => {
     console.log('Fetched user profile:', user)
   }, [])
 
+=======
+  const location = useLocation()
+  const activeTab = location.pathname.split('/')[2] || 'dashboard'
+  
+>>>>>>> main
   return (
     <div className='flex flex-col h-screen'>
       <Header />
 
       <div className='flex flex-1 pt-12 overflow-hidden'>
-        <ProfileSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <StaffSidebar activeTab={activeTab} />
 
         <div className='flex-1 overflow-y-auto'>
-          <div className='p-8'>{renderContent()}</div>
+          <div className='p-8'>
+            <Outlet />
+          </div>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useRoutes, Navigate } from 'react-router-dom'
+import { useRoutes, Navigate, useNavigate } from 'react-router-dom'
 import path from '../constants/path'
 import AboutUs from '../pages/home/aboutUs'
 import OurProducts from '../pages/home/ourProduct'
@@ -21,8 +21,17 @@ import Clauses from '../pages/manager/contract/templateClauses'
 import BreachReports from '../pages/manager/report/breachReports'
 import ContractTemplates from '../pages/manager/contract/allContracts'
 import ShareRentalRequestDetail from '../pages/rental/ShareRentalRequestDetail'
+import DeliveryTrackingPage from '../pages/staff/DeliveryTrackingPage'
+import RobotGroupContent from '../pages/staff/robotGroup'
+import ScheduleBoard from '../pages/staff/scheduleBoard'
+import CreateRentalRequestContent from '../pages/customer/RentalRequest/createRentalRequest'
+import CreateRentalDetailContent from '../pages/customer/RentalDetail/CreateRentalDetailContent'
+import ContractDrafts from '../pages/manager/contractDraft/contractDrafts'
+import DetailContractDraft from '../pages/manager/contractDraft/detailContractDraft'
+import CustomerContractDraft from '../pages/customer/contract/customerContractDraft'
 
 export default function useRouteElements() {
+  const navigate = useNavigate()
   const routeElements = useRoutes([
     { path: path.home, element: <Home /> },
     { path: path.aboutUs, element: <AboutUs /> },
@@ -39,7 +48,57 @@ export default function useRouteElements() {
           children: [
             { path: 'dashboard', element: <DashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
-            { path: 'rental-requests', element: <CustomerRentalRequestsContent /> },
+            {
+              path: 'rental-requests',
+              element: (
+                <CustomerRentalRequestsContent 
+                  onCreate={() => navigate(`${path.BASE_CUSTOMER}/create-rental-request`)}
+                  onView={(rentalId) => navigate(`${path.BASE_CUSTOMER}/create-rental-request/${rentalId}`)}
+                  onViewContract={(rentalId) => navigate(`${path.BASE_CUSTOMER}/contract-draft/${rentalId}`)}
+                />
+              )
+            },
+            {
+              path: 'contract-draft/:rentalId',
+              element: (
+                <CustomerContractDraft
+                  onBack={() => navigate(`${path.BASE_CUSTOMER}/rental-requests`)}
+                />
+              )
+            },
+            {
+              path: 'create-rental-request',
+              element: (
+                <CreateRentalRequestContent
+                  onBack={() => navigate(`${path.BASE_CUSTOMER}/rental-requests`)}
+                  onNextStep={(rentalId, activityTypeId) =>
+                    navigate(`${path.BASE_CUSTOMER}/create-rental-detail/${rentalId}/${activityTypeId}`)
+                  }
+                />
+              )
+            },
+            {
+              path: 'create-rental-request/:rentalId',
+              element: (
+                <CreateRentalRequestContent
+                  onBack={() => navigate(`${path.BASE_CUSTOMER}/rental-requests`)}
+                  onNextStep={(rentalId, activityTypeId) =>
+                    navigate(`${path.BASE_CUSTOMER}/create-rental-detail/${rentalId}/${activityTypeId}`)
+                  }
+                />
+              )
+            },
+            {
+              path: 'create-rental-detail/:rentalId/:activityTypeId',
+              element: (
+                <CreateRentalDetailContent 
+                  onBack={(rentalId) =>
+                    navigate(`${path.BASE_CUSTOMER}/create-rental-request/${rentalId}`)
+                  }
+                  onSave={() => navigate(`${path.BASE_CUSTOMER}/rental-requests`)}
+                />
+              )
+            },
             { path: 'transactions', element: <TransactionsContent /> }
           ]
         },
@@ -57,14 +116,46 @@ export default function useRouteElements() {
           children: [
             { path: 'dashboard', element: <DashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
-            { path: 'rental-requests', element: <StaffRentalRequestsContent /> },
+            { 
+              path: 'rental-requests', 
+              element: 
+              <StaffRentalRequestsContent 
+                onCreate={() => {}}
+                onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
+              /> 
+            },
+            { 
+              path: 'contract-drafts', 
+              element: 
+              <StaffRentalRequestsContent 
+                onCreate={() => {}}
+                onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
+              /> 
+            },
+            { 
+              path: 'contract-drafts/:draftId', 
+              element: 
+              <StaffRentalRequestsContent 
+                onCreate={() => {}}
+                onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
+              /> 
+            },
             { path: 'transactions', element: <TransactionsContent /> },
-            { path: 'rental/:id', element: <ShareRentalRequestDetail />}
+            { 
+              path: 'rental/:id', 
+              element: 
+              <ShareRentalRequestDetail 
+                onBack={() => navigate(`${path.BASE_STAFF}/rental-requests`)} 
+              />
+            },
+            { path: 'deliveries', element: <DeliveryTrackingPage /> },
+            { path: 'robot-group', element: <RobotGroupContent /> },
+            { path: 'schedule-board/:groupId', element: <ScheduleBoard /> }
           ]
         },
         {
           path: 'chat/:rentalId', element: <StaffChatPage />
-        }
+        },
       ]
     },
     //================ Manager routes ================
@@ -80,6 +171,20 @@ export default function useRouteElements() {
             { path: 'account', element: <AccountProfile /> },
             { path: 'rental-requests', element: <ManagerRentalRequestsContent /> },
             { path: 'quotes', element: <ManagerQuotesPage /> },
+            { 
+              path: 'contract-drafts', 
+              element: 
+              <ContractDrafts 
+                onView={(draftId) => navigate(`${path.BASE_MANAGER}/contract-drafts/${draftId}`)}
+              /> 
+            },
+            { 
+              path: 'contract-drafts/:draftId', 
+              element: 
+              <DetailContractDraft 
+                onBack={() => navigate(`${path.BASE_MANAGER}/contract-drafts`)}
+              /> 
+            },
             { path: 'contract-templates', element: <ContractTemplates /> },
             { path: 'templates-clauses', element: <Clauses /> },
             { path: 'reports', element: <BreachReports /> }

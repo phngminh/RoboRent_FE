@@ -89,6 +89,8 @@ export interface PriceQuoteResponse {
   deposit: number | null
   complete: number | null
   service: number | null
+  deliveryFee: number | null      
+  deliveryDistance: number | null 
   total: number
   staffDescription: string | null
   managerFeedback: string | null

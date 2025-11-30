@@ -10,6 +10,7 @@ import { ArrowLeft, MapPin, Clock, Home, CalendarDays } from 'lucide-react'
 import BlockTimePicker from '../../../components/customer/BlockTimePicker'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import { useParams } from 'react-router-dom'
 
 interface EventActivity {
   id: number
@@ -39,19 +40,16 @@ interface Wards {
 interface CreateRentalRequestContentProps {
   onBack: () => void
   onNextStep: (rentalId: number, activityTypeId: number) => void
-  rentalId?: number
 }
 
-const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
-  onBack,
-  onNextStep,
-  rentalId
-}) => {
+const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({ onBack, onNextStep }) => {
   const { user } = useAuth()
   const [errors, setErrors] = useState<string[]>([])
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string[] }>({})
 
   const [eventName, setEventName] = useState('')
+  const { rentalId: rentalIdString } = useParams<{ rentalId: string }>()
+  const rentalId = rentalIdString ? parseInt(rentalIdString, 10) : 0
   const [eventDate, setEventDate] = useState<string>('')
 
   const [eventActivities, setEventActivities] = useState<EventActivity[]>([])
