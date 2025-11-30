@@ -1,7 +1,5 @@
 import { useRoutes, Navigate, useNavigate } from 'react-router-dom'
 import path from '../constants/path'
-import AboutUs from '../pages/home/aboutUs'
-import OurProducts from '../pages/home/ourProduct'
 import Home from '../pages/home/homePage/homePage'
 import ProtectedRoute from './ProtectedRoute'
 import CustomerProfile from '../pages/customer/profile/profile'
@@ -29,13 +27,13 @@ import CreateRentalDetailContent from '../pages/customer/RentalDetail/CreateRent
 import ContractDrafts from '../pages/manager/contractDraft/contractDrafts'
 import DetailContractDraft from '../pages/manager/contractDraft/detailContractDraft'
 import CustomerContractDraft from '../pages/customer/contract/customerContractDraft'
+import StaffContractDrafts from '../pages/staff/contract/staffContractDrafts'
+import StaffDetailContractDraft from '../pages/staff/contract/detailContractDraft'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
   const routeElements = useRoutes([
     { path: path.home, element: <Home /> },
-    { path: path.aboutUs, element: <AboutUs /> },
-    { path: path.products, element: <OurProducts /> },
     { path: path.callback, element: <AuthCallback /> },
     //================ Customer routes ================
     {
@@ -136,17 +134,15 @@ export default function useRouteElements() {
             { 
               path: 'contract-drafts', 
               element: 
-              <StaffRentalRequestsContent 
-                onCreate={() => {}}
-                onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
+              <StaffContractDrafts 
+                onView={(id) => navigate(`${path.BASE_STAFF}/contract-drafts/${id}`)}
               /> 
             },
             { 
               path: 'contract-drafts/:draftId', 
               element: 
-              <StaffRentalRequestsContent 
-                onCreate={() => {}}
-                onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
+              <StaffDetailContractDraft 
+                onBack={() => navigate(`${path.BASE_STAFF}/contract-drafts`)}
               /> 
             },
             {

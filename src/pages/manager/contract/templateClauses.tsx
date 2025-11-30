@@ -363,7 +363,8 @@ const Clauses: React.FC = () => {
                                     setSelectedClause(clause)
                                     setIsEditModalVisible(true)
                                   }}
-                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors'
+                                  disabled={!clause.isEditable}
+                                  className={`flex items-center space-x-1 rounded px-2 py-1 bg-yellow-100 text-yellow-800 ${!clause.isEditable ? 'opacity-50 cursor-not-allowed' : 'hover:bg-yellow-200'} transition-colors`}
                                 >
                                   <Edit size={14} />
                                   <span>Edit</span>
@@ -373,7 +374,8 @@ const Clauses: React.FC = () => {
                                     setSelectedClause(clause)
                                     setIsDeleteModalVisible(true)
                                   }}
-                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-red-100 text-red-800 hover:bg-red-200 transition-colors'
+                                  disabled={clause.isMandatory}
+                                  className={`flex items-center space-x-1 rounded px-2 py-1 bg-red-100 text-red-800 ${clause.isMandatory ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-200'} transition-colors`}
                                 >
                                   <Trash2 size={14} />
                                   <span>Delete</span>

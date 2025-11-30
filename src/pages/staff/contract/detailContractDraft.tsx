@@ -4,20 +4,18 @@ import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Textarea } from '../../../components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
 import { ArrowLeft, Eye } from 'lucide-react'
-import { getDraftById, managerRejects, managerSigns, type ContractDraftResponse } from '../../../apis/contractDraft.api'
+import { getDraftById, type ContractDraftResponse } from '../../../apis/contractDraft.api'
 import { getClausesByTemplate, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
 import { getRequestById, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
 import { useParams } from 'react-router-dom'
-import ViewContractDraft from './fullContractDraft'
-import { toast } from 'react-toastify'
+import ViewContractDraft from '../../manager/contractDraft/fullContractDraft'
 
-interface DetailContractDraftProps {
+interface StaffDetailContractDraft {
   onBack: () => void
 }
 
-const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => {
+const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }) => {
   const { draftId: draftIdString } = useParams<{ draftId: string }>()
   const draftId = draftIdString ? parseInt(draftIdString, 10) : 0
   const [draft, setDraft] = useState<ContractDraftResponse | null>(null)
@@ -26,10 +24,6 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isViewModalVisible, setIsViewModalVisible] = useState(false)
-  const [approveOpen, setApproveOpen] = useState(false)
-  const [rejectOpen, setRejectOpen] = useState(false)
-  const [signature, setSignature] = useState('')
-  const [reason, setReason] = useState('')
 
   const fetchDraft = async () => {
     try {
@@ -80,32 +74,6 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
       setLoading(false)
     }
   }, [draftId])
-
-  const handleConfirmApprove = async () => {
-    try {
-      await managerSigns(draftId, signature)
-      toast.success('Approved successfully!')
-      setApproveOpen(false)
-      setSignature('')
-      onBack()
-    } catch (err) {
-      console.error('Approval failed', err)
-      toast.error('Approval failed')
-    }
-  }
-
-  const handleConfirmReject = async () => {
-    try {
-      await managerRejects(draftId, reason)
-      toast.success('Rejected successfully!')
-      setRejectOpen(false)
-      setReason('')
-      onBack()
-    } catch (err) {
-      console.log('err:', err)
-      toast.error('Rejection failed')
-    }
-  }
 
   const decodeHtml = (html: string) => {
     const txt = document.createElement('textarea')
@@ -253,92 +221,6 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
         </CardContent>
       </Card>
 
-      <div className='flex justify-end gap-3 mr-8'>
-        <Button 
-          onClick={() => setRejectOpen(true)} 
-          disabled={draft.status !== 'PendingManagerSignature'}
-          className='bg-red-500 border-gray-300 text-white hover:bg-red-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
-        >
-          Reject
-        </Button>
-        <Button 
-          onClick={() => setApproveOpen(true)} 
-          disabled={draft.status !== 'PendingManagerSignature'}
-          className='bg-indigo-600 hover:bg-indigo-700 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
-        >
-          Approve
-        </Button>
-      </div>
-
-      <Dialog 
-        open={approveOpen} 
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            setApproveOpen(false)
-            setSignature('')
-          }
-        }}
-      >
-        <DialogContent className='sm:max-w-[425px]'>
-          <DialogHeader>
-            <DialogTitle>Enter Signature</DialogTitle>
-            <DialogDescription>
-              Please enter your name as the signature to approve the contract.
-            </DialogDescription>
-          </DialogHeader>
-          <div className='grid gap-4 py-4 -mt-4'>
-            <Input
-              placeholder='Enter your name as signature'
-              value={signature}
-              onChange={(e) => setSignature(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button type='submit' variant='outline' onClick={() => setApproveOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmApprove} disabled={!signature.trim()}>
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog 
-        open={rejectOpen} 
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            setRejectOpen(false)
-            setReason('')
-          }
-        }}
-      >
-        <DialogContent className='sm:max-w-[425px]'>
-          <DialogHeader>
-            <DialogTitle>Enter Rejection Reason</DialogTitle>
-            <DialogDescription>
-              Please provide a reason for rejecting the contract.
-            </DialogDescription>
-          </DialogHeader>
-          <div className='grid gap-4 py-4 -mt-4'>
-            <Textarea
-              placeholder='Enter rejection reason...'
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className='min-h-[100px]'
-            />
-          </div>
-          <DialogFooter>
-            <Button type='submit' variant='outline' onClick={() => setRejectOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmReject} disabled={!reason.trim()}>
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <ViewContractDraft
         open={isViewModalVisible}
         onClose={() => setIsViewModalVisible(false)}
@@ -348,4 +230,4 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
   )
 }
 
-export default DetailContractDraft
+export default StaffDetailContractDraft
