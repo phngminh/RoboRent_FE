@@ -124,12 +124,14 @@ const ScheduleCard = ({
 // -------------------------
 // Main Component
 // -------------------------
-const ScheduleBoard = ({ groupId, onBack }: { groupId: number; onBack: () => void }) => {
+const ScheduleBoard = ({ onBack }: { onBack: () => void }) => {
 
   const { user } = useAuth();   // ⬅️ GET LOGGED-IN STAFF
 
 const loggedStaffId = user?.accountId ? Number(user.accountId) : undefined;
 
+  const { groupId: groupIdString } = useParams<{ groupId: string }>()
+  const groupId = groupIdString ? parseInt(groupIdString, 10) : 0
   const [schedules, setSchedules] = useState<ScheduleGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");

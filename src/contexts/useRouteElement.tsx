@@ -55,6 +55,15 @@ export default function useRouteElements() {
                   onCreate={() => navigate(`${path.BASE_CUSTOMER}/create-rental-request`)}
                   onView={(rentalId) => navigate(`${path.BASE_CUSTOMER}/create-rental-request/${rentalId}`)}
                   onViewContract={(rentalId) => navigate(`${path.BASE_CUSTOMER}/contract-draft/${rentalId}`)}
+                  onDetaild={(rentalId) => navigate(`${path.BASE_CUSTOMER}/share-rental-request/${rentalId}`)}
+                />
+              )
+            },
+            {
+              path: 'share-rental-request/:rentalId',
+              element: (
+                <ShareRentalRequestDetail
+                  onBack={() => navigate(`${path.BASE_CUSTOMER}/rental-requests`)}
                 />
               )
             },
@@ -121,7 +130,7 @@ export default function useRouteElements() {
               element: 
               <StaffRentalRequestsContent 
                 onCreate={() => {}}
-                onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
+                onView={(id) => navigate(`${path.BASE_STAFF}/share-rental-request/${id}`)}
               /> 
             },
             { 
@@ -140,6 +149,15 @@ export default function useRouteElements() {
                 onView={(id) => navigate(`${path.BASE_STAFF}/rental/${id}`)}
               /> 
             },
+            {
+              path: 'share-rental-request/:rentalId',
+              element: (
+                <ShareRentalRequestDetail
+                  onBack={() => navigate(`${path.BASE_STAFF}/rental-requests`)}
+                  onNavigateToScheduleBoard={(groupId) => navigate(`${path.BASE_STAFF}/schedule-board/${groupId}`)}
+                />
+              )
+            },
             { path: 'transactions', element: <TransactionsContent /> },
             { 
               path: 'rental/:id', 
@@ -150,7 +168,13 @@ export default function useRouteElements() {
             },
             { path: 'deliveries', element: <DeliveryTrackingPage /> },
             { path: 'robot-group', element: <RobotGroupContent /> },
-            { path: 'schedule-board/:groupId', element: <ScheduleBoard /> }
+            { 
+              path: 'schedule-board/:groupId', 
+              element: 
+              <ScheduleBoard
+                onBack={() => navigate(`${path.BASE_STAFF}/robot-group`)}
+              /> 
+            }
           ]
         },
         {

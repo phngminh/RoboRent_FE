@@ -15,7 +15,7 @@ interface ShareRentalRequestDetailProps {
 export default function ShareRentalRequestDetail({ onBack, onNavigateToScheduleBoard }: ShareRentalRequestDetailProps) {
 const { user } = useAuth();
 const userRole = user?.role; // "Customer", "Staff", "Manager", etc.
-  const { id: rentalIdString } = useParams<{ id: string }>()
+  const { rentalId: rentalIdString } = useParams<{ rentalId: string }>()
   const rentalId = rentalIdString ? parseInt(rentalIdString, 10) : 0
   const [rental, setRental] = useState<any>(null);
   const [rentalDetails, setRentalDetails] = useState<any[]>([]);
@@ -480,8 +480,11 @@ const loadSchedule = async () => {
 {(userRole === "staff") && (
 <button
   onClick={() => {
+    console.log("test:" + schedule.activityTypeGroupId)
+    console.log("callback exists:", typeof onNavigateToScheduleBoard);
     if (schedule && onNavigateToScheduleBoard) {
       onNavigateToScheduleBoard(schedule.activityTypeGroupId);
+      console.log("ClickKkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
     }
   }}
   className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 mt-4"
