@@ -302,7 +302,11 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
                       : '—'
 
                     const drafts = draftsMap[request.id] ?? []
-                    const hasDrafts = drafts.length > 0
+                    const hasDrafts = drafts.length > 0 
+                    && drafts.some(d => d.status === 'PendingCustomerSignature' 
+                                      || d.status === 'ChangeRequested'
+                                      || d.status === 'Active'
+                                      || d.status === 'Rejected')
 
                     return (
                       <TableRow key={request.id} className='hover:bg-gray-50'>

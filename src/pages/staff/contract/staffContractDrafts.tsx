@@ -4,23 +4,36 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from '../../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Button } from '../../../components/ui/button'
-import { Search, SettingsIcon } from 'lucide-react'
-import { getDraftsByManager, type ContractDraftResponse } from '../../../apis/contractDraft.api'
+import { Eye, Plus, Search, Send } from 'lucide-react'
+import { getDraftsByStaff, sendDraftToManager, type ContractDraftResponse } from '../../../apis/contractDraft.api'
 import { useAuth } from '../../../contexts/AuthContext'
+import CreateContractDraft from './createContractDraft'
+import { toast } from 'react-toastify'
 
 interface ContractDraftsProps {
   onView: (draftId: number) => void
 }
 
-const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
+const StaffContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
   const { user } = useAuth()
   const [drafts, setDrafts] = useState<ContractDraftResponse[]>([])
   const [filteredDrafts, setFilteredDrafts] = useState<ContractDraftResponse[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [appliedStatus, setAppliedStatus] = useState('All Status')
+  const [rentalFilter, setRentalFilter] = useState('')
+  const [appliedRental, setAppliedRental] = useState('')
   const [loading, setLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false)
+
+  const rentalOptions = Array.from(
+    new Set(
+      drafts
+        .map((draft) => draft.contractTemplateTitle)
+        .filter((title) => Boolean(title))
+    )
+  ).sort()
 
   const pageSize = 5
   const totalPages = Math.ceil(filteredDrafts.length / pageSize)
@@ -29,8 +42,7 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
   const fetchDrafts = async () => {
     try {
       setLoading(true)
-      const draftsData = await getDraftsByManager(user?.accountId)
-      console.log('Fetched drafts:', draftsData)
+      const draftsData = await getDraftsByStaff(user?.accountId)
       setDrafts(draftsData)
       setFilteredDrafts(draftsData)
     } catch (err) {
@@ -39,6 +51,17 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
       setFilteredDrafts([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSendDraft = async (draftId: number) => {
+    try {
+      await sendDraftToManager(draftId)
+      toast.success('Draft sent to manager successfully.')
+      fetchDrafts()
+    } catch (err) {
+      console.error('Failed to send draft to manager', err)
+      toast.error('Failed to send draft to manager.')
     }
   }
 
@@ -57,6 +80,10 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
 
     if (appliedStatus !== 'All Status') {
       filtered = filtered.filter((draft) => draft.status === appliedStatus)
+    }
+
+    if (appliedRental) {
+      filtered = filtered.filter((draft) => draft.contractTemplatesId.toString() === appliedRental)
     }
 
     setFilteredDrafts(filtered)
@@ -86,12 +113,16 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
 
   const applyFilters = () => {
     setAppliedStatus(statusFilter)
+    setAppliedRental(rentalFilter)
+    setCurrentPage(1)
   }
 
   const clearFilters = () => {
     setSearch('')
     setStatusFilter('All Status')
     setAppliedStatus('All Status')
+    setRentalFilter('')
+    setAppliedRental('')
     setCurrentPage(1)
   }
 
@@ -174,6 +205,22 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
               </div>
 
               <div className='flex-1'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Rental Request</label>
+                <Select value={rentalFilter} onValueChange={setRentalFilter}>
+                  <SelectTrigger className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
+                    <SelectValue placeholder='Select Request' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rentalOptions.map((rental) => (
+                      <SelectItem key={rental} value={rental}>
+                        {rental}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className='flex-1'>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Title</label>
                 <div className='relative'>
                   <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
@@ -213,6 +260,13 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
           <h2 className='text-xl text-gray-800 font-semibold text-center w-full'>
             Contract Drafts
           </h2>
+          <Button
+            onClick={() => setIsCreateModalVisible(true)}
+            className='absolute right-6 top-3.5 bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2'
+          >
+            <Plus size={18} />
+            <span>Create</span>
+          </Button>
         </CardHeader>
 
         <CardContent className='p-0'>
@@ -245,40 +299,53 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedDrafts.map((draft) => (
-                      <TableRow key={draft.id} className='hover:bg-gray-50'>
-                        {columns.map((column) => {
-                          const cellClass = `px-6 py-4 text-sm text-gray-900 text-center ${column.className || ''}`
-                          let content: React.ReactNode
-                          if (column.key === 'comments' || column.key === 'title' || column.key === 'rentalEventName' || column.key === 'contractTemplateTitle') {
-                            content = <span className='max-w-md truncate'>{draft[column.accessor as keyof ContractDraftResponse] || 'N/A'}</span>
-                          } else if (column.key === 'status') {
-                            content = <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(draft.status)}`}>
-                              {draft.status}
-                            </span>
-                          } else if (column.key === 'createdAt' || column.key === 'updatedAt') {
-                                content = draft[column.key as 'createdAt' | 'updatedAt'] 
-                                    ? new Date(draft[column.key as 'createdAt' | 'updatedAt']).toLocaleDateString()
-                                    : 'N/A'
-                          } else if (column.key === 'actions') {
-                            content = (
-                              <div className='flex items-center justify-center space-x-2 text-sm'>
-                                <button
-                                  onClick={() => onView(draft.id)}
-                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
-                                >
-                                  <SettingsIcon size={14} />
-                                  <span>View</span>
-                                </button>
-                              </div>
-                            )
-                          } else {
-                            content = draft[column.accessor as keyof ContractDraftResponse]
-                          }
-                          return <TableCell key={column.key} className={cellClass}>{content}</TableCell>
-                        })}
-                      </TableRow>
-                    ))
+                    paginatedDrafts.map((draft) => {
+                      const canSend = draft.status === 'Draft'
+
+                      return (
+                        <TableRow key={draft.id} className='hover:bg-gray-50'>
+                          {columns.map((column) => {
+                            const cellClass = `px-6 py-4 text-sm text-gray-900 text-center ${column.className || ''}`
+                            let content: React.ReactNode
+                            if (column.key === 'comments' || column.key === 'title' || column.key === 'rentalEventName' || column.key === 'contractTemplateTitle') {
+                              content = <span className='max-w-md truncate'>{draft[column.accessor as keyof ContractDraftResponse] || 'N/A'}</span>
+                            } else if (column.key === 'status') {
+                              content = <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(draft.status)}`}>
+                                {draft.status}
+                              </span>
+                            } else if (column.key === 'createdAt' || column.key === 'updatedAt') {
+                                  content = draft[column.key as 'createdAt' | 'updatedAt'] 
+                                      ? new Date(draft[column.key as 'createdAt' | 'updatedAt']).toLocaleDateString()
+                                      : 'N/A'
+                            } else if (column.key === 'actions') {
+                              content = (
+                                <div className='flex items-center justify-center space-x-2 text-sm'>
+                                  <button
+                                    onClick={() => onView(draft.id)}
+                                    className='flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
+                                  >
+                                    <Eye size={14} />
+                                    <span>View</span>
+                                  </button>
+                                  {canSend && (
+                                    <button
+                                      onClick={() => handleSendDraft(draft.id)}
+                                      className='flex items-center space-x-1 rounded px-2 py-1 bg-green-100 text-green-800 hover:bg-green-200 transition-colors'
+                                    >
+                                      <Send size={14} />
+                                      <span>Send</span>
+                                    </button>
+                                  )}
+                                </div>
+                              )
+                            } else {
+                              content = draft[column.accessor as keyof ContractDraftResponse]
+                            }
+                            return <TableCell key={column.key} className={cellClass}>{content}</TableCell>
+                          })}
+                        </TableRow>
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -323,8 +390,17 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
           </div>
         </CardContent>
       </Card>
+
+      <CreateContractDraft
+        open={isCreateModalVisible}
+        onClose={() => setIsCreateModalVisible(false)}
+        onSuccess={() => {
+          setIsCreateModalVisible(false)
+          fetchDrafts()
+        }}
+      />
     </div>
   )
 }
 
-export default ContractDrafts
+export default StaffContractDrafts
