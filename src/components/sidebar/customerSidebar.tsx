@@ -1,5 +1,5 @@
 import React from 'react'
-import { LayoutDashboard, User, Calendar, CreditCard,ChevronRight } from 'lucide-react'
+import { LayoutDashboard, User, Calendar, CreditCard,ChevronRight,ScanFace  } from 'lucide-react'
 
 interface ProfileSidebarProps {
   activeTab: string
@@ -12,6 +12,7 @@ const CustomerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab, onTabChange
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar },
     { id: 'transactions', label: 'Transactions', icon: CreditCard },
     { id: 'account', label: 'Account', icon: User },
+    { id: 'face-profile', label: 'Face Profile', icon:ScanFace }
   ]
 
   return (

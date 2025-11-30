@@ -10,7 +10,7 @@ const RobotGroupContent: React.FC<RobotGroupContentProps> = ({ onSchedule }) => 
   const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("");
-
+  const [a,setA] = useState(true);
   useEffect(() => {
     const loadGroups = async () => {
       try {

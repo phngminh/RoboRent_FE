@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@microsoft/signalr": "^9.0.6",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -31,12 +32,15 @@
     "path": "^0.12.7",
     "react": "^19.1.1",
     "react-clock": "^6.0.0",
+    "react-datepicker": "^8.9.0",
     "react-dom": "^19.1.1",
+    "react-hook-form": "^7.66.1",
     "react-router-dom": "^7.9.3",
     "react-time-picker": "^8.0.2",
     "react-toastify": "^11.0.5",
     "tailwind-merge": "^3.3.1",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

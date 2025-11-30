@@ -21,6 +21,7 @@ export default function CreateQuoteModal({
   onSuccess 
 }: CreateQuoteModalProps) {
   const [delivery, setDelivery] = useState<string>('')
+  const [distance, setDistance] = useState<string>('')
   const [deposit, setDeposit] = useState<string>('')
   const [complete, setComplete] = useState<string>('')
   const [service, setService] = useState<string>('')
@@ -33,6 +34,7 @@ export default function CreateQuoteModal({
   const completeNum = parseFloat(complete) || 0
   const serviceNum = parseFloat(service) || 0
   const total = deliveryNum + depositNum + completeNum + serviceNum
+  const distanceNum = parseFloat(distance)
 
   const quoteNumber = currentQuoteCount + 1
   const quotesRemaining = 3 - currentQuoteCount
@@ -81,7 +83,8 @@ export default function CreateQuoteModal({
         deposit: depositNum,
         complete: completeNum,
         service: serviceNum,
-        staffDescription: staffDescription.trim()
+        staffDescription: staffDescription.trim(),
+        deliveryDistance: distanceNum
       }
 
       await createPriceQuote(request)
@@ -92,6 +95,7 @@ export default function CreateQuoteModal({
       setDeposit('')
       setComplete('')
       setService('')
+      setDistance('')
       setStaffDescription('')
       
       onSuccess()
@@ -157,90 +161,119 @@ export default function CreateQuoteModal({
           )}
 
           {/* Cost Breakdown */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
-            
-            <div className="grid grid-cols-2 gap-4">
-              {/* Delivery Fee */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Delivery Fee
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={delivery}
-                    onChange={(e) => setDelivery(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Cost for delivering the rental items.
-                  <span className="text-red-600 ml-1">Cannot be negative.</span>
-                </p>
-              </div>
+<div>
+  <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
+  
+  <div className="grid grid-cols-2 gap-4">
 
-              {/* Deposit */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Deposit Amount
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={deposit}
-                    onChange={(e) => setDeposit(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Refundable security deposit for the rental.</p>
-              </div>
+    {/* Delivery Distance */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Delivery Distance (km)
+      </label>
+      <div className="relative">
+        <input
+          type="number"
+          step="0.1"
+          value={distance}
+          onChange={(e) => setDistance(e.target.value)}
+          placeholder="Enter distance"
+          className="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      <p className="text-xs text-gray-500 mt-1">
+        Distance from HQ to event location.
+      </p>
+    </div>
 
-              {/* Completion Fee */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Completion Fee
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={complete}
-                    onChange={(e) => setComplete(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Fee upon successful completion of the rental.</p>
-              </div>
+    {/* Delivery Fee */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Delivery Fee
+      </label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+        <input
+          type="number"
+          step="0.01"
+          value={delivery}
+          onChange={(e) => setDelivery(e.target.value)}
+          placeholder="0.00"
+          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      <p className="text-xs text-gray-500 mt-1">
+        Cost for delivering the rental items.
+        <span className="text-red-600 ml-1">Cannot be negative.</span>
+      </p>
+    </div>
 
-              {/* Service Fee */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Service Fee
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={service}
-                    onChange={(e) => setService(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Charges for additional services.</p>
-              </div>
-            </div>
-          </div>
+    {/* Deposit */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Deposit Amount
+      </label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+        <input
+          type="number"
+          step="0.01"
+          value={deposit}
+          onChange={(e) => setDeposit(e.target.value)}
+          placeholder="0.00"
+          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      <p className="text-xs text-gray-500 mt-1">
+        Refundable security deposit for the rental.
+      </p>
+    </div>
+
+    {/* Completion Fee */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Completion Fee
+      </label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+        <input
+          type="number"
+          step="0.01"
+          value={complete}
+          onChange={(e) => setComplete(e.target.value)}
+          placeholder="0.00"
+          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      <p className="text-xs text-gray-500 mt-1">
+        Fee upon successful completion of the rental.
+      </p>
+    </div>
+
+    {/* Service Fee */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Service Fee
+      </label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+        <input
+          type="number"
+          step="0.01"
+          value={service}
+          onChange={(e) => setService(e.target.value)}
+          placeholder="0.00"
+          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      <p className="text-xs text-gray-500 mt-1">
+        Charges for additional services.
+      </p>
+    </div>
+
+  </div>
+</div>
+
 
           {/* Total Calculation */}
           <div className="bg-gray-50 rounded-lg p-4">

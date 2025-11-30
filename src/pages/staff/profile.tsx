@@ -41,6 +41,10 @@ const Profile = () => {
           <ShareRentalRequestDetail
             rentalId={selectedId}
             onBack={() => setActiveTab("rental-requests")}
+                  onNavigateToScheduleBoard={(groupId) => {
+          setSelectedId(groupId);       
+          setActiveTab("schedule-board");
+      }}
           />
         ) : (
           <div>No rental selected.</div>
@@ -59,7 +63,10 @@ const Profile = () => {
 
       case 'schedule-board':
         return selectedId !== null ? (
-          <ScheduleBoard groupId={selectedId} />
+          <ScheduleBoard 
+          groupId={selectedId} 
+          onBack={() => setActiveTab("robot-group")}
+          />
         ) : (
           <div>No group selected.</div>
         );

@@ -35,6 +35,25 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
   const [rows, setRows] = useState<DetailRow[]>([])
   const [roboTypeNames, setRoboTypeNames] = useState<Record<number, string>>({})
 
+  const validateBeforeSend = () => {
+  const missing: string[] = [];
+
+  rows.forEach((r, idx) => {
+    const label = cardTitle(r, indexWithinType(idx));
+
+    if (!r.script.trim()) missing.push(`${label}: Script is required.`);
+    if (!r.branding.trim()) missing.push(`${label}: Branding is required.`);
+    if (!r.scenario.trim()) missing.push(`${label}: Scenario is required.`);
+  });
+
+  if (missing.length > 0) {
+    setErrors(missing);
+    return false;
+  }
+
+  return true;
+};
+
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -130,75 +149,83 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
     setRows(prev => prev.map(r => (r.key === key ? { ...r, [field]: value } : r)))
   }
 
-  const handleSave = async () => {
-    setErrors([])
-    const isUpdate = rows.some(r => r.id !== undefined)
+const handleSave = async (shouldTriggerOnSave = true) => {
+  setErrors([]);
+  const isUpdate = rows.some(r => r.id !== undefined);
 
-    try {
-      setLoading(true)
-      if (isUpdate) {
-        const payload = rows.map(r => ({
-          id: r.id!,
-          rentalId,
-          roboTypeId: r.roboTypeId,
-          robotAbilityId: null,
-          script: r.script?.trim() || '',
-          branding: r.branding?.trim() || '',
-          scenario: r.scenario?.trim() || '',
-          status: r.status || 'Draft',
-          isDeleted: r.isDeleted ?? false,
-        }))
+  try {
+    setLoading(true);
 
-        const res = await updateRentalDetailsAsync(rentalId, payload)
-        onSave()
-      } else {
-        const payload = rows.map(r => ({
-          rentalId,
-          roboTypeId: r.roboTypeId,
-          robotAbilityId: null,
-          script: r.script?.trim() || '',
-          branding: r.branding?.trim() || '',
-          scenario: r.scenario?.trim() || '',
-          status: r.status || 'Draft',
-          isDeleted: r.isDeleted ?? false,
-        }))
+    if (isUpdate) {
+      const payload = rows.map(r => ({
+        id: r.id!,
+        rentalId,
+        roboTypeId: r.roboTypeId,
+        robotAbilityId: null,
+        script: r.script?.trim() || '',
+        branding: r.branding?.trim() || '',
+        scenario: r.scenario?.trim() || '',
+        status: r.status || 'Draft',
+        isDeleted: r.isDeleted ?? false,
+      }));
 
-        const res = await createRentalDetailsBulkAsync(payload)
-        onSave()
-      }
+      await updateRentalDetailsAsync(rentalId, payload);
+      if (shouldTriggerOnSave) onSave();   // 🔥 only when NOT sending
 
-    } catch (err: any) {
-      const beErrors = err?.response?.data?.errors
-      if (Array.isArray(beErrors) && beErrors.length) {
-        setErrors(beErrors)
-      } else {
-        setErrors(['Failed to save rental details.'])
-      }
-    } finally {
-      setLoading(false)
+    } else {
+      const payload = rows.map(r => ({
+        rentalId,
+        roboTypeId: r.roboTypeId,
+        robotAbilityId: null,
+        script: r.script?.trim() || '',
+        branding: r.branding?.trim() || '',
+        scenario: r.scenario?.trim() || '',
+        status: r.status || 'Draft',
+        isDeleted: r.isDeleted ?? false,
+      }));
+
+      await createRentalDetailsBulkAsync(payload);
+      if (shouldTriggerOnSave) onSave();   // 🔥 not used during sending
     }
+
+  } catch (err: any) {
+    const beErrors = err?.response?.data?.errors;
+    if (Array.isArray(beErrors) && beErrors.length) {
+      setErrors(beErrors);
+    } else {
+      setErrors(['Failed to save rental details.']);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleSend = async () => {
+  setErrors([]);
+
+  // ⛔ Validate ONLY for Send
+  if (!validateBeforeSend()) {
+    return; // stop sending
   }
 
-  const handleSend = async () => {
-    try {
-      setLoading(true)
-      setErrors([])
+  try {
+    setLoading(true);
 
-      // 🧩 Step 1: Save first
-      await handleSave()
+    // Save without triggering parent refresh
+    await handleSave(false);
 
-      // 🧩 Step 2: Then send rental
-      await customerSendRentalAsync(rentalId)
+    // Send to manager
+    await customerSendRentalAsync(rentalId);
 
-      // 🧩 Step 3: Notify parent / move to next step
-      onSave()
-    } catch (err: any) {
-      console.error('Error sending rental:', err)
-      setErrors([err?.response?.data?.message || 'Failed to send rental.'])
-    } finally {
-      setLoading(false)
-    }
+    // After sending → refresh list
+    onSave();
+  } catch (err: any) {
+    console.error("Error sending rental:", err);
+    setErrors([err?.response?.data?.message || "Failed to send rental."]);
+  } finally {
+    setLoading(false);
   }
+};
 
   return (
     <div className='space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-200 w-full'>
@@ -288,7 +315,7 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
       {/* Actions */}
       <div className='flex justify-end gap-3 pt-2'>
         <button
-          onClick={handleSave}
+onClick={() => handleSave()}
           disabled={loading || rows.length === 0}
           className='px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 text-sm inline-flex items-center gap-2 disabled:opacity-60'
         >

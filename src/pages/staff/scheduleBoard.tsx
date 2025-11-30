@@ -1,13 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { MapPin, MoreHorizontal, Plus, X } from "lucide-react";
-import { getAllScheduleByGroupIdAsync } from "../../apis/groupSchedule.staff.api";
-import { addScheduleAsync } from "../../apis/groupSchedule.staff.api"; // <-- make sure this path is correct
+import { 
+  getAllScheduleByGroupIdAsync, 
+  addScheduleAsync,
+  updateScheduleAsync 
+} from "../../apis/groupSchedule.staff.api";
 import { getReceivedRentalByStaffIdAsync } from "../../apis/rental.staff.api";
+import { useAuth } from "../../contexts/AuthContext";  
+import ModalPortal from "../../components/staff/ModalPortal";
 
 // -------------------------
 // Types
 // -------------------------
 type ScheduleItem = {
+  id: number;
+  eventName: string;
   eventDate: string;
   eventLocation: string;
   eventCity: string;
@@ -48,57 +55,67 @@ const getStatusBadgeClasses = (status: string) => {
 };
 
 // -------------------------
-// Card Component
+// Schedule Card Component
 // -------------------------
-const ScheduleCard = ({ item }: { item: ScheduleItem }) => {
+const ScheduleCard = ({
+  item,
+  onEdit,
+  canEdit
+}: {
+  item: ScheduleItem;
+  onEdit: () => void;
+  canEdit: boolean;
+}) => {
   return (
     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 flex flex-col gap-4 relative">
-      {/* LOCATION */}
-      <div className="flex items-center gap-2 text-gray-800">
-        <MapPin size={18} className="text-indigo-600" />
-        <div className="font-semibold">{item.eventLocation}</div>
-        <span className="text-sm text-gray-500">({item.eventCity})</span>
+      
+      {/* --------------------------- */}
+      {/* LOCATION + EVENT NAME ROW */}
+      {/* --------------------------- */}
+      <div className="flex items-center justify-between w-full text-gray-800">
+
+        {/* LEFT: LOCATION */}
+        <div className="flex items-center gap-2">
+          <MapPin size={18} className="text-indigo-600" />
+          <div className="font-semibold">{item.eventLocation}</div>
+          <span className="text-sm text-gray-500">({item.eventCity})</span>
+        </div>
+
+        {/* RIGHT: EVENT NAME */}
+        <div className="text-sm font-semibold text-indigo-600 whitespace-nowrap ml-4">
+          {item.eventName}
+        </div>
       </div>
 
       {/* TIME */}
       <div className="text-gray-700 text-sm space-y-1 mt-1 text-center">
-        <div>
-          <strong>Delivery:</strong> {item.deliveryTime}
-        </div>
-        <div>
-          <strong>Start – End:</strong> {item.startTime} – {item.endTime}
-        </div>
-        <div>
-          <strong>Finish:</strong> {item.finishTime}
-        </div>
+        <div><strong>Delivery:</strong> {item.deliveryTime}</div>
+        <div><strong>Start – End:</strong> {item.startTime} – {item.endTime}</div>
+        <div><strong>Finish:</strong> {item.finishTime}</div>
       </div>
 
-      {/* STAFF & CUSTOMER */}
+      {/* STAFF */}
       <div className="mt-3 text-xs text-gray-600">
-        <div>
-          <strong>Staff:</strong> {item.staffFullName}
-        </div>
-        <div>
-          <strong>Customer:</strong> {item.customerFullName}
-        </div>
+        <div><strong>Staff:</strong> {item.staffFullName}</div>
+        <div><strong>Customer:</strong> {item.customerFullName}</div>
+        <div><strong>Rental ID:</strong> {item.rentalId}</div>
       </div>
 
       {/* STATUS BADGE */}
       <div className="absolute bottom-4 right-4">
-        <span
-          className={`px-3 py-1 text-sm font-semibold rounded-lg ${getStatusBadgeClasses(
-            item.status
-          )}`}
-        >
+        <span className={`px-3 py-1 text-sm font-semibold rounded-lg ${getStatusBadgeClasses(item.status)}`}>
           {item.status}
         </span>
       </div>
 
-      {/* MENU */}
-      <MoreHorizontal
-        className="absolute top-4 right-4 text-gray-400 cursor-pointer"
-        size={18}
-      />
+      {/* EDIT BUTTON */}
+      {canEdit && (
+        <MoreHorizontal
+          className="absolute top-4 right-4 text-gray-400 cursor-pointer"
+          size={18}
+          onClick={onEdit}
+        />
+      )}
     </div>
   );
 };
@@ -106,17 +123,26 @@ const ScheduleCard = ({ item }: { item: ScheduleItem }) => {
 // -------------------------
 // Main Component
 // -------------------------
-const ScheduleBoard = ({ groupId }: { groupId: number }) => {
+const ScheduleBoard = ({ groupId, onBack }: { groupId: number; onBack: () => void }) => {
+
+  const { user } = useAuth();   // ⬅️ GET LOGGED-IN STAFF
+
+const loggedStaffId = user?.accountId ? Number(user.accountId) : undefined;
+
   const [schedules, setSchedules] = useState<ScheduleGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [receivedRentals, setReceivedRentals] = useState<any[]>([]);
   const [formError, setFormError] = useState("");
 
-  // POPUP STATE
   const [openModal, setOpenModal] = useState(false);
+  const [isUpdate, setIsUpdate] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  
+const scheduledRentalIds = schedules
+  .flatMap(g => g.items)
+  .map(i => i.rentalId);
 
-  // FORM STATE
   const [form, setForm] = useState({
     deliveryTime: "",
     startTime: "",
@@ -126,82 +152,126 @@ const ScheduleBoard = ({ groupId }: { groupId: number }) => {
     rentalId: 0,
   });
 
-  const staffId = 1; // ← Replace with real staffId from AuthContext if needed
-
-  // Fetch schedules
+  // -------------------------
+  // Load Schedules
+  // -------------------------
   const loadData = async () => {
     try {
       const res = await getAllScheduleByGroupIdAsync(groupId);
       if (res.success) setSchedules(res.data);
-    } catch (e) {
-      console.error("Error loading schedules:", e);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-  const load = async () => {
-    await loadData(); // existing schedule load
+    const load = async () => {
+      await loadData();
 
-    try {
-      const res = await getReceivedRentalByStaffIdAsync(staffId);
+      // load rentals for select dropdown
+      const res = await getReceivedRentalByStaffIdAsync(Number(loggedStaffId));
       if (res.success) setReceivedRentals(res.data);
-    } catch (err) {
-      console.error("Failed to load rentals for staff:", err);
-    }
-  };
+    };
 
-  load();
-}, [groupId]);
+    if (loggedStaffId) load();
+  }, [groupId, loggedStaffId]);
 
-  useEffect(() => {
-    loadData();
-  }, [groupId]);
-
-  // Handle form change
   const updateForm = (key: string, value: string | number) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Submit create schedule
+  const isFormValid = () =>
+    form.deliveryTime && form.startTime && form.endTime && form.finishTime && form.rentalId;
+
+  // -------------------------
+  // CREATE
+  // -------------------------
 const handleCreate = async () => {
-  if (
-    !form.deliveryTime ||
-    !form.startTime ||
-    !form.endTime ||
-    !form.finishTime ||
-    !form.rentalId
-  ) {
+  if (!isFormValid()) {
     setFormError("Please complete all fields");
     return;
   }
 
-  try {
-    const res = await addScheduleAsync(staffId, form);
+  const res = await addScheduleAsync(Number(loggedStaffId), form);
 
-    // API returns { success: false, message: "..." }
-    if (res && res.success === false) {
-      setFormError(res.message || "Failed to create schedule");
-      return;   // keep modal open
-    }
-
-    // Success
-    setOpenModal(false);
-    setFormError("");
-    await loadData();
-    
-  } catch (err: any) {
-    const apiMsg = err?.response?.data?.message;
-    setFormError(apiMsg || "Failed to create schedule");
-    console.error(err);
+  if (!res.success) {
+    setFormError(res.message);
+    return;
   }
+
+  setOpenModal(false);
+  await loadData();
 };
 
+  // -------------------------
+  // UPDATE
+  // -------------------------
+const handleUpdate = async () => {
+  console.log("===== UPDATE DEBUG =====");
+  console.log("Schedule ID:", editingId);
+  console.log("Payload sent to API:", {
+    ...form,
+    deliveryTime: form.deliveryTime,
+    startTime: form.startTime,
+    endTime: form.endTime,
+    finishTime: form.finishTime,
+    rentalId: form.rentalId,
+    activityTypeGroupId: form.activityTypeGroupId,
+  });
+  console.log("========================");
 
-  if (loading) return <p className="text-gray-500 p-6">Loading schedules...</p>;
+  if (!editingId) return;
 
-  // FILTER
+  const owner = schedules
+    .flatMap(g => g.items)
+    .find(i => i.id === editingId)?.staffId;
+
+  if (owner !== loggedStaffId) {
+    alert("❌ You cannot edit this schedule. It belongs to another staff.");
+    return;
+  }
+
+  // 🔥 CALL API
+  const res = await updateScheduleAsync(editingId, form);
+
+  // 🔥 CHECK DUPLICATE CONFLICT
+  if (res.success === false) {
+    setFormError(res.message || "Cannot update schedule.");
+    return;
+  }
+
+  setOpenModal(false);
+  await loadData();
+};
+
+  // -------------------------
+  // OPEN UPDATE MODAL
+  // -------------------------
+const openUpdateModal = (item: ScheduleItem) => {
+  if (item.staffId !== loggedStaffId) {
+    alert("❌ You can only update schedules you created.");
+    return;
+  }
+
+  setIsUpdate(true);
+  setEditingId(item.id);
+
+  setForm({
+    deliveryTime: item.deliveryTime,
+    startTime: item.startTime,
+    endTime: item.endTime,
+    finishTime: item.finishTime,
+    rentalId: item.rentalId,
+    activityTypeGroupId: item.activityTypeGroupId,
+  });
+
+  setFormError("");   // <---- IMPORTANT
+  setOpenModal(true);
+};
+
+  // -------------------------
+  // Filter Schedules
+  // -------------------------
   const filteredGroups = schedules
     .map((group) => ({
       ...group,
@@ -214,14 +284,38 @@ const handleCreate = async () => {
     }))
     .filter((group) => group.items.length > 0);
 
+  if (loading) return <p className="p-6 text-gray-500">Loading schedules...</p>;
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
+  <div className="min-h-screen p-6 space-y-6 bg-gray-50">
+      {/* ===================== */}
+      {/*        BACK BTN       */}
+      {/* ===================== */}
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-gray-700 hover:text-gray-900 text-sm font-medium"
+      >
+        ← Back to Robot Groups
+      </button>
+      {/* HEADER */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Schedule Board</h1>
 
         <button
-          onClick={() => setOpenModal(true)}
+          onClick={() => {
+            setIsUpdate(false);
+            setEditingId(null);
+            setForm({
+              deliveryTime: "",
+              startTime: "",
+              endTime: "",
+              finishTime: "",
+              rentalId: 0,
+              activityTypeGroupId: groupId,
+            });
+            setFormError("");
+            setOpenModal(true);
+          }}
           className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
           <Plus size={18} />
@@ -229,38 +323,39 @@ const handleCreate = async () => {
         </button>
       </div>
 
-      {/* Search */}
+      {/* SEARCH */}
       <div className="w-full sm:w-72">
         <input
           type="text"
           placeholder="Search schedules..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border rounded-lg"
         />
       </div>
 
-      {/* DATE COLUMNS */}
+      {/* COLUMNS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredGroups.map((group, index) => {
           const date = new Date(group.eventDate).toLocaleDateString();
 
           return (
-            <div
-              key={index}
-              className="flex flex-col bg-gray-50 p-4 rounded-xl border border-gray-200 
-                         max-h-[600px] overflow-y-auto scroll-smooth"
-            >
-              <div className="flex justify-between items-center mb-4 sticky top-0 bg-gray-50 pb-2">
-                <h2 className="font-semibold text-gray-800">{date}</h2>
+            <div key={index} className="bg-gray-50 p-4 border rounded-xl max-h-[600px] overflow-y-auto">
+              <div className="flex justify-between mb-4">
+                <h2 className="font-semibold">{date}</h2>
                 <div className="text-xs bg-indigo-200 text-indigo-800 px-2 py-1 rounded-full">
                   {group.items.length}
                 </div>
               </div>
 
               <div className="flex flex-col gap-4">
-                {group.items.map((item, idx) => (
-                  <ScheduleCard item={item} key={idx} />
+                {group.items.map((item) => (
+                  <ScheduleCard
+                    key={item.id}
+                    item={item}
+                    canEdit={item.staffId === loggedStaffId}
+                    onEdit={() => openUpdateModal(item)}
+                  />
                 ))}
               </div>
             </div>
@@ -268,125 +363,134 @@ const handleCreate = async () => {
         })}
       </div>
 
-      {/* ------------------------- */}
-      {/*      CREATE MODAL        */}
-      {/* ------------------------- */}
-      {openModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[400px] p-6 rounded-xl shadow-lg space-y-4 relative">
+      {/* MODAL */}
+{openModal && (
+  // Overlay wrapper
+    <ModalPortal>
+<div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-40 flex items-center justify-center z-[9999] p-4">
+    <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
+      {/* Close Button */}
+      <button
+        onClick={() => setOpenModal(false)}
+        className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+      >
+        <X size={20} />
+      </button>
 
-            {/* Close */}
-            <button
-              onClick={() => setOpenModal(false)}
-              className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
-            >
-              <X size={20} />
-            </button>
+      <h2 className="text-xl font-semibold text-gray-800 text-center">
+        {isUpdate ? "Update Schedule" : "Create Schedule"}
+      </h2>
 
-            <h2 className="text-xl font-semibold text-gray-800">
-              Create New Schedule
-            </h2>
-
-            {formError && (
-              <div className="text-red-600 text-sm bg-red-100 border border-red-300 px-3 py-2 rounded">
-                {formError}
-              </div>
-            )}
-
-            {/* FORM */}
-            <div className="space-y-3">
-
-<div>
-  <label className="block text-sm font-medium text-gray-700">
-    Select Rental
-  </label>
-
-  <select
-    value={form.rentalId}
-    onChange={(e) => updateForm("rentalId", Number(e.target.value))}
-    className="w-full px-3 py-2 border rounded-lg bg-white"
-  >
-    <option value={0}>-- Select a rental --</option>
-
-    {receivedRentals.map((rental: any) => (
-      <option key={rental.id} value={rental.id}>
-        #{rental.id} — {rental.eventName} ({rental.eventActivityName})
-      </option>
-    ))}
-  </select>
-
-  {/* RENTAL EXTRA DETAILS */}
-  {form.rentalId !== 0 && (
-    <div className="mt-2 text-xs text-gray-600 bg-gray-100 p-2 rounded">
-      {(() => {
-        const selected = receivedRentals.find(r => r.id === form.rentalId);
-        if (!selected) return null;
-
-        return (
-          <>
-            <div><strong>Event:</strong> {selected.eventName}</div>
-            <div><strong>Activity:</strong> {selected.eventActivityName}</div>
-            <div><strong>Customer:</strong> {selected.customerName}</div>
-            <div><strong>Date:</strong> {new Date(selected.eventDate).toLocaleDateString()}</div>
-          </>
-        );
-      })()}
-    </div>
-  )}
-</div>
-
-
-              <div>
-                <label className="block text-sm">Delivery Time</label>
-                <input
-                  type="time"
-                  value={form.deliveryTime}
-                  onChange={(e) => updateForm("deliveryTime", e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm">Start Time</label>
-                <input
-                  type="time"
-                  value={form.startTime}
-                  onChange={(e) => updateForm("startTime", e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm">End Time</label>
-                <input
-                  type="time"
-                  value={form.endTime}
-                  onChange={(e) => updateForm("endTime", e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm">Finish Time</label>
-                <input
-                  type="time"
-                  value={form.finishTime}
-                  onChange={(e) => updateForm("finishTime", e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-            </div>
-
-            {/* BUTTON */}
-            <button
-              onClick={handleCreate}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg mt-4 hover:bg-blue-700"
-            >
-              Create Schedule
-            </button>
-          </div>
+      {formError && (
+        <div className="text-red-600 text-sm bg-red-100 border border-red-300 px-3 py-2 rounded">
+          {formError}
         </div>
       )}
+
+      <div className="space-y-4">
+        {/* RENTAL SELECT */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Select Rental
+          </label>
+<select
+  value={form.rentalId}
+  disabled={isUpdate}
+  onChange={(e) => {
+    const rid = Number(e.target.value);
+    updateForm("rentalId", rid);
+
+    if (!isUpdate) {
+      const rental = receivedRentals.find((r: any) => r.id === rid);
+      if (rental) {
+        updateForm("startTime", rental.startTime);
+        updateForm("endTime", rental.endTime);
+      }
+    }
+  }}
+  className={`w-full px-3 py-2 border border-gray-300 rounded-lg bg-white 
+              ${isUpdate ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "cursor-pointer"}
+              focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+>
+  <option value={0}>-- Select a rental --</option>
+
+  {receivedRentals
+    .filter((r: any) => isUpdate || !scheduledRentalIds.includes(r.id))
+    .map((r: any) => (
+      <option key={r.id} value={r.id}>
+        #{r.id} — {r.eventName}
+      </option>
+    ))}
+</select>
+
+        </div>
+
+        {/* Delivery Time */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Delivery Time
+          </label>
+          <input
+            type="time"
+            value={form.deliveryTime}
+            onChange={(e) => updateForm("deliveryTime", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Start Time */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Start Time
+          </label>
+          <input
+            type="time"
+            value={form.startTime}
+            disabled={true}
+            onChange={(e) => updateForm("startTime", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* End Time */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            End Time
+          </label>
+          <input
+            type="time"
+            value={form.endTime}
+            disabled={true}
+            onChange={(e) => updateForm("endTime", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Finish Time */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Finish Time
+          </label>
+          <input
+            type="time"
+            value={form.finishTime}
+            onChange={(e) => updateForm("finishTime", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+
+      <button
+        onClick={isUpdate ? handleUpdate : handleCreate}
+        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+      >
+        {isUpdate ? "Update Schedule" : "Create Schedule"}
+      </button>
+    </div>
+  </div>
+  </ModalPortal>
+)}
+
     </div>
   );
 };
