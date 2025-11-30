@@ -1,4 +1,40 @@
 #root {
   margin: 0 auto;
-  text-align: center;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.prose table, .prose th, .prose td {
+  border: 1px solid #000;
+}
+
+.prose th, .prose td {
+  padding: 6px 10px;
+}
+
+.prose ol {
+  list-style-type: decimal;
+  margin-left: 1.25rem;
+  padding-left: 0;
+}
+
+.prose ul {
+  list-style-type: disc;
+  margin-left: 1.25rem;
+  padding-left: 0;
+}
+
+.prose li {
+  margin-bottom: 0.25rem;
+}
+
+.ql-container {
+  min-height: 150px !important;
+}
+
+.ql-editor {
+  min-height: 120px !important;
 }

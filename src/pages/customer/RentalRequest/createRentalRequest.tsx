@@ -8,6 +8,7 @@ import TimePicker from 'react-time-picker'
 import 'react-time-picker/dist/TimePicker.css'
 import 'react-clock/dist/Clock.css'
 import { useAuth } from '../../../contexts/AuthContext'
+import { useParams } from 'react-router-dom'
 
 interface EventActivity {
   id: number
@@ -42,11 +43,12 @@ interface Wards {
 interface CreateRentalRequestContentProps {
   onBack: () => void
   onNextStep: (rentalId: number, activityTypeId: number) => void
-  rentalId?: number
 }
 
-const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({ onBack, onNextStep, rentalId }) => {
+const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({ onBack, onNextStep }) => {
   const { user } = useAuth()
+  const { rentalId: rentalIdString } = useParams<{ rentalId: string }>()
+  const rentalId = rentalIdString ? parseInt(rentalIdString, 10) : 0
   const [eventDate, setEventDate] = useState<string>('')
   const [errors, setErrors] = useState<string[]>([])
 

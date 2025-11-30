@@ -5,7 +5,7 @@ import Header from '../../../components/header'
 const Profile = () => {
   const location = useLocation()
   const activeTab = location.pathname.split('/')[2] || 'dashboard'
-  console.log('activeTab:', activeTab)
+  
   return (
     <div className='flex flex-col h-screen'>
       <Header />

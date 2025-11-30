@@ -1,16 +1,16 @@
 import React from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
-import type { ContractTemplateResponse } from '../../../apis/contractTemplates.api'
+import type { ContractDraftResponse } from '../../../apis/contractDraft.api'
 
-interface DetailContractTemplateProps {
+interface ViewContractDraftProps {
   open: boolean
   onClose: () => void
-  template?: ContractTemplateResponse | null
+  draft?: ContractDraftResponse | null
 }
 
-const DetailContractTemplate: React.FC<DetailContractTemplateProps> = ({ open, onClose, template }) => {
-  if (!template) {
+const ViewContractDraft: React.FC<ViewContractDraftProps> = ({ open, onClose, draft }) => {
+  if (!draft) {
     return null
   }
 
@@ -25,22 +25,22 @@ const DetailContractTemplate: React.FC<DetailContractTemplateProps> = ({ open, o
     >
       <DialogContent className='sm:max-w-[780px] flex flex-col max-h-[90vh] p-8'>
         <DialogHeader>
-          <DialogTitle className='text-center text-2xl'>{template.title}</DialogTitle>
+          <DialogTitle className='text-center text-2xl'>{draft.title}</DialogTitle>
         </DialogHeader>
         <DialogDescription></DialogDescription>
         <div className='flex-1 overflow-y-auto overflow-x-visible pr-3 pl-3 space-y-6'>
           <div className='space-y-2'>
             <div
               className='prose max-w-none prose-sm'
-              dangerouslySetInnerHTML={{ __html: template.bodyJson }}
+              dangerouslySetInnerHTML={{ __html: draft.bodyJson }}
             />
           </div>
         </div>
         <DialogFooter>
           <div className='flex-1 text-xs text-muted-foreground'>
-            <p>Created on {new Date(template.createdAt).toLocaleDateString()} by {template.createdByName}</p>
-            {template.updatedAt && (
-              <p>Last updated on {new Date(template.updatedAt).toLocaleDateString()} by {template.updatedByName}</p>
+            <p>Created on {new Date(draft.createdAt).toLocaleDateString()} by {draft.staffName}</p>
+            {draft.updatedAt && (
+              <p>Last updated on {new Date(draft.updatedAt).toLocaleDateString()}</p>
             )}
           </div>
           <Button 
@@ -56,4 +56,4 @@ const DetailContractTemplate: React.FC<DetailContractTemplateProps> = ({ open, o
   )
 }
 
-export default DetailContractTemplate
+export default ViewContractDraft
