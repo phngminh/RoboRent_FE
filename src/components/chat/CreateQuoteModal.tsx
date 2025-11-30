@@ -21,6 +21,7 @@ export default function CreateQuoteModal({
   onSuccess 
 }: CreateQuoteModalProps) {
   const [delivery, setDelivery] = useState<string>('')
+  const [distance, setDistance] = useState<string>('')
   const [deposit, setDeposit] = useState<string>('')
   const [complete, setComplete] = useState<string>('')
   const [service, setService] = useState<string>('')
@@ -36,6 +37,7 @@ export default function CreateQuoteModal({
   // ⚠️ NOTE: DeliveryFee sẽ được backend tự động tính
   // Total hiển thị ở đây chỉ là preview (chưa có DeliveryFee)
   const subtotal = deliveryNum + depositNum + completeNum + serviceNum
+  const distanceNum = parseFloat(distance)
 
   const quoteNumber = currentQuoteCount + 1
   const quotesRemaining = 3 - currentQuoteCount
@@ -84,7 +86,8 @@ export default function CreateQuoteModal({
         deposit: depositNum,
         complete: completeNum,
         service: serviceNum,
-        staffDescription: staffDescription.trim()
+        staffDescription: staffDescription.trim(),
+        deliveryDistance: distanceNum
       }
 
       await createPriceQuote(request)
@@ -95,6 +98,7 @@ export default function CreateQuoteModal({
       setDeposit('')
       setComplete('')
       setService('')
+      setDistance('')
       setStaffDescription('')
       
       onSuccess()
@@ -196,64 +200,72 @@ export default function CreateQuoteModal({
                 </p>
               </div>
 
-              {/* Deposit */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Deposit Amount
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={deposit}
-                    onChange={(e) => setDeposit(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Refundable security deposit for the rental.</p>
-              </div>
+    {/* Deposit */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Deposit Amount
+      </label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+        <input
+          type="number"
+          step="0.01"
+          value={deposit}
+          onChange={(e) => setDeposit(e.target.value)}
+          placeholder="0.00"
+          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      <p className="text-xs text-gray-500 mt-1">
+        Refundable security deposit for the rental.
+      </p>
+    </div>
 
-              {/* Completion Fee */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Completion Fee
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={complete}
-                    onChange={(e) => setComplete(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Fee upon successful completion of the rental.</p>
-              </div>
+    {/* Completion Fee */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Completion Fee
+      </label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+        <input
+          type="number"
+          step="0.01"
+          value={complete}
+          onChange={(e) => setComplete(e.target.value)}
+          placeholder="0.00"
+          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      <p className="text-xs text-gray-500 mt-1">
+        Fee upon successful completion of the rental.
+      </p>
+    </div>
 
-              {/* Service Fee */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Service Fee
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={service}
-                    onChange={(e) => setService(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Charges for additional services.</p>
-              </div>
-            </div>
-          </div>
+    {/* Service Fee */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Service Fee
+      </label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+        <input
+          type="number"
+          step="0.01"
+          value={service}
+          onChange={(e) => setService(e.target.value)}
+          placeholder="0.00"
+          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      <p className="text-xs text-gray-500 mt-1">
+        Charges for additional services.
+      </p>
+    </div>
+
+  </div>
+</div>
+
 
           {/* ✅ UPDATED: Subtotal Preview (before auto DeliveryFee) */}
           <div className="bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-300">

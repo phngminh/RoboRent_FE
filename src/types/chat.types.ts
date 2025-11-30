@@ -108,6 +108,7 @@ export interface CreatePriceQuoteRequest {
   service?: number
   staffDescription?: string
   managerFeedback?: string
+  deliveryDistance: number
 }
 
 export interface RentalQuotesResponse {
