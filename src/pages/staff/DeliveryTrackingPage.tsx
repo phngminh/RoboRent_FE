@@ -757,19 +757,29 @@ export default function DeliveryTrackingPage() {
                           </button>
                         )}
 
-                        {/* ✅ NEW: Complete Rental Button */}
+                        {/* ✅ NEW: Complete Rental Button - ULTRA PREMIUM VERSION */}
                         {selectedDelivery.status === 'Delivered' && (
                           <button 
                             onClick={handleCompleteRental}
                             disabled={isCompleting}
-                            className="px-5 py-3 rounded-xl bg-slate-900 text-white font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg disabled:opacity-50 ring-2 ring-white/20"
+                            className="relative px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500 text-slate-900 font-extrabold flex items-center gap-2 hover:from-amber-300 hover:via-yellow-400 hover:to-orange-400 transition-all duration-300 shadow-2xl shadow-amber-500/50 disabled:opacity-50 ring-4 ring-amber-300/30 hover:ring-amber-400/50 hover:scale-105 group overflow-hidden"
                           >
+                            {/* Shine effect overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                            
+                            {/* Icon with animation */}
                             {isCompleting ? (
-                              <RefreshCw className="w-5 h-5 animate-spin" />
+                              <RefreshCw className="w-5 h-5 animate-spin relative z-10" />
                             ) : (
-                              <CheckCircle2 className="w-5 h-5" />
+                              <CheckCircle2 className="w-5 h-5 relative z-10 group-hover:rotate-12 transition-transform" />
                             )}
-                            Complete Rental
+                            
+                            {/* Text */}
+                            <span className="relative z-10">Complete Rental</span>
+                            
+                            {/* Sparkle decorations */}
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity animate-pulse" />
+                            <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity animate-pulse delay-75" />
                           </button>
                         )}
                       </div>
