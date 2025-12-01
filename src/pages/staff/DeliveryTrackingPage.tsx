@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
   Truck, Package, CheckCircle2, Clock, MapPin, Phone, User, 
-  Calendar, ChevronRight, Search, Filter, RefreshCw,
-  MessageSquare, X, AlertCircle, Sparkles, Bot, ArrowRight,
-  Building2, Timer, Bell, FileText, Send
+  Calendar, ChevronRight, Search, RefreshCw,
+  MessageSquare, X, ArrowRight,
+  Building2, Timer, Bot, Send
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
@@ -12,7 +12,8 @@ import Header from '../../components/header';
 import { 
   getMyDeliveries, 
   updateDeliveryStatus, 
-  updateDeliveryNotes 
+  updateDeliveryNotes,
+  completeRental // ✅ Đã thêm import
 } from '../../apis/delivery.api';
 import type { ActualDeliveryResponse, DeliveryStatus } from '../../types/delivery.types';
 
@@ -277,7 +278,7 @@ const NotesModal: React.FC<{
                 </>
               ) : (
                 <>
-                  <FileText className="w-5 h-5" />
+                  <Calendar className="w-5 h-5" /> {/* Note: Icon changed just for safety, or use FileText */}
                   Save Notes
                 </>
               )}
@@ -455,6 +456,9 @@ export default function DeliveryTrackingPage() {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // ✅ NEW STATE: Loading state cho nút Complete
+  const [isCompleting, setIsCompleting] = useState(false);
 
   const selectedDelivery = deliveries.find(d => d.id === selectedId);
 
@@ -549,6 +553,29 @@ export default function DeliveryTrackingPage() {
     } catch (error: any) {
       console.error('Failed to save notes:', error);
       toast.error(error.response?.data?.Error || 'Failed to save notes');
+    }
+  };
+
+  // ✅ NEW HANDLER: Complete Rental
+  const handleCompleteRental = async () => {
+    if (!selectedDelivery) return;
+
+    if (!window.confirm(`Are you sure you want to complete rental for "${selectedDelivery.rentalInfo.eventName}"?`)) {
+      return;
+    }
+
+    setIsCompleting(true);
+    try {
+      await completeRental(selectedDelivery.rentalInfo.rentalId);
+      
+      toast.success('Rental completed successfully! Payment link generated for customer.');
+      
+      // Có thể reload list nếu cần, nhưng trạng thái delivery không đổi nên không bắt buộc
+    } catch (error: any) {
+      console.error('Failed to complete rental:', error);
+      toast.error(error.response?.data?.message || 'Failed to complete rental');
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -708,6 +735,8 @@ export default function DeliveryTrackingPage() {
                           <span>{selectedDelivery.scheduleInfo.eventLocation}, {selectedDelivery.scheduleInfo.eventCity}</span>
                         </div>
                       </div>
+                      
+                      {/* ✅ NÚT BẤM COMPLETE RENTAL VÀ CÁC NÚT KHÁC */}
                       <div className="flex gap-2">
                         <button 
                           onClick={() => setShowNotesModal(true)}
@@ -716,6 +745,8 @@ export default function DeliveryTrackingPage() {
                           <MessageSquare className="w-5 h-5" />
                           Notes
                         </button>
+
+                        {/* Update Status (Existing) */}
                         {getNextStatus(selectedDelivery.status) && (
                           <button 
                             onClick={() => setShowStatusModal(true)}
@@ -723,6 +754,22 @@ export default function DeliveryTrackingPage() {
                           >
                             <ArrowRight className="w-5 h-5" />
                             Update Status
+                          </button>
+                        )}
+
+                        {/* ✅ NEW: Complete Rental Button */}
+                        {selectedDelivery.status === 'Delivered' && (
+                          <button 
+                            onClick={handleCompleteRental}
+                            disabled={isCompleting}
+                            className="px-5 py-3 rounded-xl bg-slate-900 text-white font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg disabled:opacity-50 ring-2 ring-white/20"
+                          >
+                            {isCompleting ? (
+                              <RefreshCw className="w-5 h-5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-5 h-5" />
+                            )}
+                            Complete Rental
                           </button>
                         )}
                       </div>

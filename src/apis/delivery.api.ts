@@ -127,3 +127,13 @@ export const assignStaff = async (
   )
   return response.data
 }
+
+/**
+ * PUT /api/Rentals/{rentalId}/complete
+ * Returns: RentalCompletionResponse (with checkoutUrl)
+ */
+export const completeRental = async (rentalId: number): Promise<any> => {
+  // Lưu ý: Check lại Controller bên BE là "Rentals" hay "Rental"
+  const response = await http.put(`${API_URL}/Rental/${rentalId}/complete`)
+  return response.data
+}

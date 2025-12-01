@@ -1,217 +1,283 @@
-import React from 'react'
-import { Search, CheckCircle, Clock, XCircle } from 'lucide-react'
+import React, { useEffect, useState } from 'react';
+import { 
+  Search, 
+  Filter, 
+  CreditCard, 
+  CheckCircle2, 
+  Clock, 
+  XCircle, 
+  AlertCircle, 
+  ExternalLink,
+  Calendar,
+  Wallet,
+  ArrowUpRight
+} from 'lucide-react';
+import { toast } from 'react-toastify';
+import { paymentApi } from '../../apis/payment.api';
+import type { PaymentRecordResponse } from '../../types/payment.types';
 
-const TransactionsContent: React.FC = () => {
+// Component hiển thị Status Badge chuyên nghiệp
+const StatusBadge = ({ status, expired }: { status: string, expired: boolean }) => {
+  if (status === 'Pending' && expired) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">
+        <XCircle className="w-3.5 h-3.5" />
+        Expired
+      </span>
+    );
+  }
+
+  const configs: Record<string, any> = {
+    Paid: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', icon: CheckCircle2 },
+    Pending: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: Clock },
+    Cancelled: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', icon: XCircle },
+    Failed: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', icon: AlertCircle },
+  };
+
+  const config = configs[status] || configs.Pending;
+  const Icon = config.icon;
+
   return (
-    <div className='space-y-6 bg-gray-50 p-6'>
-      <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
-        <h2 className='text-lg font-semibold text-gray-800 mb-4'>Filter Transactions</h2>
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Date From</label>
-            <input 
-              type='date'
-              placeholder='YYYY-MM-DD'
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-          
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Date To</label>
-            <input 
-              type='date'
-              placeholder='YYYY-MM-DD'
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-          
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Type</label>
-            <select className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
-              <option>All Types</option>
-              <option>Payment</option>
-              <option>Refund</option>
-              <option>Deposit</option>
-              <option>Withdrawal</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Status</label>
-            <select className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
-              <option>All Statuses</option>
-              <option>Completed</option>
-              <option>Pending</option>
-              <option>Failed</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Amount Range: $0 - $2000</label>
-            <div className='relative'>
-              <input 
-                type='range'
-                min='0'
-                max='2000'
-                className='w-full'
-              />
-              <div className='flex justify-between text-xs text-gray-500 mt-1'>
-                <span>$0</span>
-                <span>$2000</span>
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Search</label>
-            <div className='relative'>
-              <Search size={16} className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
-              <input 
-                type='text'
-                placeholder='Order Code or Description'
-                className='w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-              />
-            </div>
-          </div>
-        </div>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}>
+      <Icon className="w-3.5 h-3.5" />
+      {status}
+    </span>
+  );
+};
 
-        <div className='flex space-x-3'>
-          <button className='bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors'>
-            Apply Filters
-          </button>
-          <button className='bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors'>
-            Reset Filters
-          </button>
+export default function TransactionsContent() {
+  const [transactions, setTransactions] = useState<PaymentRecordResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Filter States
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+
+  // Load Data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const res = await paymentApi.getMyTransactions();
+        if (res.success) {
+          // Sort client-side: Mới nhất lên đầu
+          const sorted = res.data.sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          setTransactions(sorted);
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error('Unable to load transaction history');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  // Format Helpers
+  const formatMoney = (amount: number) => 
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+
+  const formatDate = (dateStr: string) => 
+    new Date(dateStr).toLocaleDateString('vi-VN', { 
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit' 
+    });
+
+  const checkExpired = (dateStr: string | null) => 
+    dateStr ? new Date(dateStr) < new Date() : false;
+
+  // Filter Logic
+  const filteredData = transactions.filter(item => {
+    const matchSearch = 
+      (item.rentalName?.toLowerCase() || '').includes(search.toLowerCase()) ||
+      item.orderCode.toString().includes(search);
+    const matchType = typeFilter === 'All' || item.paymentType === typeFilter;
+    const matchStatus = statusFilter === 'All' || item.status === statusFilter;
+    return matchSearch && matchType && matchStatus;
+  });
+
+  // Action Handler
+  const handlePay = (url: string | null) => {
+    if (!url) return toast.error('Payment link is invalid');
+    window.location.href = url;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50/50 p-6 space-y-8">
+      
+      {/* 1. Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Payment History</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your rental payments and track financial records.</p>
+        </div>
+        
+        {/* Quick Stats (Optional but Professional) */}
+        <div className="flex gap-4">
+          <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 font-medium uppercase">Total Spent</p>
+              <p className="text-sm font-bold text-gray-900">
+                {formatMoney(transactions.filter(t => t.status === 'Paid').reduce((sum, t) => sum + t.amount, 0))}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Transactions Table */}
-      <div className='bg-white rounded-xl shadow-sm border border-gray-100'>
-        <div className='p-6 border-b border-gray-100'>
-          <h2 className='text-xl font-semibold text-gray-800'>Latest Transactions</h2>
+      {/* 2. Filters Bar */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input 
+            type="text" 
+            placeholder="Search by event name or reference ID..." 
+            className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
         
-        <div className='overflow-x-auto'>
-          <table className='w-full'>
-            <thead className='bg-gray-50'>
-              <tr>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Order Code</th>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Description</th>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Amount</th>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Status</th>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Created At</th>
-              </tr>
-            </thead>
-            <tbody className='bg-white divide-y divide-gray-200'>
-              {[
-                { 
-                  code: 'TXN12345678', 
-                  description: 'Online purchase at TechStore', 
-                  amount: '$120.50', 
-                  status: 'Completed',
-                  date: '2024-07-20 10:30 AM',
-                  statusColor: 'bg-green-100 text-green-800',
-                  statusIcon: CheckCircle
-                },
-                { 
-                  code: 'TXN12345679', 
-                  description: 'Subscription renewal for CloudService', 
-                  amount: '$50.00', 
-                  status: 'Pending',
-                  date: '2024-07-19 03:15 PM',
-                  statusColor: 'bg-yellow-100 text-yellow-800',
-                  statusIcon: Clock
-                },
-                { 
-                  code: 'TXN12345680', 
-                  description: 'Refund for returned item (Gadget)', 
-                  amount: '$75.25', 
-                  status: 'Completed',
-                  date: '2024-07-18 11:00 AM',
-                  statusColor: 'bg-green-100 text-green-800',
-                  statusIcon: CheckCircle
-                },
-                { 
-                  code: 'TXN12345681', 
-                  description: 'International money transfer', 
-                  amount: '$500.00', 
-                  status: 'Failed',
-                  date: '2024-07-17 08:45 AM',
-                  statusColor: 'bg-red-100 text-red-800',
-                  statusIcon: XCircle
-                },
-                { 
-                  code: 'TXN12345682', 
-                  description: 'Utility bill payment', 
-                  amount: '$85.70', 
-                  status: 'Completed',
-                  date: '2024-07-16 02:00 PM',
-                  statusColor: 'bg-green-100 text-green-800',
-                  statusIcon: CheckCircle
-                },
-                { 
-                  code: 'TXN12345683', 
-                  description: 'Mobile data top-up', 
-                  amount: '$15.00', 
-                  status: 'Completed',
-                  date: '2024-07-15 09:00 AM',
-                  statusColor: 'bg-green-100 text-green-800',
-                  statusIcon: CheckCircle
-                },
-                { 
-                  code: 'TXN12345684', 
-                  description: 'Restaurant bill', 
-                  amount: '$65.40', 
-                  status: 'Completed',
-                  date: '2024-07-14 07:00 PM',
-                  statusColor: 'bg-green-100 text-green-800',
-                  statusIcon: CheckCircle
-                },
-                { 
-                  code: 'TXN12345685', 
-                  description: 'Cash withdrawal ATM', 
-                  amount: '$100.00', 
-                  status: 'Completed',
-                  date: '2024-07-13 01:00 PM',
-                  statusColor: 'bg-green-100 text-green-800',
-                  statusIcon: CheckCircle
-                },
-              ].map((transaction) => {
-                const StatusIcon = transaction.statusIcon
-                return (
-                  <tr key={transaction.code} className='hover:bg-gray-50'>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>{transaction.code}</td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>{transaction.description}</td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>{transaction.amount}</td>
-                    <td className='px-6 py-4 whitespace-nowrap'>
-                      <div className='flex items-center space-x-2'>
-                        <StatusIcon size={16} />
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${transaction.statusColor}`}>
-                          {transaction.status}
-                        </span>
-                      </div>
-                    </td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>{transaction.date}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div className="flex gap-3 w-full md:w-auto">
+          <select 
+            className="px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value)}
+          >
+            <option value="All">All Types</option>
+            <option value="Deposit">Deposit (30%)</option>
+            <option value="Full">Full Payment (70%)</option>
+          </select>
+
+          <select 
+            className="px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+          >
+            <option value="All">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Paid">Paid</option>
+          </select>
         </div>
-        
-        {/* Pagination */}
-        <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
-          <div className='flex space-x-2'>
-            <button className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors'>&lt; Previous</button>
-            <button className='px-3 py-1 text-sm bg-blue-600 text-white rounded'>1</button>
-            <button className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors'>2</button>
-            <button className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors'>3</button>
-            <button className='px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors'>Next &gt;</button>
+      </div>
+
+      {/* 3. Main Table */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center text-gray-500">Loading transactions...</div>
+        ) : filteredData.length === 0 ? (
+          <div className="p-12 text-center flex flex-col items-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <Search className="w-6 h-6 text-gray-400" />
+            </div>
+            <h3 className="text-gray-900 font-medium">No transactions found</h3>
+            <p className="text-gray-500 text-sm mt-1">Try adjusting your search or filters.</p>
           </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Transaction Info</th>
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="text-right py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="text-center py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="text-right py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredData.map((item) => {
+                  const isExpiredLink = checkExpired(item.expiredAt);
+                  
+                  return (
+                    <tr key={item.id} className="group hover:bg-blue-50/30 transition-colors">
+                      {/* Cột 1: Thông tin chính (Event & Ref ID) */}
+                      <td className="py-4 px-6">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-900 line-clamp-1" title={item.rentalName || ''}>
+                            {item.rentalName || 'Unknown Event'}
+                          </span>
+                          <span className="text-xs text-gray-400 mt-1 font-mono">
+                            Ref: #{item.orderCode}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Cột 2: Loại thanh toán */}
+                      <td className="py-4 px-6">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${
+                          item.paymentType === 'Deposit' 
+                            ? 'bg-purple-100 text-purple-700' 
+                            : 'bg-indigo-100 text-indigo-700'
+                        }`}>
+                          {item.paymentType}
+                        </span>
+                      </td>
+
+                      {/* Cột 3: Thời gian */}
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          {formatDate(item.createdAt)}
+                        </div>
+                      </td>
+
+                      {/* Cột 4: Số tiền (Căn phải) */}
+                      <td className="py-4 px-6 text-right">
+                        <span className="font-bold text-gray-900 tabular-nums">
+                          {formatMoney(item.amount)}
+                        </span>
+                      </td>
+
+                      {/* Cột 5: Status Badge (Căn giữa) */}
+                      <td className="py-4 px-6 text-center">
+                        <StatusBadge status={item.status} expired={isExpiredLink} />
+                      </td>
+
+                      {/* Cột 6: Action (Căn phải) */}
+                      <td className="py-4 px-6 text-right">
+                        {item.status === 'Pending' && !isExpiredLink ? (
+                          <button
+                            onClick={() => handlePay(item.checkoutUrl)}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm shadow-blue-200 transition-all hover:translate-y-[-1px]"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            Pay Now
+                          </button>
+                        ) : item.status === 'Paid' ? (
+                          <button 
+                            disabled 
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-gray-400 bg-gray-100 rounded-lg text-xs font-medium cursor-default"
+                          >
+                            Receipt
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">No action</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        
+        {/* Pagination placeholder (Professional Footer) */}
+        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center text-xs text-gray-500">
+          <span>Showing {filteredData.length} transaction(s)</span>
+          {/* Implement pagination logic later if needed */}
         </div>
       </div>
     </div>
-  )
+  );
 }
-
-export default TransactionsContent
