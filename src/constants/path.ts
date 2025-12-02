@@ -14,6 +14,7 @@ const path = {
   CUSTOMER_TRANSACTIONS: '/customer/transactions',
   CUSTOMER_CHAT: '/customer/chat/:rentalId',
   CUSTOMER_ACCOUNT: '/customer/account',
+  CUSTOMER_DELIVERY: '/customer/delivery/:rentalId',
 
   //============= Staff ============
   BASE_STAFF: '/staff',

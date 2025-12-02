@@ -137,3 +137,21 @@ export const completeRental = async (rentalId: number): Promise<any> => {
   const response = await http.put(`${API_URL}/Rental/${rentalId}/complete`)
   return response.data
 }
+
+/**
+ * [CUSTOMER] GET /api/ActualDelivery/by-rental/{rentalId}
+ * Returns: First delivery for this rental (or null)
+ */
+export const getDeliveryByRentalId = async (
+  rentalId: number
+): Promise<ActualDeliveryResponse | null> => {
+  try {
+    const response = await http.get(`${API_URL}/ActualDelivery/by-rental/${rentalId}`)
+    return response.data
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      return null // No delivery yet
+    }
+    throw error
+  }
+}

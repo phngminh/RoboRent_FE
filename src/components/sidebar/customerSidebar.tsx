@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, CreditCard, ChevronRight, User } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, ChevronRight, User, Truck } from 'lucide-react'
 import path from '../../constants/path'
 
 interface ProfileSidebarProps {
