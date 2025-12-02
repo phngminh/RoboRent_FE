@@ -48,7 +48,7 @@ export const getReportById = async (id: number): Promise<ContractReportResponse>
   return response.data.data
 }
 
-export const createReport = async (data: CreateContractReportPayload) => {
+export const sendReport = async (data: CreateContractReportPayload) => {
   const response = await http.post<ContractReportResponse>(`ContractReports`, data)
   return response.data
 }

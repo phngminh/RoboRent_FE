@@ -101,6 +101,12 @@ const BreachReports: React.FC<BreachReportsProps> = ({ onView }) => {
 
   const columns = [
     {
+      key: 'id',
+      title: 'ID',
+      accessor: 'id' as keyof ContractReportResponse,
+      className: 'w-[100px] whitespace-nowrap',
+    },
+     {
       key: 'draftClauseTitle',
       title: 'Title',
       accessor: 'draftClauseTitle' as keyof ContractReportResponse,
