@@ -43,7 +43,7 @@ export const getDraftsByStaff = async (id: number): Promise<ContractDraftRespons
   return response.data.success ? response.data.data : []
 }
 
-export const getDraftById = async (id: number) => {
+export const getDraftById = async (id: number): Promise<ContractDraftResponse> => {
   const response = await http.get<SingleApiResponse<ContractDraftResponse>>(`ContractDrafts/${id}`)
   return response.data.data
 }

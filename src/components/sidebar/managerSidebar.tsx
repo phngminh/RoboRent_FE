@@ -16,7 +16,7 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.MANAGER_REQUESTS },
     { id: 'quotes', label: 'Price Quotes', icon: CreditCard, path: path.MANAGER_QUOTES },
     { id: 'contracts', label: 'Contracts', icon: Newspaper, hasSubItems: true },
-    { id: 'reports', label: 'Reports', icon: ChartColumn, path: path.MANAGER_REPORTS },
+    { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.MANAGER_REPORTS },
   ]
 
   const contractSubItems = [
