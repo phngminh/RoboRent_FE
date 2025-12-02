@@ -28,7 +28,6 @@ export async function createFaceProfileCCCD(data: {
 export async function verifyFace(data: {
   account_id: number;
   image_base64: string;
-  rental_id?: number;
 }) {
   try {
     const res = await httpPython.post("/face/verify", data);

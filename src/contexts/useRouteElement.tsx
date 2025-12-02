@@ -29,6 +29,9 @@ import DetailContractDraft from '../pages/manager/contractDraft/detailContractDr
 import CustomerContractDraft from '../pages/customer/contract/customerContractDraft'
 import StaffContractDrafts from '../pages/staff/contract/staffContractDrafts'
 import StaffDetailContractDraft from '../pages/staff/contract/detailContractDraft'
+import FaceProfilePage from '../pages/customer/profile/faceProfile'
+import FaceProfileCreateUI from '../pages/customer/faceProfile/FaceProfileCreateUI'
+import FaceVerificationPage from '../pages/customer/faceProfile/FaceProfileVerifyUI'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -103,6 +106,33 @@ export default function useRouteElements() {
                     navigate(`${path.BASE_CUSTOMER}/create-rental-request/${rentalId}`)
                   }
                   onSave={() => navigate(`${path.BASE_CUSTOMER}/rental-requests`)}
+                />
+              )
+            },
+            {
+              path: '/customer/face-profile',
+              element: (
+                <FaceProfilePage
+                onNotFound={() => navigate(`${path.BASE_CUSTOMER}/face-profile/create`)}
+                onUpdate={() => navigate(`${path.BASE_CUSTOMER}/face-profile/create`)}
+                onVerify={() => navigate(`${path.BASE_CUSTOMER}/face-profile/verify`)}
+                />
+              )
+            },
+            {
+              path: '/customer/face-profile/create',
+              element: (
+                <FaceProfileCreateUI
+                onSubmit={() => navigate(`${path.BASE_CUSTOMER}/face-profile`)}
+                />
+              )
+            },
+            {
+              path: '/customer/face-profile/verify',
+              element: (
+                <FaceVerificationPage
+                onSubmit={() => navigate(`${path.BASE_CUSTOMER}/face-profile`)}
+                onBack={() => navigate(`${path.BASE_CUSTOMER}/face-profile`)}
                 />
               )
             },

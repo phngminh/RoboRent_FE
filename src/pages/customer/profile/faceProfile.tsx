@@ -244,14 +244,7 @@ const FaceProfilePage: React.FC<FaceProfilePageProps> = ({ onNotFound, onUpdate,
                 {historyError}
               </div>
             )}
-
-{/* No history → show yellow box + verify button */}
-{!historyLoading && historyError === "" && historyList.length === 0 && (
   <>
-    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
-      No biometric verification history found.
-    </div>
-
     <button
       onClick={onVerify}
       className="px-4 py-2 bg-blue-600 text-white rounded-lg mt-3"
@@ -259,48 +252,52 @@ const FaceProfilePage: React.FC<FaceProfilePageProps> = ({ onNotFound, onUpdate,
       Verify Now
     </button>
   </>
+{/* SHOW TABLE IF HISTORY EXISTS */}
+{historyList.length > 0 && (
+  <div className="max-h-80 overflow-y-auto border rounded-lg">
+    <table className="w-full text-left">
+      <thead className="sticky top-0 bg-white shadow-sm z-10">
+        <tr className="text-gray-600 text-sm border-b">
+          <th className="py-2 px-2">Date</th>
+          <th className="px-2">Submission Type</th>
+          <th className="px-2">Status</th>
+          <th className="px-2">Match Score</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {historyList.map((item) => (
+          <tr key={item.id} className="border-b text-sm">
+            <td className="py-2 px-2">
+              {new Date(item.verifiedAt).toLocaleString()}
+            </td>
+
+            <td className="px-2">
+              {item.rentalId ? "Rental Verification" : "Face Verification"}
+            </td>
+
+            <td className="px-2">
+              {item.result === "Success" ? (
+                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                  Approved
+                </span>
+              ) : (
+                <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">
+                  Rejected
+                </span>
+              )}
+            </td>
+
+            <td className="text-gray-600 px-2">
+              {item.matchScore?.toFixed(3)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 )}
 
-            {/* SHOW TABLE IF HISTORY EXISTS */}
-            {historyList.length > 0 && (
-              <table className="w-full text-left border-t">
-                <thead>
-                  <tr className="text-gray-600 text-sm border-b">
-                    <th className="py-2">Date</th>
-                    <th>Submission Type</th>
-                    <th>Status</th>
-                    <th>Match Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historyList.map((item) => (
-                    <tr key={item.id} className="border-b text-sm">
-                      <td className="py-2">
-                        {new Date(item.verifiedAt).toLocaleString()}
-                      </td>
-
-                      <td>
-                        {item.rentalId ? "Rental Verification" : "Face Verification"}
-                      </td>
-
-                      <td>
-                        {item.result === "Success" ? (
-                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
-                            Approved
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">
-                            Rejected
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="text-gray-600">{item.matchScore?.toFixed(3)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
           </div>
         </>
       )}
