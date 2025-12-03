@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '../../../components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
@@ -9,7 +9,6 @@ import { editClause, type TemplateClauseResponse } from '../../../apis/contractT
 import { toast } from 'react-toastify'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
-import { DialogDescription } from '@radix-ui/react-dialog'
 
 interface EditTemplateClauseProps {
   open: boolean

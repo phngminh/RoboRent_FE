@@ -58,7 +58,7 @@ export const getDraftsByStaff = async (id: number): Promise<ContractDraftRespons
   return response.data.success ? response.data.data : []
 }
 
-export const getDraftById = async (id: number) => {
+export const getDraftById = async (id: number): Promise<ContractDraftResponse> => {
   const response = await http.get<SingleApiResponse<ContractDraftResponse>>(`ContractDrafts/${id}`)
   return response.data.data
 }
@@ -87,4 +87,31 @@ export const customerRejects = (id: number, reason: string) => {
 
 export const customerRequestChange = (id: number, requests: string) => {
   return http.patch(`/ContractDrafts/${id}/customer-request-change`, { requests })
+}
+
+export interface CreateContractDraftPayload {
+  title: string
+  comments: string
+  rentalId: number
+  contractTemplatesId: number
+  managerId: number
+}
+
+export interface ReviseContractDraftPayload {
+  id: number
+  title: string
+  comments: string
+  bodyJson: string
+}
+
+export const sendDraftToManager = (id: number) => {
+  return http.patch(`/ContractDrafts/${id}/send-to-manager`)
+}
+
+export const createDraft = (data: CreateContractDraftPayload) => {
+  return http.post('/ContractDrafts', data)
+}
+
+export const reviseDraft = (id: number, data: ReviseContractDraftPayload) => {
+  return http.patch(`/ContractDrafts/${id}/revise`, data)
 }

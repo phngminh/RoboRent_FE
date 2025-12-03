@@ -14,6 +14,7 @@ const path = {
   CUSTOMER_TRANSACTIONS: '/customer/transactions',
   CUSTOMER_CHAT: '/customer/chat/:rentalId',
   CUSTOMER_ACCOUNT: '/customer/account',
+  SHARE_RENTAL_REQUEST: '/customer/share-rental-request/:rentalId',
   CUSTOMER_DELIVERY: '/customer/delivery/:rentalId',
 
   //============= Staff ============
@@ -27,6 +28,7 @@ const path = {
   STAFF_ACCOUNT: '/staff/account',
   STAFF_ROBOT_GROUP: '/staff/robot-group',
   STAFF_CONTRACT_DRAFTS: '/staff/contract-drafts',
+  SHARE_RENTAL_REQUEST_STAFF: '/staff/share-rental-request/:rentalId',
 
   //============= Manager ============
   BASE_MANAGER: '/manager',
@@ -34,7 +36,7 @@ const path = {
   MANAGER_PROFILE: '/manager/profile',
   MANAGER_REQUESTS: '/manager/rental-requests',
   MANAGER_QUOTES: '/manager/quotes',
-  MANAGER_REPORTS: '/manager/reports',
+  MANAGER_REPORTS: '/manager/breach-reports',
   MANAGER_DRAFTS: '/manager/contract-drafts',
   MANAGER_CONTRACT: '/manager/contract-templates',
   MANAGER_CLAUSES: '/manager/templates-clauses',

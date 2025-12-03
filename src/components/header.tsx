@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { X, LogOut, Bell } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { X, LogOut, Bell, Menu } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { googleLogin } from '../apis/auth.api'
 import { getStaffChatRooms, getCustomerChatRooms } from '../apis/chat.api'
@@ -22,9 +22,11 @@ const Header = () => {
   const { user, logout, isAuthenticated } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+  const [currentSection, setCurrentSection] = useState('home')
   const [unreadCount, setUnreadCount] = useState(0)
 
-  const showNav = [path.home, path.products, path.aboutUs].includes(location.pathname)
+  const showNav = location.pathname === path.home
 
   const handleLogout = () => {
     logout()
@@ -51,6 +53,19 @@ const Header = () => {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  useEffect(() => {
+    if (!showNav) return
+
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1)
+      setCurrentSection(hash || 'home')
+    }
+
+    handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [showNav])
 
   useEffect(() => {
     if (!user?.id) return
@@ -92,6 +107,23 @@ const Header = () => {
 
   const textColor = !showNav || isScrolled || isMenuOpen ? 'text-gray-700' : 'text-white'
 
+  const scrollToSection = (sectionId: string) => {
+    setIsMenuOpen(false)
+    const element = document.getElementById(sectionId)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
+  const handleNavClick = (sectionId: string, route?: string) => {
+    if (showNav) {
+      scrollToSection(sectionId)
+    } else if (route) {
+      navigate(route)
+    }
+    setIsMenuOpen(false)
+  }
+
   return (
     <>
       <header
@@ -112,7 +144,7 @@ const Header = () => {
                 }`}
               />
               <Link 
-                to='/' 
+                to={path.home} 
                 className={`font-orbitron text-2xl tracking-widest transition-colors duration-300 ${
                   !showNav || isScrolled || isMenuOpen
                     ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent'
@@ -126,54 +158,69 @@ const Header = () => {
             <div className='flex justify-center'>
               {showNav && (
                 <nav className='hidden md:flex justify-center space-x-8 tracking-wide text-lg'>
-                  <Link 
-                    to='/' 
+                  <a
+                    href='#home'
+                    onClick={(e) => {
+                      e.preventDefault()
+                      handleNavClick('home')
+                    }}
                     className={`transition-colors duration-200 relative pb-1 ${
                       !showNav || isScrolled
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    } ${
-                      location.pathname === '/' ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px]' : ''
+                    }
                     }`}
                   >
                     HOME
-                  </Link>
-                  <Link 
-                    to='/our-products' 
+                  </a>
+                  <a
+                    href='#our-products'
+                    onClick={(e) => {
+                      e.preventDefault()
+                      handleNavClick('our-products')
+                    }}
                     className={`transition-colors duration-200 relative pb-1 ${
                       !showNav || isScrolled
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    } ${
-                      location.pathname === '/our-products' ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px]' : ''
+                    }
                     }`}
                   >
                     PRODUCTS
-                  </Link>
-                  <Link 
-                    to='/about-us'
+                  </a>
+                  <a
+                    href='#about-us'
+                    onClick={(e) => {
+                      e.preventDefault()
+                      handleNavClick('about-us')
+                    }}
                     className={`transition-colors duration-200 relative pb-1 ${
                       !showNav || isScrolled
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    } ${
-                      location.pathname === '/about-us' ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px]' : ''
+                    }
                     }`}
                   >
                     ABOUT US
-                  </Link>
+                  </a>
                 </nav>
               )}
             </div>
 
             <div className='flex justify-end items-center space-x-4 mr-2 sm:mr-10'>
+              <button
+                className='md:hidden'
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                <Menu size={20} className={textColor} />
+              </button>
               <div className='hidden md:flex items-center space-x-4'>
                 {isAuthenticated ? (
                   <div className='flex items-center space-x-4'>
-                    <button className="relative p-2 hover:bg-gray-100/10 rounded-full transition-colors">
+                    <button className='relative p-2 hover:bg-gray-100/10 rounded-full transition-colors'>
                       <Bell size={21} className={textColor} />
                       {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        <span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center'>
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
@@ -221,33 +268,42 @@ const Header = () => {
           {isMenuOpen && (
             <div className='md:hidden absolute top-16 left-0 right-0 bg-white/95 shadow-lg animate-in slide-in-from-top-2 duration-200'>
               <nav className='px-4 py-4 space-y-2'>
-                <Link 
-                  to='/' 
+                <a
+                  href='#home'
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleNavClick('home')
+                  }}
                   className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${
-                    location.pathname === '/' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                    currentSection === 'home' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
                   }`}
-                  onClick={() => setIsMenuOpen(false)}
                 >
                   Home
-                </Link>
-                <Link 
-                  to='/our-products' 
+                </a>
+                <a
+                  href='#our-products'
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleNavClick('our-products')
+                  }}
                   className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${
-                    location.pathname === '/our-products' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                    currentSection === 'our-products' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
                   }`}
-                  onClick={() => setIsMenuOpen(false)}
                 >
                   Products
-                </Link>
-                <Link 
-                  to='/about-us' 
+                </a>
+                <a
+                  href='#about-us' 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleNavClick('about-us')
+                  }}
                   className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${
-                    location.pathname === '/about-us' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                    currentSection === 'about-us' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
                   }`}
-                  onClick={() => setIsMenuOpen(false)}
                 >
                   About Us
-                </Link>
+                </a>
               </nav>
             </div>
           )}

@@ -5,7 +5,7 @@ import { Input } from '../../../components/ui/input'
 import { Textarea } from '../../../components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
-import { ArrowLeft, Eye } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Eye, XCircle } from 'lucide-react'
 import { getDraftById, managerRejects, managerSigns, type ContractDraftResponse } from '../../../apis/contractDraft.api'
 import { getClausesByTemplate, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
 import { getRequestById, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
@@ -84,7 +84,7 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
   const handleConfirmApprove = async () => {
     try {
       await managerSigns(draftId, signature)
-      toast.success('Approved successfully!')
+      toast.success('Signed successfully!')
       setApproveOpen(false)
       setSignature('')
       onBack()
@@ -180,7 +180,7 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
               </div>
               <div>
                 <label className='block text-xs font-medium text-gray-600 mb-1'>Comments from Staff</label>
-                <Textarea value={draft.comments} readOnly className='bg-white border-gray-300 min-h-[100px]' />
+                <Textarea value={draft.comments || 'N/A'} readOnly className='bg-white border-gray-300 min-h-[100px]' />
               </div>
             </div>
 
@@ -257,15 +257,17 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
         <Button 
           onClick={() => setRejectOpen(true)} 
           disabled={draft.status !== 'PendingManagerSignature'}
-          className='bg-red-500 border-gray-300 text-white hover:bg-red-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
+          className='bg-red-500 border-gray-300 text-white hover:bg-red-600'
         >
+          <XCircle size={18} />
           Reject
         </Button>
         <Button 
           onClick={() => setApproveOpen(true)} 
           disabled={draft.status !== 'PendingManagerSignature'}
-          className='bg-indigo-600 hover:bg-indigo-700 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
+          className='bg-green-600 hover:bg-green-700 text-white'
         >
+          <CheckCircle size={18} />
           Approve
         </Button>
       </div>

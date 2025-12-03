@@ -63,11 +63,11 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
     setCurrentPage(1)
   }, [drafts, search, appliedStatus])
 
-  const statusOptions = ['All Status', 'Draft', 'PendingManagerSignature', 'PendingCustomerSignature', 'Expired', 'Approved', 'Rejected']
+  const statusOptions = ['All Status', 'Draft', 'PendingManagerSignature', 'PendingCustomerSignature', 'Expired', 'Active', 'Rejected']
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Approved':
+      case 'Active':
         return 'bg-green-100 text-green-800'
       case 'Rejected':
         return 'bg-red-100 text-red-800'
@@ -152,7 +152,7 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
     <div className='space-y-6 bg-gray-50 p-6'>
       <Card className='rounded-xl shadow-sm border border-gray-100'>
         <CardHeader className='pb-0'>
-          <h2 className='text-lg font-semibold text-gray-800 text-center mb-3'>Filter Templates</h2>
+          <h2 className='text-lg font-semibold text-gray-800 text-center mb-3'>Filter Drafts</h2>
         </CardHeader>
         <CardContent className='p-6 pt-0'>
           <div className='flex flex-col gap-4 md:flex-row md:items-end md:gap-4'>
@@ -211,7 +211,7 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
       <Card className='rounded-xl shadow-sm border border-gray-300 relative'>
         <CardHeader className='p-6 border-b border-gray-100 relative'>
           <h2 className='text-xl text-gray-800 font-semibold text-center w-full'>
-            Contract Templates
+            Contract Drafts
           </h2>
         </CardHeader>
 

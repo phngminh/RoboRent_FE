@@ -29,7 +29,34 @@ export const addScheduleAsync = async (
         );
         return response.data;
     } catch (error: any) {
-        console.error("Error adding schedule:", error);
-        throw error;
+    return {
+      success: false,
+      message: error.response?.data?.message || "Unexpected error"
+    };
+    }
+};
+
+export const updateScheduleAsync = async (
+    scheduleId: number,
+    payload: {
+        deliveryTime: string;
+        startTime: string;
+        endTime: string;
+        finishTime: string;
+        activityTypeGroupId: number;
+        rentalId: number;
+    }
+) => {
+    try {
+        const response = await http.put(
+            `${API_URL}/staff/update/${scheduleId}`,
+            payload
+        );
+        return response.data;
+    } catch (error: any) {
+    return {
+      success: false,
+      message: error.response?.data?.message || "Unexpected error"
+    };
     }
 };
