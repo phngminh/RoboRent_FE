@@ -32,6 +32,7 @@ import StaffDetailContractDraft from '../pages/staff/contract/detailContractDraf
 import FaceProfilePage from '../pages/customer/profile/faceProfile'
 import FaceProfileCreateUI from '../pages/customer/faceProfile/FaceProfileCreateUI'
 import FaceVerificationPage from '../pages/customer/faceProfile/FaceProfileVerifyUI'
+import ReportDetail from '../pages/manager/report/reportDetail'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -156,8 +157,7 @@ export default function useRouteElements() {
             { 
               path: 'rental-requests', 
               element: 
-              <StaffRentalRequestsContent 
-                onCreate={() => {}}
+              <StaffRentalRequestsContent
                 onView={(id) => navigate(`${path.BASE_STAFF}/share-rental-request/${id}`)}
               /> 
             },
@@ -241,7 +241,20 @@ export default function useRouteElements() {
             },
             { path: 'contract-templates', element: <ContractTemplates /> },
             { path: 'templates-clauses', element: <Clauses /> },
-            { path: 'reports', element: <BreachReports /> }
+            { 
+              path: 'breach-reports', 
+              element: 
+                <BreachReports 
+                  onView={(reportId) => navigate(`${path.BASE_MANAGER}/breach-reports/${reportId}`)}
+                /> 
+            },
+            { 
+              path: 'breach-reports/:reportId', 
+              element: 
+                <ReportDetail 
+                  onBack={() => navigate(`${path.BASE_MANAGER}/breach-reports`)}
+                /> 
+            }
           ]
         }
       ]

@@ -1,15 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '../../../components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { cn } from '../../../lib/utils'
-import { createClause, getAllTemplates, type ContractTemplateResponse } from '../../../apis/contractTemplates.api'
+import { createClause, getAllTemplates } from '../../../apis/contractTemplates.api'
 import { toast } from 'react-toastify'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
-import { DialogDescription } from '@radix-ui/react-dialog'
 
 interface CreateTemplateClauseProps {
   open: boolean
@@ -45,10 +44,8 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
   const fetchTemplates = async () => {
     try {
       const templatesData = await getAllTemplates()
-      const templates: TemplateOption[] = templatesData
-        .map((t: ContractTemplateResponse) => ({ id: t.id, title: t.title }))
-        .sort((a, b) => a.title.localeCompare(b.title))
-      setTemplates(templates)
+      const filteredTemplates = templatesData.filter(t =>t.status === 'Updated' || t.status === 'Initiated')
+      setTemplates(filteredTemplates)
       if (templates.length > 0 && formData.contractTemplateId === 0) {
         setFormData(prev => ({ ...prev, contractTemplateId: templates[0].id }))
       }
@@ -226,11 +223,17 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
                   <SelectValue placeholder='Select Template' />
                 </SelectTrigger>
                 <SelectContent>
-                  {templates.map((template) => (
-                    <SelectItem key={template.id} value={template.id.toString()}>
-                      {template.title}
+                  {templates.length === 0 ? (
+                    <SelectItem value='no-templates' disabled>
+                      There's no available template
                     </SelectItem>
-                  ))}
+                  ) : (
+                    templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id.toString()}>
+                        {template.title}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               {errors.contractTemplateId && <ErrorMessage message={errors.contractTemplateId} />}

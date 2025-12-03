@@ -168,8 +168,7 @@ const Header = () => {
                       !showNav || isScrolled
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    } ${
-                      currentSection === 'home' ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px]' : ''
+                    }
                     }`}
                   >
                     HOME
@@ -184,8 +183,7 @@ const Header = () => {
                       !showNav || isScrolled
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    } ${
-                      currentSection === 'our-products' ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px]' : ''
+                    }
                     }`}
                   >
                     PRODUCTS
@@ -200,8 +198,7 @@ const Header = () => {
                       !showNav || isScrolled
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    } ${
-                      currentSection === 'about-us' ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px]' : ''
+                    }
                     }`}
                   >
                     ABOUT US

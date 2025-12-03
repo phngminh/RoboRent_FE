@@ -1,21 +1,36 @@
-import { Eye, MessageCircle, Send, Search } from 'lucide-react'
+import { Eye, MessageCircle, Send, Search, Flag } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-
-import { 
-  getPendingRentalAsync,
-  getReceivedRentalByStaffIdAsync,
-  receiveRentalAsync
-} from '../../apis/rental.staff.api'
-
+import path from '../../constants/path'
+import { cn } from '../../lib/utils'
+import { toast } from 'react-toastify'
+import { getPendingRentalAsync, getReceivedRentalByStaffIdAsync, receiveRentalAsync } from '../../apis/rental.staff.api'
+import { getDraftsByRentalId, type ContractDraftResponse } from '../../apis/contractDraft.api'
+import { getDraftsByContractId, type DraftClausesResponse } from '../../apis/draftClause.api'
+import { sendReport, type CreateContractReportPayload } from '../../apis/contractReport.api'
 import { useAuth } from '../../contexts/AuthContext'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
+import { Textarea } from '../../components/ui/textarea'
+import { Label } from '../../components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { Button } from '../../components/ui/button'
+import type { RentalRequestResponse } from '../../apis/rentalRequest.api'
 
 interface RentalRequestsContentProps {
-  onCreate: () => void
   onView: (rentalId: number) => void
 }
 
-const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate, onView }) => {
+interface FormData {
+  draftClausesId: number,
+  accusedId: number,
+  description: string,
+  evidencePath: string
+}
+
+const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView }) => {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const staffId = user?.accountId
   const [allItems, setAllItems] = useState<any[]>([])
   const [filteredItems, setFilteredItems] = useState<any[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -32,17 +47,23 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
 
   const [viewMode, setViewMode] = useState<'pending' | 'received' | 'canceled'>('pending')
 
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const staffId = user?.accountId
+  const [reportOpen, setReportOpen] = useState(false)
+  const [selectedClauseId, setSelectedClauseId] = useState<number | null>(null)
+  const [clauses, setClauses] = useState<DraftClausesResponse[]>([])
+  const [selectedRental, setSelectedRental] = useState<RentalRequestResponse>({} as RentalRequestResponse)
+  const [draftsMap, setDraftsMap] = useState<Record<number, ContractDraftResponse[]>>({})
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
+  const [rawEvidenceFile, setRawEvidenceFile] = useState<File | null>(null)
+  const [formData, setFormData] = useState<FormData>({
+    draftClausesId: 0,
+    accusedId: 0,
+    description: '',
+    evidencePath: ''
+  })
 
-  // ============================
-  // FETCH FROM API
-  // ============================
 const fetchData = async () => {
   try {
     setLoading(true)
-
     let res;
 
     if (viewMode === 'pending') {
@@ -58,6 +79,7 @@ const fetchData = async () => {
     }
 
     setAllItems(res.data ?? [])
+      setDraftsMap({})
   } catch (err) {
     console.error('Failed to load rental requests', err)
   } finally {
@@ -65,14 +87,26 @@ const fetchData = async () => {
   }
 }
 
+  const fetchDraftsForRentals = async () => {
+    for (const rental of allItems.filter(r => !draftsMap[r.id!])) {
+      try {
+        const drafts = await getDraftsByRentalId(rental.id)
+        setDraftsMap(prev => ({ ...prev, [rental.id]: drafts }))
+      } catch (error) {
+        console.error(`Error fetching drafts for ${rental.id}:`, error)
+        setDraftsMap(prev => ({ ...prev, [rental.id]: [] }))
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (allItems.length > 0) fetchDraftsForRentals()
+  }, [allItems])
+
   useEffect(() => {
     if (staffId) fetchData()
   }, [viewMode, staffId])
 
-
-  // ============================
-  // FILTERING
-  // ============================
   const filterData = () => {
     let filtered = [...allItems]
 
@@ -115,10 +149,6 @@ if (viewMode === 'canceled') {
     filterData()
   }, [allItems, search, appliedStatus, appliedDateFrom, appliedDateTo])
 
-
-  // ============================
-  // PAGINATION
-  // ============================
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize))
   const paginatedItems = filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
@@ -134,10 +164,6 @@ if (viewMode === 'canceled') {
     if (num >= 1 && num <= totalPages) setCurrentPage(num)
   }
 
-
-  // ============================
-  // RECEIVE RENTAL
-  // ============================
   const handleReceive = async (id: number) => {
     try {
       setReceiving(id)
@@ -165,10 +191,128 @@ if (viewMode === 'canceled') {
     }
   }
 
+  const handleOpenReport = async (rental: any) => {
+    setSelectedRental(rental)
+    clearFields()
+    try {
+      const drafts = draftsMap[rental.id] ?? []
+      const relevantDrafts = drafts.filter(d =>
+        d.status === 'PendingCustomerSignature' ||
+        d.status === 'ChangeRequested' ||
+        d.status === 'Active' ||
+        d.status === 'Rejected'
+      )
+      let allClauses: DraftClausesResponse[] = []
+      for (const draft of relevantDrafts) {
+        const draftClauses = await getDraftsByContractId(draft.id)
+        allClauses = [...allClauses, ...draftClauses]
+      }
+      setClauses(allClauses)
+    } catch (err) {
+      console.error('Error fetching clauses:', err)
+      setClauses([])
+    }
 
-  // ============================
-  // UI
-  // ============================
+    setReportOpen(true)
+  }
+
+  const clearFields = () => {
+    setFormData({ ...formData, description: '', draftClausesId: 0, evidencePath: '' })
+    setSelectedClauseId(null)
+    setClauses([])
+  }
+
+  const handleDraftClauseChange = (clauseId: number) => {
+    setSelectedClauseId(clauseId)
+    setFormData((prev) => ({ ...prev, draftClausesId: clauseId }))
+    if (errors.draftClausesId) {
+      setErrors((prev) => {
+        const { draftClausesId, ...rest } = prev
+        return rest
+      })
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (Object.keys(errors).length > 0) {
+      setErrors({})
+    }
+  }
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {}
+    
+    if (!selectedClauseId) {
+      newErrors.draftClausesId = 'Draft Clause is required!'
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required!'
+    }
+
+    if (formData.description.trim().length > 200) {
+      newErrors.description = 'Description must not exceed 200 characters!'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const uploadToCloudinary = async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET)
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/auto/upload`,
+      { method: 'POST', body: formData }
+    )
+    return res.json()
+  }
+
+  const handleSendReport = async () => {
+    if (validateForm() === false) {
+      return
+    }
+    try {
+      setLoading(true)
+
+      let evidencePath = ''
+      if (rawEvidenceFile) {
+        const uploadResult = await uploadToCloudinary(rawEvidenceFile)
+        evidencePath = uploadResult.secure_url
+        console.log('Uploaded evidence path:', evidencePath)
+      }
+
+      const payload: CreateContractReportPayload = {
+        draftClausesId: selectedClauseId!,
+        accusedId: selectedRental.accountId,
+        description: formData.description,
+        evidencePath: evidencePath
+      }
+      await sendReport(payload)
+      toast.success('Report sent successfully')
+      setReportOpen(false)
+      clearFields()
+    } catch (err: any) {
+      console.error('Error sending report:', err)
+      toast.error('Failed to send report')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const decodeHtml = (html: string) => {
+    const txt = document.createElement('textarea')
+    txt.innerHTML = html
+    return txt.value
+  }
+
+  const ErrorMessage = ({ message }: { message: string }) => (
+    <p className='text-sm text-destructive mt-1'>{message}</p>
+  )
+
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
 
@@ -333,64 +477,79 @@ onClick={() => {
                   <td colSpan={7} className='text-center py-6 text-gray-500'>No requests found.</td>
                 </tr>
               ) : (
-                paginatedItems.map((request: any) => (
-                  <tr key={request.id} className='hover:bg-gray-50'>
-                    <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.id}</td>
-                    <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventName}</td>
-                    <td className='px-6 py-4 text-sm text-center'>
-                      <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800'>
-                        {request.status}
-                      </span>
-                    </td>
-                    <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventActivityName}</td>
-                    <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.activityTypeName}</td>
-                    <td className='px-6 py-4 text-sm text-gray-900 text-center'>
-                      {new Date(request.createdDate).toLocaleDateString()}
-                    </td>
+                paginatedItems.map((request: any) => {
+                  const drafts = draftsMap[request.id] ?? []
+                  const canReport = drafts.length > 0 && drafts.some(d => d.status === 'Active')
 
-                    <td className='px-6 py-4 text-sm text-center'>
-                      <div className='flex justify-center space-x-2'>
+                  return (
+                    <tr key={request.id} className='hover:bg-gray-50'>
+                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.id}</td>
+                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventName}</td>
+                      <td className='px-6 py-4 text-sm text-center'>
+                        <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800'>
+                          {request.status}
+                        </span>
+                      </td>
+                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventActivityName}</td>
+                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.activityTypeName}</td>
+                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>
+                        {new Date(request.createdDate).toLocaleDateString()}
+                      </td>
 
-                        {/* View */}
-                        <button
-                          onClick={() => onView(request.id)}
-                          className='text-gray-600 hover:text-gray-800 flex items-center space-x-1'
-                        >
-                          <Eye size={14} />
-                          <span>View</span>
-                        </button>
+                      <td className='px-6 py-4 text-sm text-center'>
+                        <div className='flex justify-center space-x-2'>
 
-                        {/* Receive button only in pending view */}
-                        {viewMode === 'pending' && (
+                          {/* View */}
                           <button
-                            onClick={() => handleReceive(request.id)}
-                            disabled={receiving === request.id}
-                            className={`px-3 py-1 rounded-lg flex items-center space-x-1 ${
-                              receiving === request.id
-                                ? 'bg-gray-400 text-white cursor-not-allowed'
-                                : 'bg-green-600 text-white hover:bg-green-700'
-                            }`}
+                            onClick={() => onView(request.id)}
+                            className='text-gray-600 hover:text-gray-800 flex items-center space-x-1'
                           >
-                            <Send size={14} />
-                            <span>{receiving === request.id ? 'Receiving...' : 'Receive'}</span>
+                            <Eye size={14} />
+                            <span>View</span>
                           </button>
-                        )}
 
-                        {/* Chat button only in RECEIVED view */}
-                        {viewMode === 'received' && (
-                          <button
-                            onClick={() => navigate(`/staff/chat/${request.id}`)}
-                            className='px-3 py-1 rounded-lg bg-purple-600 text-white hover:bg-purple-700 flex items-center space-x-1'
-                          >
-                            <MessageCircle size={14} />
-                            <span>Chat</span>
-                          </button>
-                        )}
+                          {/* Receive button only in pending view */}
+                          {viewMode === 'pending' && (
+                            <button
+                              onClick={() => handleReceive(request.id)}
+                              disabled={receiving === request.id}
+                              className={`px-3 py-1 rounded-lg flex items-center space-x-1 ${
+                                receiving === request.id
+                                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                                  : 'bg-green-600 text-white hover:bg-green-700'
+                              }`}
+                            >
+                              <Send size={14} />
+                              <span>{receiving === request.id ? 'Receiving...' : 'Receive'}</span>
+                            </button>
+                          )}
 
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {/* Chat button only in RECEIVED view */}
+                          {viewMode === 'received' && (
+                            <button
+                              onClick={() => navigate(path.STAFF_CHAT.replace(':rentalId', String(request.id)))} // Adjust path if needed
+                              className='px-3 py-1 rounded-lg bg-purple-600 text-white hover:bg-purple-700 flex items-center space-x-1'
+                            >
+                              <MessageCircle size={14} />
+                              <span>Chat</span>
+                            </button>
+                          )}
+
+                          {canReport && (
+                            <button
+                              onClick={() => handleOpenReport(request)}
+                              className='flex items-center space-x-1 bg-red-100 text-red-800 hover:bg-red-200 px-2 py-1 rounded whitespace-nowrap'
+                            >
+                              <Flag size={14} />
+                              <span>Report</span>
+                            </button>
+                          )}
+
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -437,6 +596,89 @@ onClick={() => {
           </div>
         </div>
       </div>
+
+      <Dialog 
+        open={reportOpen} 
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setReportOpen(false)
+            setFormData({ ...formData, description: '', draftClausesId: 0, evidencePath: '' })
+            setSelectedClauseId(null)
+            setClauses([])
+          }
+        }}
+      >
+        <DialogContent className='sm:max-w-[520px] flex flex-col max-h-[90vh] p-8'>
+          <DialogHeader>
+            <DialogTitle className='text-lg font-semibold'>Report Contract Issue</DialogTitle>
+            <DialogDescription className='text-sm text-gray-600 leading-relaxed'>
+              Please select the problematic clause, provide a description and evidence.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1 -mt-8'>
+            <div className='space-y-4 py-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='clause'>Select Clause</Label>
+                <Select value={formData.draftClausesId.toString()} onValueChange={v => handleDraftClauseChange(Number(v))}>
+                  <SelectTrigger id='clause' className='w-full'>
+                    <SelectValue placeholder='Select a clause to report' />
+                  </SelectTrigger>
+                  <SelectContent className='max-h-60 overflow-y-auto'>
+                    {clauses.map(clause => (
+                      <SelectItem key={clause.id} value={clause.id.toString()} className='truncate'>
+                        {decodeHtml(clause.title)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.draftClausesId && <ErrorMessage message={errors.draftClausesId} />}
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='description'>Description</Label>
+                <Textarea
+                  id='description'
+                  name='description'
+                  placeholder='Enter a detailed description of the issue...'
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  className='min-h-[100px] resize-y'
+                  rows={4}
+                />
+                {errors.description && <ErrorMessage message={errors.description} />}
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='evidence'>Evidence</Label>
+                <div className='flex flex-col space-y-2'>
+                  <input 
+                    id='evidence'
+                    type='file'
+                    accept='image/*,video/*,application/pdf'
+                    onChange={(e) => setRawEvidenceFile(e.target.files?.[0] || null)}
+                    className='w-full'
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              type='button' 
+              variant='outline' 
+              onClick={() => setReportOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type='button'
+              onClick={handleSendReport} 
+              disabled={!formData.draftClausesId || !formData.description.trim() || loading}
+              className={cn('bg-red-600 hover:bg-red-700 disabled:bg-gray-400')}
+            >
+              {loading ? 'Sending...' : 'Send Report'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   )
