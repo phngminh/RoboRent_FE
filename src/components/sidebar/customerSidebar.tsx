@@ -16,7 +16,7 @@ const CustomerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
     { id: 'transactions', label: 'Transactions', icon: CreditCard, path: path.CUSTOMER_TRANSACTIONS },
     { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.CUSTOMER_REPORTS },
     { id: 'account', label: 'Account', icon: User, path: path.CUSTOMER_ACCOUNT },
-    { id: 'face-profile', label: 'Face Profile', icon:ScanFace, path: path.CUSTOMER_ACCOUNT }
+    { id: 'face-profile', label: 'Face Profile', icon:ScanFace, path: path.FACE_PROFILE }
   ]
 
   return (

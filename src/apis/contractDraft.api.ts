@@ -28,6 +28,21 @@ export interface ContractDraftResponse {
   updatedAt: string
 }
 
+export interface SignContractResponse {
+  success: boolean
+  data: {
+    id: number
+    status: string
+    depositPayment?: {
+      orderCode: number
+      amount: number
+      checkoutUrl: string
+      expiresAt: string
+    }
+  }
+  message: string
+}
+
 export const getAllDrafts = async (): Promise<ContractDraftResponse[]> => {
   const response = await http.get<ApiResponse<ContractDraftResponse>>(`ContractDrafts`)
   return response.data.success ? response.data.data : []
@@ -57,8 +72,9 @@ export const managerSigns = (id: number, signature: string) => {
   return http.patch(`/ContractDrafts/${id}/manager-sign`, { signature })
 }
 
-export const customerSigns = (id: number, signature: string) => {
-  return http.patch(`/ContractDrafts/${id}/customer-sign`, { signature })
+export const customerSigns = async (id: number, signature: string) => {
+  const response = await http.patch<SignContractResponse>(`/ContractDrafts/${id}/customer-sign`, { signature })
+  return response.data
 }
 
 export const managerRejects = (id: number, reason: string) => {
