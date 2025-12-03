@@ -18,6 +18,7 @@ const path = {
   FACE_PROFILE: '/customer/face-profile',
   FACE_PROFILE_CREATE: '/customer/face-profile/create',
   FACE_PROFILE_VERIFY: '/customer/face-profile/verify',
+  CUSTOMER_DELIVERY: '/customer/delivery/:rentalId',
 
   //============= Staff ============
   BASE_STAFF: '/staff',
@@ -42,6 +43,7 @@ const path = {
   MANAGER_DRAFTS: '/manager/contract-drafts',
   MANAGER_CONTRACT: '/manager/contract-templates',
   MANAGER_CLAUSES: '/manager/templates-clauses',
+  MANAGER_STAFF_ASSIGNMENT: '/manager/staff-assignment',
   
   //============= Admin ============
   BASE_ADMIN: '/admin',

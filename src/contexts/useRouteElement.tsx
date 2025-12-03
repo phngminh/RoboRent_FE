@@ -33,6 +33,8 @@ import FaceProfilePage from '../pages/customer/profile/faceProfile'
 import FaceProfileCreateUI from '../pages/customer/faceProfile/FaceProfileCreateUI'
 import FaceVerificationPage from '../pages/customer/faceProfile/FaceProfileVerifyUI'
 import ReportDetail from '../pages/manager/report/reportDetail'
+import StaffAssignmentPage from '../pages/manager/StaffAssignmentPage'
+import CustomerDeliveryTrackingPage from '../pages/customer/CustomerDeliveryTrackingPage'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -140,7 +142,11 @@ export default function useRouteElements() {
             { path: 'transactions', element: <TransactionsContent /> }
           ]
         },
-        { path: 'chat/:rentalId', element: <CustomerChatPage /> }
+        { path: 'chat/:rentalId', element: <CustomerChatPage /> },
+        { 
+          path: 'delivery/:rentalId', 
+          element: <CustomerDeliveryTrackingPage /> 
+        },
       ]
     },
     //================ Staff routes ================
@@ -256,6 +262,10 @@ export default function useRouteElements() {
                 /> 
             }
           ]
+        },
+        { 
+          path: 'staff-assignment', 
+          element: <StaffAssignmentPage /> 
         }
       ]
     },
