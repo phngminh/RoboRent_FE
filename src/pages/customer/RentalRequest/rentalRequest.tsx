@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Eye, Flag, MessageCircle, Plus, Search } from 'lucide-react'
+import { Eye, Flag, MessageCircle, Plus, Search, Truck } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '../../../components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
 import { Input } from '../../../components/ui/input'
@@ -494,6 +494,16 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                               >
                                 <span>📤</span>
                                 <span>Send</span>
+                              </button>
+                            )}
+
+                            {(request.status === 'Accepted' || request.status === 'AcceptedDemo' || request.status === 'Completed') && (
+                              <button
+                                onClick={() => navigate(path.CUSTOMER_DELIVERY.replace(':rentalId', String(request.id)))}
+                                className='flex items-center space-x-1 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 px-2 py-1 rounded whitespace-nowrap'
+                              >
+                                <Truck size={14} />
+                                <span>Theo dõi</span>
                               </button>
                             )}
 

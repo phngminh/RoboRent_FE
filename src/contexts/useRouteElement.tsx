@@ -30,6 +30,8 @@ import CustomerContractDraft from '../pages/customer/contract/customerContractDr
 import StaffContractDrafts from '../pages/staff/contract/staffContractDrafts'
 import StaffDetailContractDraft from '../pages/staff/contract/detailContractDraft'
 import ReportDetail from '../pages/manager/report/reportDetail'
+import StaffAssignmentPage from '../pages/manager/StaffAssignmentPage'
+import CustomerDeliveryTrackingPage from '../pages/customer/CustomerDeliveryTrackingPage'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -110,7 +112,11 @@ export default function useRouteElements() {
             { path: 'transactions', element: <TransactionsContent /> }
           ]
         },
-        { path: 'chat/:rentalId', element: <CustomerChatPage /> }
+        { path: 'chat/:rentalId', element: <CustomerChatPage /> },
+        { 
+          path: 'delivery/:rentalId', 
+          element: <CustomerDeliveryTrackingPage /> 
+        },
       ]
     },
     //================ Staff routes ================
@@ -222,6 +228,10 @@ export default function useRouteElements() {
                 /> 
             }
           ]
+        },
+        { 
+          path: 'staff-assignment', 
+          element: <StaffAssignmentPage /> 
         }
       ]
     },
