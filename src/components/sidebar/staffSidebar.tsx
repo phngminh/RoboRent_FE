@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, ChevronRight, User, Truck, Group } from 'lucide-react'
+import { LayoutDashboard, Calendar, ChevronRight, User, Truck, Group, ChartColumn } from 'lucide-react'
 import path from '../../constants/path'
 
 interface ProfileSidebarProps {
@@ -16,6 +16,7 @@ const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
     { id: 'contract-drafts', label: 'Contract Drafts', icon: Calendar, path: path.STAFF_CONTRACT_DRAFTS },
     { id: 'deliveries', label: 'Delivery Tracking', icon: Truck, path: path.STAFF_DELIVERIES },
     // { id: 'transactions', label: 'Transactions', icon: CreditCard, path: '/staff/transactions' },
+    { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.STAFF_REPORTS },
     { id: 'robot-group', label: 'Robot Groups', icon: Group, path: path.STAFF_ROBOT_GROUP },
     { id: 'account', label: 'Account', icon: User, path: path.STAFF_ACCOUNT },
   ]

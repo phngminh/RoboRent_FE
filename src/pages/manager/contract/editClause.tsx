@@ -170,9 +170,10 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
 
       setOriginalFormData(formData)
       onSuccess()
-    } catch (err) {
+    } catch (err : any) {
       console.error(err)
-      toast.error('Failed to update clause!')
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
     }
   }
 

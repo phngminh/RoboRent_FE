@@ -168,9 +168,10 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
 
       resetForm()
       onSuccess()
-    } catch (err) {
+    } catch (err : any) {
       console.error(err)
-      toast.error('Failed to create clause!')
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
     }
   }
 

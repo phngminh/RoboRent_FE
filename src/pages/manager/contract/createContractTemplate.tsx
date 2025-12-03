@@ -108,9 +108,10 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
 
       resetForm()
       onSuccess()
-    } catch (err) {
+    } catch (err : any) {
       console.error(err)
-      toast.error('Failed to create template!')
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
     }
   }
 

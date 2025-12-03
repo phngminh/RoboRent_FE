@@ -1,22 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, CheckCircle, XCircle, FileText, Calendar, User, ImageIcon, Eye } from 'lucide-react'
+import { ArrowLeft, FileText, Calendar, User, ImageIcon, Eye } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { Button } from '../../../components/ui/button'
-import { getReportById, managerResolve, managerReject, type ContractReportResponse } from '../../../apis/contractReport.api'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
-import { Textarea } from '../../../components/ui/textarea'
+import { getReportById, type ContractReportResponse } from '../../../apis/contractReport.api'
 
 interface ReportDetailProps {
   onBack: () => void
 }
 
-const ReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
+const CustomerReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
   const { reportId: reportIdString } = useParams<{ reportId: string }>()
   const reportId = reportIdString ? parseInt(reportIdString, 10) : 0
-  const [rejectOpen, setRejectOpen] = useState(false)
-  const [resolveOpen, setResolveOpen] = useState(false)
-  const [resolution, setResolution] = useState('')
   const [report, setReport] = useState<ContractReportResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -71,33 +66,6 @@ const ReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
         return 'bg-blue-100 text-blue-800'
       default:
         return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const handleConfirmResolve = async () => {
-    try {
-      await managerResolve(reportId, resolution)
-      toast.success('Resolved successfully!')
-      setResolveOpen(false)
-      setResolution('')
-      onBack()
-    } catch (err) {
-      console.log('err:', err)
-      toast.error('Resolvement failed')
-    }
-  }
-
-  const handleConfirmReject = async () => {
-    try {
-      await managerReject(reportId, resolution)
-      toast.success('Rejected successfully!')
-      setRejectOpen(false)
-      setResolution('')
-      onBack()
-    } catch (err : any) {
-      console.error(err)
-      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
-      toast.error(errorMessage)
     }
   }
 
@@ -272,97 +240,8 @@ const ReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
           )}
         </div>
       </div>
-
-      <div className='flex justify-end gap-3 mr-8'>
-        <Button
-          onClick={() => setRejectOpen(true)} 
-          disabled={report.status === 'Rejected' || report.status === 'Resolved'}
-          className='bg-red-600 text-white hover:bg-red-700 flex items-center space-x-2'
-        >
-          <XCircle size={18} />
-          <span>Reject</span>
-        </Button>
-        <Button
-          onClick={() => setResolveOpen(true)} 
-          disabled={report.status === 'Resolved' || report.status === 'Rejected'}
-          className='bg-green-600 text-white hover:bg-green-700 flex items-center space-x-2'
-        >
-          <CheckCircle size={18} />
-          <span>Resolve</span>
-        </Button>
-      </div>
-
-      <Dialog 
-        open={resolveOpen} 
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            setResolveOpen(false)
-            setResolution('')
-          }
-        }}
-      >
-        <DialogContent className='sm:max-w-[425px]'>
-          <DialogHeader>
-            <DialogTitle>Enter Resolution</DialogTitle>
-            <DialogDescription>
-              Please enter your resolution to approve the report.
-            </DialogDescription>
-          </DialogHeader>
-          <div className='grid gap-4 py-4 -mt-4'>
-            <Textarea
-              placeholder='Enter your resolution...'
-              value={resolution}
-              onChange={(e) => setResolution(e.target.value)}
-              className='min-h-[100px]'
-            />
-          </div>
-          <DialogFooter>
-            <Button type='submit' variant='outline' onClick={() => setResolveOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmResolve} disabled={!resolution.trim()}>
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog 
-        open={rejectOpen} 
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            setRejectOpen(false)
-            setResolution('')
-          }
-        }}
-      >
-        <DialogContent className='sm:max-w-[425px]'>
-          <DialogHeader>
-            <DialogTitle>Enter Resolution</DialogTitle>
-            <DialogDescription>
-              Please provide a resolution for rejecting the report.
-            </DialogDescription>
-          </DialogHeader>
-          <div className='grid gap-4 py-4 -mt-4'>
-            <Textarea
-              placeholder='Enter your resolution...'
-              value={resolution}
-              onChange={(e) => setResolution(e.target.value)}
-              className='min-h-[100px]'
-            />
-          </div>
-          <DialogFooter>
-            <Button type='submit' variant='outline' onClick={() => setRejectOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmReject} disabled={!resolution.trim()}>
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
 
-export default ReportDetail
+export default CustomerReportDetail

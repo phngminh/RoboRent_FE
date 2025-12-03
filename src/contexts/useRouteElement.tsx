@@ -30,6 +30,10 @@ import CustomerContractDraft from '../pages/customer/contract/customerContractDr
 import StaffContractDrafts from '../pages/staff/contract/staffContractDrafts'
 import StaffDetailContractDraft from '../pages/staff/contract/detailContractDraft'
 import ReportDetail from '../pages/manager/report/reportDetail'
+import CustomerBreachReports from '../pages/customer/report/customerBreachReports'
+import CustomerReportDetail from '../pages/customer/report/customerReportDetail'
+import StaffBreachReports from '../pages/staff/report/staffBreachReports'
+import StaffReportDetail from '../pages/staff/report/staffReportDetail'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -107,7 +111,21 @@ export default function useRouteElements() {
                 />
               )
             },
-            { path: 'transactions', element: <TransactionsContent /> }
+            { path: 'transactions', element: <TransactionsContent /> },
+            { 
+              path: 'breach-reports', 
+              element: 
+                <CustomerBreachReports
+                  onView={(reportId) => navigate(`${path.BASE_CUSTOMER}/breach-reports/${reportId}`)}
+                /> 
+            },
+            { 
+              path: 'breach-reports/:reportId', 
+              element: 
+                <CustomerReportDetail
+                  onBack={() => navigate(`${path.BASE_CUSTOMER}/breach-reports`)}
+                /> 
+            }
           ]
         },
         { path: 'chat/:rentalId', element: <CustomerChatPage /> }
@@ -170,6 +188,20 @@ export default function useRouteElements() {
               <ScheduleBoard
                 onBack={() => navigate(`${path.BASE_STAFF}/robot-group`)}
               /> 
+            },
+            { 
+              path: 'breach-reports', 
+              element: 
+                <StaffBreachReports
+                  onView={(reportId) => navigate(`${path.BASE_STAFF}/breach-reports/${reportId}`)}
+                /> 
+            },
+            { 
+              path: 'breach-reports/:reportId', 
+              element: 
+                <StaffReportDetail
+                  onBack={() => navigate(`${path.BASE_STAFF}/breach-reports`)}
+                /> 
             }
           ]
         },

@@ -21,7 +21,7 @@ interface RentalRequestsContentProps {
 }
 
 interface FormData {
-  draftClausesId: number,
+  draftClausesId: number | null,
   accusedId: number,
   description: string,
   evidencePath: string
@@ -31,8 +31,8 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
   const navigate = useNavigate()
   const { user } = useAuth()
   const staffId = user?.accountId
-  const [allItems, setAllItems] = useState<any[]>([])
-  const [filteredItems, setFilteredItems] = useState<any[]>([])
+  const [allItems, setAllItems] = useState<RentalRequestResponse[]>([])
+  const [filteredItems, setFilteredItems] = useState<RentalRequestResponse[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize] = useState(5)
   const [search, setSearch] = useState('')
@@ -48,14 +48,14 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
   const [viewMode, setViewMode] = useState<'pending' | 'received'>('pending')
 
   const [reportOpen, setReportOpen] = useState(false)
-  const [selectedClauseId, setSelectedClauseId] = useState<number | null>(null)
+  const [selectedClause, setSelectedClause] = useState<DraftClausesResponse | null>(null)
   const [clauses, setClauses] = useState<DraftClausesResponse[]>([])
   const [selectedRental, setSelectedRental] = useState<RentalRequestResponse>({} as RentalRequestResponse)
   const [draftsMap, setDraftsMap] = useState<Record<number, ContractDraftResponse[]>>({})
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
   const [rawEvidenceFile, setRawEvidenceFile] = useState<File | null>(null)
   const [formData, setFormData] = useState<FormData>({
-    draftClausesId: 0,
+    draftClausesId: null,
     accusedId: 0,
     description: '',
     evidencePath: ''
@@ -174,7 +174,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
     }
   }
 
-  const handleOpenReport = async (rental: any) => {
+  const handleOpenReport = async (rental: RentalRequestResponse) => {
     setSelectedRental(rental)
     clearFields()
     try {
@@ -200,14 +200,23 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
   }
 
   const clearFields = () => {
-    setFormData({ ...formData, description: '', draftClausesId: 0, evidencePath: '' })
-    setSelectedClauseId(null)
+    setFormData({
+      draftClausesId: 0,
+      accusedId: 0,
+      description: '',
+      evidencePath: '',
+    })
+    setSelectedClause(null)
     setClauses([])
+    setErrors({})
+    setRawEvidenceFile(null)
   }
 
-  const handleDraftClauseChange = (clauseId: number) => {
-    setSelectedClauseId(clauseId)
-    setFormData((prev) => ({ ...prev, draftClausesId: clauseId }))
+  const handleClauseChange = (clauseIdStr: string) => {
+    const clauseId = Number(clauseIdStr)
+    const clause = clauses.find(c => c.id === clauseId)
+    setSelectedClause(clause || null)
+    setFormData((prev) => ({ ...prev, draftClausesId: clause ? clauseId : null }))
     if (errors.draftClausesId) {
       setErrors((prev) => {
         const { draftClausesId, ...rest } = prev
@@ -227,7 +236,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {}
     
-    if (!selectedClauseId) {
+    if (!selectedClause) {
       newErrors.draftClausesId = 'Draft Clause is required!'
     }
 
@@ -255,24 +264,25 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
   }
 
   const handleSendReport = async () => {
-    if (validateForm() === false) {
+    if (!validateForm()) {
       return
     }
     try {
       setLoading(true)
 
-      let evidencePath = ''
+      let evidencePath = formData.evidencePath
       if (rawEvidenceFile) {
         const uploadResult = await uploadToCloudinary(rawEvidenceFile)
         evidencePath = uploadResult.secure_url
         console.log('Uploaded evidence path:', evidencePath)
+        setFormData(prev => ({ ...prev, evidencePath }))
       }
 
       const payload: CreateContractReportPayload = {
-        draftClausesId: selectedClauseId!,
+        draftClausesId: selectedClause!.id,
         accusedId: selectedRental.accountId,
         description: formData.description,
-        evidencePath: evidencePath
+        evidencePath
       }
       await sendReport(payload)
       toast.success('Report sent successfully')
@@ -433,7 +443,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
                   <td colSpan={7} className='text-center py-6 text-gray-500'>No requests found.</td>
                 </tr>
               ) : (
-                paginatedItems.map((request: any) => {
+                paginatedItems.map((request: RentalRequestResponse) => {
                   const drafts = draftsMap[request.id] ?? []
                   const canReport = drafts.length > 0 && drafts.some(d => d.status === 'Active')
 
@@ -558,9 +568,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setReportOpen(false)
-            setFormData({ ...formData, description: '', draftClausesId: 0, evidencePath: '' })
-            setSelectedClauseId(null)
-            setClauses([])
+            clearFields()
           }
         }}
       >
@@ -575,7 +583,10 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
             <div className='space-y-4 py-4'>
               <div className='space-y-2'>
                 <Label htmlFor='clause'>Select Clause</Label>
-                <Select value={formData.draftClausesId.toString()} onValueChange={v => handleDraftClauseChange(Number(v))}>
+                <Select 
+                  value={selectedClause?.id.toString() || ''} 
+                  onValueChange={handleClauseChange}
+                >
                   <SelectTrigger id='clause' className='w-full'>
                     <SelectValue placeholder='Select a clause to report' />
                   </SelectTrigger>
@@ -612,6 +623,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
                     onChange={(e) => setRawEvidenceFile(e.target.files?.[0] || null)}
                     className='w-full'
                   />
+                  {rawEvidenceFile && <p className='text-sm text-gray-600'>Selected: {rawEvidenceFile.name}</p>}
                 </div>
               </div>
             </div>
@@ -627,7 +639,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
             <Button 
               type='button'
               onClick={handleSendReport} 
-              disabled={!formData.draftClausesId || !formData.description.trim() || loading}
+              disabled={!selectedClause || !formData.description.trim() || loading}
               className={cn('bg-red-600 hover:bg-red-700 disabled:bg-gray-400')}
             >
               {loading ? 'Sending...' : 'Send Report'}

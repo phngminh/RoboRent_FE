@@ -29,9 +29,10 @@ const DeleteContractTemplate: React.FC<DeleteContractTemplateProps> = ({ open, o
       }
       toast.success(successMessage)
       onSuccess()
-    } catch (err) {
+    } catch (err : any) {
       console.error(err)
-      toast.error(`Failed to ${action} template!`)
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
     }
   }
 

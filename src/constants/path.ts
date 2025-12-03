@@ -13,6 +13,7 @@ const path = {
   CUSTOMER_CREATE_REQUEST: '/customer/create-rental-request',
   CUSTOMER_TRANSACTIONS: '/customer/transactions',
   CUSTOMER_CHAT: '/customer/chat/:rentalId',
+  CUSTOMER_REPORTS: '/customer/breach-reports',
   CUSTOMER_ACCOUNT: '/customer/account',
   SHARE_RENTAL_REQUEST: '/customer/share-rental-request/:rentalId',
 
@@ -25,6 +26,7 @@ const path = {
   STAFF_TRANSACTIONS: '/staff/transactions',
   STAFF_CHAT: '/staff/chat/:rentalId',
   STAFF_ACCOUNT: '/staff/account',
+  STAFF_REPORTS: '/staff/breach-reports',
   STAFF_ROBOT_GROUP: '/staff/robot-group',
   STAFF_CONTRACT_DRAFTS: '/staff/contract-drafts',
   SHARE_RENTAL_REQUEST_STAFF: '/staff/share-rental-request/:rentalId',
