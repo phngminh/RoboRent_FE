@@ -80,37 +80,14 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       return
     }
     try {
-      // 1. Gọi API ký
-      const response = await customerSigns(draft.id, signature)
-      
-      // 2. Kiểm tra success
-      if (response.success) {
-        toast.success('Contract signed successfully!')
-        
-        // 3. ✅ QUAN TRỌNG: Kiểm tra và Redirect sang PayOS
-        const checkoutUrl = response.data.depositPayment?.checkoutUrl
-        
-        if (checkoutUrl) {
-           toast.info('Redirecting to payment gateway...', { autoClose: 2000 })
-           
-           // Delay nhẹ 1-2s để khách đọc thông báo rồi chuyển trang
-           setTimeout(() => {
-             window.location.href = checkoutUrl
-           }, 1500)
-           
-        } else {
-           // Fallback nếu không có link (hiếm khi xảy ra với logic hiện tại)
-           onBack()
-        }
-
-        setApproveOpen(false)
-        setSignature('')
-      }
-      
-    } catch (err: any) {
+      await customerSigns(draft.id, signature)
+      toast.success('Signed successfully!')
+      setApproveOpen(false)
+      setSignature('')
+      onBack()
+    } catch (err) {
       console.error('Approval failed', err)
-      // Hiển thị lỗi từ BE nếu có
-      toast.error(err.response?.data?.message || 'Approval failed')
+      toast.error('Approval failed')
     }
   }
 

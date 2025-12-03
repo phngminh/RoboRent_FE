@@ -635,7 +635,7 @@ const fetchDetailsForRentals = async () => {
   </button>
 )}
 
-                            {(request.status === 'Accepted' || request.status === 'AcceptedDemo' || request.status === 'Completed') && (
+                            {(request.status === 'Accepted' || request.status === 'AcceptedDemo' || request.status === 'Completed' || request.status === 'DeliveryScheduled') && (
                               <button
                                 onClick={() => navigate(path.CUSTOMER_DELIVERY.replace(':rentalId', String(request.id)))}
                                 className='flex items-center space-x-1 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 px-2 py-1 rounded whitespace-nowrap'
