@@ -40,7 +40,6 @@ const AuthCallback = () => {
         if (!urlToken) {
           throw new Error('No token provided in URL. Ensure backend redirects with ?token=your_jwt_here')
         }
-        console.log('Received token from URL:', urlToken)
         const decoded: JwtPayload = jwtDecode(urlToken)
 
         if (!decoded.sub) {

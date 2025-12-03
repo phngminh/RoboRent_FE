@@ -1,16 +1,23 @@
 import React, { useEffect, useState } from 'react'
-import { Eye, MessageCircle, Plus, Search } from 'lucide-react'
+import { Eye, Flag, MessageCircle, Plus, Search } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '../../../components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
 import { Input } from '../../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Button } from '../../../components/ui/button'
+import { Label } from '../../../components/ui/label'
 import { getRequestByCustomer, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
 import { getDraftsByRentalId, type ContractDraftResponse } from '../../../apis/contractDraft.api'
+import { getDraftsByContractId, type DraftClausesResponse } from '../../../apis/draftClause.api'
+import { sendReport, type CreateContractReportPayload } from '../../../apis/contractReport.api'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import path from '../../../constants/path'
 import { customerSendRentalAsync } from '../../../apis/rental.customer.api'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
+import { Textarea } from '../../../components/ui/textarea'
+import { cn } from '../../../lib/utils'
+import { toast } from 'react-toastify'
 
 interface RentalRequestsContentProps {
   onViewContract: (rentalId: number) => void
@@ -19,12 +26,20 @@ interface RentalRequestsContentProps {
   onDetaild: (rentalId: number) => void
 }
 
-const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
-  onCreate,
-  onViewContract,
-  onView,
-  onDetaild
-}) => {
+interface FormData {
+  draftClausesId: number,
+  accusedId: number,
+  description: string,
+  evidencePath: string
+}
+
+const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate, onViewContract, onView, onDetaild }) => {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [reportOpen, setReportOpen] = useState(false)
+  const [selectedClauseId, setSelectedClauseId] = useState<number | null>(null)
+  const [clauses, setClauses] = useState<DraftClausesResponse[]>([])
+  const [selectedRental, setSelectedRental] = useState<RentalRequestResponse>({} as RentalRequestResponse)
   const [allRentals, setAllRentals] = useState<RentalRequestResponse[]>([])
   const [filteredRentals, setFilteredRentals] = useState<RentalRequestResponse[]>([])
   const [draftsMap, setDraftsMap] = useState<Record<number, ContractDraftResponse[]>>({})
@@ -37,8 +52,14 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
   const [appliedDateFrom, setAppliedDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [appliedDateTo, setAppliedDateTo] = useState('')
-  const navigate = useNavigate()
-  const { user } = useAuth()
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
+  const [rawEvidenceFile, setRawEvidenceFile] = useState<File | null>(null)
+  const [formData, setFormData] = useState<FormData>({
+      draftClausesId: 0,
+      accusedId: 0,
+      description: '',
+      evidencePath: ''
+    })
 
   const pageSize = 5
   const totalPages = Math.max(1, Math.ceil(filteredRentals.length / pageSize))
@@ -47,9 +68,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
     currentPage * pageSize
   )
 
-  // -------------------------------
-  // FETCH RENTALS
-  // -------------------------------
   const fetchData = async () => {
     try {
       setLoading(true)
@@ -63,9 +81,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
     }
   }
 
-  // -------------------------------
-  // FETCH CONTRACT DRAFTS FOR EACH RENTAL
-  // -------------------------------
   const fetchDraftsForRentals = async () => {
     for (const rental of allRentals.filter(r => !draftsMap[r.id!])) {
       try {
@@ -82,9 +97,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
     if (allRentals.length > 0) fetchDraftsForRentals()
   }, [allRentals])
 
-  // -------------------------------
-  // SEND RENTAL REQUEST
-  // -------------------------------
   const handleSendRequest = async (rentalId: number) => {
     try {
       setLoading(true)
@@ -98,9 +110,118 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
     }
   }
 
-  // -------------------------------
-  // FILTERING LOGIC
-  // -------------------------------
+  const handleOpenReport = async (rental: RentalRequestResponse) => {
+    setSelectedRental(rental)
+    clearFields()
+
+    try {
+      const drafts = draftsMap[rental.id] ?? []
+      const relevantDrafts = drafts.filter(d =>
+        d.status === 'PendingCustomerSignature' ||
+        d.status === 'ChangeRequested' ||
+        d.status === 'Active' ||
+        d.status === 'Rejected'
+      )
+      let allClauses: DraftClausesResponse[] = []
+      for (const draft of relevantDrafts) {
+        const draftClauses = await getDraftsByContractId(draft.id)
+        allClauses = [...allClauses, ...draftClauses]
+      }
+      setClauses(allClauses)
+    } catch (err) {
+      console.error('Error fetching clauses:', err)
+      setClauses([])
+    }
+
+    setReportOpen(true)
+  }
+
+  const clearFields = () => {
+    setFormData({ ...formData, description: '', draftClausesId: 0, evidencePath: '' })
+    setSelectedClauseId(null)
+    setClauses([])
+  }
+
+  const handleDraftClauseChange = (clauseId: number) => {
+    setSelectedClauseId(clauseId)
+    setFormData((prev) => ({ ...prev, draftClausesId: clauseId }))
+    if (errors.draftClausesId) {
+      setErrors((prev) => {
+        const { draftClausesId, ...rest } = prev
+        return rest
+      })
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (Object.keys(errors).length > 0) {
+      setErrors({})
+    }
+  }
+  
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {}
+    
+    if (!selectedClauseId) {
+      newErrors.draftClausesId = 'Draft Clause is required!'
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required!'
+    }
+
+    if (formData.description.trim().length > 200) {
+      newErrors.description = 'Description must not exceed 200 characters!'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const uploadToCloudinary = async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET)
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/auto/upload`,
+      { method: 'POST', body: formData }
+    )
+
+    return res.json()
+  }
+
+  const handleSendReport = async () => {
+    if (validateForm() === false) {
+      return
+    }
+    try {
+      setLoading(true)
+
+      const uploadResult = await uploadToCloudinary(rawEvidenceFile!)
+      const evidencePath = uploadResult.secure_url
+      console.log('Uploaded evidence path:', evidencePath)
+
+      const payload: CreateContractReportPayload = {
+        draftClausesId: selectedClauseId!,
+        accusedId: selectedRental.staffId,
+        description: formData.description,
+        evidencePath: formData.evidencePath
+      }
+      await sendReport(payload)
+      toast.success('Report sent successfully')
+      setReportOpen(false)
+      clearFields()
+    } catch (err: any) {
+      console.error('Error sending report:', err)
+      toast.error('Failed to send report')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const filterData = () => {
     let filtered = [...allRentals]
 
@@ -138,9 +259,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
     filterData()
   }, [allRentals, search, appliedStatus, appliedDateFrom, appliedDateTo])
 
-  // -------------------------------
-  // FILTER FORM APPLY & CLEAR
-  // -------------------------------
   const applyFilters = () => {
     setAppliedStatus(statusFilter)
     setAppliedDateFrom(dateFrom)
@@ -158,11 +276,18 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
     setCurrentPage(1)
   }
 
+  const decodeHtml = (html: string) => {
+    const txt = document.createElement('textarea')
+    txt.innerHTML = html
+    return txt.value
+  }
+
+  const ErrorMessage = ({ message }: { message: string }) => (
+    <p className='text-sm text-destructive mt-1'>{message}</p>
+  )
+
   const statusOptions = ['All Status', 'Draft', 'Pending', 'Received', 'Rejected', 'Completed']
 
-  // -------------------------------
-  // UI
-  // -------------------------------
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
       {/* FILTER CARD */}
@@ -254,14 +379,14 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
             <Table>
               <TableHeader className='bg-gray-50'>
                 <TableRow>
-                  <TableHead className='text-center'>Event Name</TableHead>
-                  <TableHead className='text-center'>Address</TableHead>
-                  <TableHead className='text-center'>Status</TableHead>
-                  <TableHead className='text-center'>Event Activity</TableHead>
-                  <TableHead className='text-center'>Activity Type</TableHead>
-                  <TableHead className='text-center'>Event Date</TableHead>
-                  <TableHead className='text-center'>Created Date</TableHead>
-                  <TableHead className='text-center'>Actions</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Event Name</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Address</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Status</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Event Activity</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Activity Type</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Event Date</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Created Date</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Actions</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -307,11 +432,12 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
                                       || d.status === 'ChangeRequested'
                                       || d.status === 'Active'
                                       || d.status === 'Rejected')
+                    const canReport = drafts.length > 0 && drafts.some(d => d.status === 'Active')
 
                     return (
                       <TableRow key={request.id} className='hover:bg-gray-50'>
-                        <TableCell className='text-center'>{request.eventName}</TableCell>
-                        <TableCell className='text-center'>{request.address}</TableCell>
+                        <TableCell className='text-center whitespace-nowrap'>{request.eventName}</TableCell>
+                        <TableCell className='text-center whitespace-nowrap'>{request.address}</TableCell>
                         <TableCell className='text-center'>
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`}
@@ -319,15 +445,15 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
                             {request.status}
                           </span>
                         </TableCell>
-                        <TableCell className='text-center'>{request.eventActivityName}</TableCell>
-                        <TableCell className='text-center'>{request.activityTypeName}</TableCell>
-                        <TableCell className='text-center'>{eventDate}</TableCell>
-                        <TableCell className='text-center'>{createdDate}</TableCell>
+                        <TableCell className='text-center whitespace-nowrap'>{request.eventActivityName}</TableCell>
+                        <TableCell className='text-center whitespace-nowrap'>{request.activityTypeName}</TableCell>
+                        <TableCell className='text-center whitespace-nowrap'>{eventDate}</TableCell>
+                        <TableCell className='text-center whitespace-nowrap'>{createdDate}</TableCell>
                         <TableCell className='text-center'>
                           <div className='flex justify-center space-x-3'>
                             <button
                               onClick={() => {
-                                if (request.status === "Draft") {
+                                if (request.status === 'Draft') {
                                   onView(request.id)
                                 } else {
                                   onDetaild(request.id)
@@ -336,7 +462,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
                               className='flex items-center space-x-1 bg-blue-100 text-blue-800 hover:bg-blue-200 px-2 py-1 rounded whitespace-nowrap'
                             >
                               <Eye size={14} />
-                              <span>{request.status === "Draft" ? "View" : "Detail"}</span>
+                              <span>{request.status === 'Draft' ? 'View' : 'Detail'}</span>
                             </button>
 
                             {hasDrafts && (
@@ -349,7 +475,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
                               </button>
                             )}
 
-                            {request.status !== "Draft" && request.status !== "Pending" && (
+                            {request.status !== 'Draft' && request.status !== 'Pending' && (
                               <button
                                 onClick={() =>
                                   navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))
@@ -361,13 +487,23 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
                               </button>
                             )}
 
-                            {request.status === "Draft" && (
+                            {request.status === 'Draft' && (
                               <button
                                 onClick={() => handleSendRequest(request.id)}
                                 className='flex items-center space-x-1 bg-green-100 text-green-800 hover:bg-green-200 px-2 py-1 rounded'
                               >
                                 <span>📤</span>
                                 <span>Send</span>
+                              </button>
+                            )}
+
+                            {canReport && (
+                              <button
+                                onClick={() => handleOpenReport(request)}
+                                className='flex items-center space-x-1 bg-red-100 text-red-800 hover:bg-red-200 px-2 py-1 rounded'
+                              >
+                                <Flag size={14} />
+                                <span>Report</span>
                               </button>
                             )}
 
@@ -420,6 +556,88 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({
           </div>
         </CardContent>
       </Card>
+
+      <Dialog 
+        open={reportOpen} 
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setReportOpen(false)
+            setFormData({ ...formData, description: '', draftClausesId: 0, evidencePath: '' })
+            setSelectedClauseId(null)
+            setClauses([])
+          }
+        }}
+      >
+        <DialogContent className='sm:max-w-[520px] flex flex-col max-h-[90vh] p-8'>
+          <DialogHeader>
+            <DialogTitle className='text-lg font-semibold'>Report Contract Issue</DialogTitle>
+            <DialogDescription className='text-sm text-gray-600 leading-relaxed'>
+              Please select the problematic clause, provide a description and evidence.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1 -mt-8'>
+            <div className='space-y-4 py-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='clause'>Select Clause</Label>
+                <Select value={formData.draftClausesId.toString()} onValueChange={v => handleDraftClauseChange(Number(v))}>
+                  <SelectTrigger id='clause' className='w-full'>
+                    <SelectValue placeholder='Select a clause to report' />
+                  </SelectTrigger>
+                  <SelectContent className='max-h-60 overflow-y-auto'>
+                    {clauses.map(clause => (
+                      <SelectItem key={clause.id} value={clause.id.toString()} className='truncate'>
+                        {decodeHtml(clause.title)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='description'>Description</Label>
+                <Textarea
+                  id='description'
+                  name='description'
+                  placeholder='Enter a detailed description of the issue...'
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  className='min-h-[100px] resize-y'
+                  rows={4}
+                />
+                {errors.description && <ErrorMessage message={errors.description} />}
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='evidence'>Evidence</Label>
+                <div className='flex flex-col space-y-2'>
+                  <input 
+                    id='evidence'
+                    type='file'
+                    accept='image/*,video/*,application/pdf'
+                    onChange={(e) => setRawEvidenceFile(e.target.files?.[0] || null)}
+                    className='w-full'
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              type='button' 
+              variant='outline' 
+              onClick={() => setReportOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type='button'
+              onClick={handleSendReport} 
+              disabled={!formData.draftClausesId || !formData.description.trim() || loading}
+              className={cn('bg-red-600 hover:bg-red-700 disabled:bg-gray-400')}
+            >
+              {loading ? 'Sending...' : 'Send Report'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

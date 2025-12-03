@@ -81,7 +81,7 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
     }
     try {
       await customerSigns(draft.id, signature)
-      toast.success('Approved successfully!')
+      toast.success('Signed successfully!')
       setApproveOpen(false)
       setSignature('')
       onBack()

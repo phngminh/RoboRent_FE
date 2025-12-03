@@ -12,6 +12,7 @@ import { toast } from 'react-toastify'
 import { useAuth } from '../../../contexts/AuthContext'
 import { createDraft } from '../../../apis/contractDraft.api'
 import type { RentalRequestResponse } from '../../../apis/rentalRequest.api'
+import { getAllManagers, type AccountResponse } from '../../../apis/account.api'
 
 interface CreateContractDraftProps {
   open: boolean
@@ -24,12 +25,14 @@ interface FormData {
   comments: string
   rentalId: number | null
   contractTemplatesId: number | null
+  managerId: number | null
 }
 
 const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose, onSuccess }) => {
   const { user } = useAuth()
   const [rentals, setRentals] = useState<RentalRequestResponse[]>([])
   const [templates, setTemplates] = useState<ContractTemplateResponse[]>([])
+  const [managers, setManagers] = useState<AccountResponse[]>([])
   const [chosenTemplate, setChosenTemplate] = useState<ContractTemplateResponse | null>(null)
   const [chosenRental, setChosenRental] = useState<RentalRequestResponse | null>(null)
   const [formData, setFormData] = useState<FormData>({
@@ -37,6 +40,7 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
     comments: '',
     rentalId: null,
     contractTemplatesId: null,
+    managerId: null,
   })
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
 
@@ -64,6 +68,17 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
       if (selectedRental) {
         setChosenRental(selectedRental)
       }
+    }
+  }
+
+  const handleManagerChange = (value: string) => {
+    const managerId = value ? parseInt(value) : null
+    setFormData((prev) => ({ ...prev, managerId }))
+    if (errors.managerId) {
+      setErrors((prev) => {
+        const { managerId, ...rest } = prev
+        return rest
+      })
     }
   }
 
@@ -110,6 +125,10 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
       newErrors.rentalId = 'Rental is required!'
     }
 
+    if (!formData.managerId) {
+      newErrors.managerId = 'Manager is required!'
+    }
+
     if (!formData.contractTemplatesId) {
       newErrors.contractTemplatesId = 'Template is required!'
     }
@@ -126,7 +145,7 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
         comments: formData.comments,
         contractTemplatesId: formData.contractTemplatesId!,
         rentalId: formData.rentalId!,
-        managerId: 3,
+        managerId: formData.managerId!,
       }
       await createDraft(payload)
       toast.success('Contract draft created successfully!')
@@ -145,6 +164,7 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
       comments: '',
       rentalId: null,
       contractTemplatesId: null,
+      managerId: null,
     })
     setErrors({})
     setChosenTemplate(null)
@@ -158,18 +178,23 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
   const fetchData = async () => {
     if (user?.accountId) {
       try {
-        const allRentals = await getReceivedRentalByStaffIdAsync(user.accountId)
-        const rentalsData = allRentals.data.filter((rental: RentalRequestResponse) => rental.status === 'AcceptedPriceQuote' || rental.status === 'Rejected')
-        setRentals(rentalsData)
+        const rentalsData = await getReceivedRentalByStaffIdAsync(user.accountId)
+        const filteredRentals = rentalsData.data.filter((rental: RentalRequestResponse) => rental.status === 'AcceptedPriceQuote' || rental.status === 'Rejected')
+        setRentals(filteredRentals)
         const templatesData = await getAllTemplates()
-        setTemplates(templatesData)
+        const filteredTemplates = templatesData.filter(t =>t.status === 'Updated' || t.status === 'Initiated')
+        setTemplates(filteredTemplates)
+        const managersData = await getAllManagers()
+        const filteredManagers = managersData.filter(t =>t.status === 'Active')
+        setManagers(filteredManagers)
       } catch (err) {
         console.error(err)
-        toast.error('Failed to fetch rentals or templates!')
+        toast.error('Failed to fetch rentals, templates, or managers!')
       }
     } else {
       setRentals([])
       setTemplates([])
+      setManagers([])
     }
   }
 
@@ -253,6 +278,29 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
                 </div>
               </div>
             )}
+
+            <div className='space-y-2'>
+              <Label htmlFor='managerId'>Manager</Label>
+              <Select onValueChange={handleManagerChange} value={formData.managerId?.toString() || ''}>
+                <SelectTrigger className={cn(errors.managerId && 'border-destructive')}>
+                  <SelectValue placeholder='Select a manager' />
+                </SelectTrigger>
+                <SelectContent>
+                  {managers.length === 0 ? (
+                    <SelectItem value='no-managers' disabled>
+                      There's no available manager
+                    </SelectItem>
+                  ) : (
+                    managers.map((manager) => (
+                      <SelectItem key={manager.accountId} value={manager.accountId.toString()}>
+                        {manager.fullName} ({manager.email})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {errors.managerId && <ErrorMessage message={errors.managerId} />}
+            </div>
 
             <div className='space-y-2'>
               <Label htmlFor='contractTemplatesId'>Template</Label>

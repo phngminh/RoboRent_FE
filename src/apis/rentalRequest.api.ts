@@ -18,6 +18,7 @@ export interface RentalRequestResponse {
   activityTypeId: number
   eventActivityName: string
   activityTypeName: string
+  staffId: number
 }
 
 export const getRequestByCustomer = async (accountId: number) => {
