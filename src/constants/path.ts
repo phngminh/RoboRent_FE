@@ -15,6 +15,9 @@ const path = {
   CUSTOMER_CHAT: '/customer/chat/:rentalId',
   CUSTOMER_ACCOUNT: '/customer/account',
   SHARE_RENTAL_REQUEST: '/customer/share-rental-request/:rentalId',
+  FACE_PROFILE: '/customer/face-profile',
+  FACE_PROFILE_CREATE: '/customer/face-profile/create',
+  FACE_PROFILE_VERIFY: '/customer/face-profile/verify',
   CUSTOMER_DELIVERY: '/customer/delivery/:rentalId',
 
   //============= Staff ============

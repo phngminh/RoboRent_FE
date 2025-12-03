@@ -40,7 +40,11 @@ interface CustomerChat {
   unread: number
 }
 
-export default function StaffChatPage() {
+interface StaffChatPageProps {
+  onViewContract: () => void
+}
+
+const StaffChatPage: React.FC<StaffChatPageProps> = ({onViewContract}) => {
   const { rentalId } = useParams<{ rentalId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -593,6 +597,7 @@ useEffect(() => {
               <div className="relative group">
                 <button
                   disabled={isSendContractDisabled}
+                  onClick={onViewContract}
                   className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors text-sm ${
                     isSendContractDisabled
                       ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
@@ -833,3 +838,5 @@ useEffect(() => {
     </div>
   )
 }
+
+export default StaffChatPage 
