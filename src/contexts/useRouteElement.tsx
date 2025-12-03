@@ -127,8 +127,7 @@ export default function useRouteElements() {
             { 
               path: 'rental-requests', 
               element: 
-              <StaffRentalRequestsContent 
-                onCreate={() => {}}
+              <StaffRentalRequestsContent
                 onView={(id) => navigate(`${path.BASE_STAFF}/share-rental-request/${id}`)}
               /> 
             },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, CheckCircle, XCircle, FileText, Calendar, User } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, FileText, Calendar, User, ImageIcon, Eye, Download } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { Button } from '../../../components/ui/button'
@@ -42,6 +42,24 @@ const ReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
     txt.innerHTML = html
     return txt.value
   }
+
+  const evidenceItems = report && report.evidencePath ? (() => {
+    const path = report.evidencePath
+    const name = path.split('/').pop() || path.split('/').pop()?.split('?')[0] || 'Unknown File'
+    const extension = name.split('.').pop()?.toLowerCase() || ''
+    const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].includes(extension)
+    const type = isImage ? 'Image' : 'Document'
+    const icon = isImage ? <ImageIcon className='text-blue-600' size={20} /> : <FileText className='text-blue-600' size={20} />
+    
+    return [{
+      type,
+      name,
+      url: path,
+      date: new Date(report.createdAt).toLocaleDateString(),
+      icon,
+      isImage
+    }]
+  })() : []
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -117,10 +135,6 @@ const ReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
       toast.error('Rejection failed')
     }
   }
-
-  const evidenceItem = report.evidencePath ? [
-    { type: 'Document', name: report.evidencePath.split('/').pop() || report.evidencePath, date: '' }
-  ] : []
 
   return (
     <div className='space-y-6 bg-white p-6 max-w-8xl mx-auto'>
@@ -214,24 +228,56 @@ const ReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
             </div>
           </div>
 
-          {evidenceItem.length > 0 && (
+          {evidenceItems.length > 0 && (
             <div className='rounded-lg shadow-sm border border-gray-200'>
               <div className='p-6 pb-3 border-b border-gray-200'>
                 <h2 className='text-2xl font-semibold text-gray-800'>Evidence & Documents</h2>
               </div>
               <div className='p-6 space-y-3'>
-                {evidenceItem.map((item, index) => (
-                  <div key={index} className='flex items-center justify-between p-3 bg-gray-50 rounded-lg'>
-                    <div className='flex items-center space-x-3'>
-                      <FileText className='text-blue-600' size={20} />
-                      <div>
-                        <p className='text-sm font-medium text-gray-900'>{item.name}</p>
-                        <p className='text-xs text-gray-500'>{item.type}</p>
+                {evidenceItems.map((item, index) => (
+                  <div key={index} className='flex flex-col space-y-3 p-3 bg-gray-50 rounded-lg'>
+                    <div className='flex items-center justify-between'>
+                      <div className='flex items-center space-x-3 flex-1'>
+                        {item.icon}
+                        <div>
+                          <p className='text-sm font-medium text-gray-900'>{item.name}</p>
+                          <p className='text-xs text-gray-500'>{item.type} • {item.date}</p>
+                        </div>
                       </div>
                     </div>
-                    <button className='text-blue-600 hover:text-blue-700 text-sm font-medium'>
-                      Download
-                    </button>
+                    
+                    <div className='flex justify-end gap-2 pt-2'>
+                      {item.isImage ? (
+                        <>
+                          <a
+                            href={item.url}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center space-x-1'
+                          >
+                            <Eye size={14} className='mr-2' />
+                            View
+                          </a>
+                          <a
+                            href={item.url}
+                            download={item.name}
+                            className='px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center space-x-1'
+                          >
+                            <Download size={14} className='mr-2' />
+                            Download
+                          </a>
+                        </>
+                      ) : (
+                        <a
+                          href={item.url}
+                          download={item.name}
+                          className='text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center space-x-1'
+                        >
+                          <Download size={14} className='mr-2' />
+                          Download
+                        </a>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -305,9 +351,9 @@ const ReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
       >
         <DialogContent className='sm:max-w-[425px]'>
           <DialogHeader>
-            <DialogTitle>Enter Rejection Reason</DialogTitle>
+            <DialogTitle>Enter Resolution</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting the report.
+              Please provide a resolution for rejecting the report.
             </DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4 -mt-4'>

@@ -18,7 +18,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '../../../components/ui/textarea'
 import { cn } from '../../../lib/utils'
 import { toast } from 'react-toastify'
-import EvidenceUploadButton from '../../../components/evidenceUpload'
 
 interface RentalRequestsContentProps {
   onViewContract: (rentalId: number) => void
@@ -27,10 +26,17 @@ interface RentalRequestsContentProps {
   onDetaild: (rentalId: number) => void
 }
 
+interface FormData {
+  draftClausesId: number,
+  accusedId: number,
+  description: string,
+  evidencePath: string
+}
+
 const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate, onViewContract, onView, onDetaild }) => {
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [reportOpen, setReportOpen] = useState(false)
-  const [description, setDescription] = useState('')
-  const [evidencePath, setEvidencePath] = useState('')
   const [selectedClauseId, setSelectedClauseId] = useState<number | null>(null)
   const [clauses, setClauses] = useState<DraftClausesResponse[]>([])
   const [selectedRental, setSelectedRental] = useState<RentalRequestResponse>({} as RentalRequestResponse)
@@ -46,8 +52,14 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   const [appliedDateFrom, setAppliedDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [appliedDateTo, setAppliedDateTo] = useState('')
-  const navigate = useNavigate()
-  const { user } = useAuth()
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
+  const [rawEvidenceFile, setRawEvidenceFile] = useState<File | null>(null)
+  const [formData, setFormData] = useState<FormData>({
+      draftClausesId: 0,
+      accusedId: 0,
+      description: '',
+      evidencePath: ''
+    })
 
   const pageSize = 5
   const totalPages = Math.max(1, Math.ceil(filteredRentals.length / pageSize))
@@ -100,10 +112,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
 
   const handleOpenReport = async (rental: RentalRequestResponse) => {
     setSelectedRental(rental)
-    setDescription('')
-    setEvidencePath('')
-    setSelectedClauseId(null)
-    setClauses([])
+    clearFields()
 
     try {
       const drafts = draftsMap[rental.id] ?? []
@@ -128,23 +137,78 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   }
 
   const clearFields = () => {
-    setDescription('')
-    setEvidencePath('')
+    setFormData({ ...formData, description: '', draftClausesId: 0, evidencePath: '' })
     setSelectedClauseId(null)
     setClauses([])
   }
 
+  const handleDraftClauseChange = (clauseId: number) => {
+    setSelectedClauseId(clauseId)
+    setFormData((prev) => ({ ...prev, draftClausesId: clauseId }))
+    if (errors.draftClausesId) {
+      setErrors((prev) => {
+        const { draftClausesId, ...rest } = prev
+        return rest
+      })
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (Object.keys(errors).length > 0) {
+      setErrors({})
+    }
+  }
+  
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {}
+    
+    if (!selectedClauseId) {
+      newErrors.draftClausesId = 'Draft Clause is required!'
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required!'
+    }
+
+    if (formData.description.trim().length > 200) {
+      newErrors.description = 'Description must not exceed 200 characters!'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const uploadToCloudinary = async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET)
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/auto/upload`,
+      { method: 'POST', body: formData }
+    )
+
+    return res.json()
+  }
+
   const handleSendReport = async () => {
-    if (!selectedRental.id || !selectedClauseId || !description.trim() || !evidencePath.trim()) {
+    if (validateForm() === false) {
       return
     }
     try {
       setLoading(true)
+
+      const uploadResult = await uploadToCloudinary(rawEvidenceFile!)
+      const evidencePath = uploadResult.secure_url
+      console.log('Uploaded evidence path:', evidencePath)
+
       const payload: CreateContractReportPayload = {
-        draftClausesId: selectedClauseId,
+        draftClausesId: selectedClauseId!,
         accusedId: selectedRental.staffId,
-        description: description,
-        evidencePath: evidencePath
+        description: formData.description,
+        evidencePath: formData.evidencePath
       }
       await sendReport(payload)
       toast.success('Report sent successfully')
@@ -158,13 +222,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
     }
   }
 
-  const handleEvidenceUpload = (data: { url: string; publicId: string }) => {
-    setEvidencePath(data.url)
-  }
-
-  // -------------------------------
-  // FILTERING LOGIC
-  // -------------------------------
   const filterData = () => {
     let filtered = [...allRentals]
 
@@ -202,9 +259,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
     filterData()
   }, [allRentals, search, appliedStatus, appliedDateFrom, appliedDateTo])
 
-  // -------------------------------
-  // FILTER FORM APPLY & CLEAR
-  // -------------------------------
   const applyFilters = () => {
     setAppliedStatus(statusFilter)
     setAppliedDateFrom(dateFrom)
@@ -227,6 +281,10 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
     txt.innerHTML = html
     return txt.value
   }
+
+  const ErrorMessage = ({ message }: { message: string }) => (
+    <p className='text-sm text-destructive mt-1'>{message}</p>
+  )
 
   const statusOptions = ['All Status', 'Draft', 'Pending', 'Received', 'Rejected', 'Completed']
 
@@ -374,6 +432,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                                       || d.status === 'ChangeRequested'
                                       || d.status === 'Active'
                                       || d.status === 'Rejected')
+                    const canReport = drafts.length > 0 && drafts.some(d => d.status === 'Active')
 
                     return (
                       <TableRow key={request.id} className='hover:bg-gray-50'>
@@ -438,7 +497,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                               </button>
                             )}
 
-                            {hasDrafts && (
+                            {canReport && (
                               <button
                                 onClick={() => handleOpenReport(request)}
                                 className='flex items-center space-x-1 bg-red-100 text-red-800 hover:bg-red-200 px-2 py-1 rounded'
@@ -503,8 +562,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setReportOpen(false)
-            setDescription('')
-            setEvidencePath('')
+            setFormData({ ...formData, description: '', draftClausesId: 0, evidencePath: '' })
             setSelectedClauseId(null)
             setClauses([])
           }
@@ -521,7 +579,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
             <div className='space-y-4 py-4'>
               <div className='space-y-2'>
                 <Label htmlFor='clause'>Select Clause</Label>
-                <Select value={selectedClauseId?.toString() || ''} onValueChange={v => setSelectedClauseId(Number(v))}>
+                <Select value={formData.draftClausesId.toString()} onValueChange={v => handleDraftClauseChange(Number(v))}>
                   <SelectTrigger id='clause' className='w-full'>
                     <SelectValue placeholder='Select a clause to report' />
                   </SelectTrigger>
@@ -538,22 +596,26 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                 <Label htmlFor='description'>Description</Label>
                 <Textarea
                   id='description'
+                  name='description'
                   placeholder='Enter a detailed description of the issue...'
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  value={formData.description}
+                  onChange={handleInputChange}
                   className='min-h-[100px] resize-y'
                   rows={4}
                 />
+                {errors.description && <ErrorMessage message={errors.description} />}
               </div>
               <div className='space-y-2'>
                 <Label htmlFor='evidence'>Evidence</Label>
-                <EvidenceUploadButton 
-                  onUploadSuccess={handleEvidenceUpload} 
-                  rentalId={selectedRental.id || 0} 
-                />
-                {evidencePath && (
-                  <p className='text-sm text-green-600 break-all'>{evidencePath}</p>
-                )}
+                <div className='flex flex-col space-y-2'>
+                  <input 
+                    id='evidence'
+                    type='file'
+                    accept='image/*,video/*,application/pdf'
+                    onChange={(e) => setRawEvidenceFile(e.target.files?.[0] || null)}
+                    className='w-full'
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -568,7 +630,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
             <Button 
               type='button'
               onClick={handleSendReport} 
-              disabled={!selectedClauseId || !description.trim() || !evidencePath.trim() || loading}
+              disabled={!formData.draftClausesId || !formData.description.trim() || loading}
               className={cn('bg-red-600 hover:bg-red-700 disabled:bg-gray-400')}
             >
               {loading ? 'Sending...' : 'Send Report'}
