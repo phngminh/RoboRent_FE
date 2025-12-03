@@ -204,7 +204,11 @@ export default function useRouteElements() {
           ]
         },
         {
-          path: 'chat/:rentalId', element: <StaffChatPage />
+          path: 'chat/:rentalId', 
+          element: 
+          <StaffChatPage
+          onViewContract={() => navigate(`${path.BASE_STAFF}/contract-drafts`)}
+           />
         },
       ]
     },

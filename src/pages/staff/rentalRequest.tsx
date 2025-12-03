@@ -30,7 +30,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   const [appliedDateTo, setAppliedDateTo] = useState('')
   const [receiving, setReceiving] = useState<number | null>(null)
 
-  const [viewMode, setViewMode] = useState<'pending' | 'received'>('pending')
+  const [viewMode, setViewMode] = useState<'pending' | 'received' | 'canceled'>('pending')
 
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -39,24 +39,31 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   // ============================
   // FETCH FROM API
   // ============================
-  const fetchData = async () => {
-    try {
-      setLoading(true)
+const fetchData = async () => {
+  try {
+    setLoading(true)
 
-      let res
-      if (viewMode === 'pending') {
-        res = await getPendingRentalAsync()
-      } else {
-        res = await getReceivedRentalByStaffIdAsync(staffId)
-      }
+    let res;
 
-      setAllItems(res.data ?? [])
-    } catch (err) {
-      console.error('Failed to load rental requests', err)
-    } finally {
-      setLoading(false)
+    if (viewMode === 'pending') {
+      res = await getPendingRentalAsync()
+    } 
+    else if (viewMode === 'received') {
+      res = await getReceivedRentalByStaffIdAsync(staffId)
     }
+    else if (viewMode === 'canceled') {
+      res = await getReceivedRentalByStaffIdAsync(staffId) 
+      // 🔥 KEEP ALL — do NOT filter here
+      // filtering handled below
+    }
+
+    setAllItems(res.data ?? [])
+  } catch (err) {
+    console.error('Failed to load rental requests', err)
+  } finally {
+    setLoading(false)
   }
+}
 
   useEffect(() => {
     if (staffId) fetchData()
@@ -68,6 +75,16 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   // ============================
   const filterData = () => {
     let filtered = [...allItems]
+
+// Auto-hide canceled when in RECEIVED view
+if (viewMode === 'received') {
+  filtered = filtered.filter(r => r.status !== 'Canceled')
+}
+
+// Show ONLY canceled when in canceled view
+if (viewMode === 'canceled') {
+  filtered = filtered.filter(r => r.status === 'Canceled')
+}
 
     if (appliedStatus !== 'All Status') {
       filtered = filtered.filter((r) => r.status === appliedStatus)
@@ -155,30 +172,57 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
 
-      {/* SWITCH BUTTONS */}
-      <div className="flex justify-center gap-3">
-        <button
-          onClick={() => setViewMode('pending')}
-          className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
-            viewMode === 'pending'
-              ? 'bg-blue-600 text-white border-blue-600'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-          }`}
-        >
-          Pending
-        </button>
+{/* SWITCH BUTTONS */}
+<div className="flex justify-center gap-3">
 
-        <button
-          onClick={() => setViewMode('received')}
-          className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
-            viewMode === 'received'
-              ? 'bg-green-600 text-white border-green-600'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-          }`}
-        >
-          Received
-        </button>
-      </div>
+  {/* Pending */}
+  <button
+onClick={() => {
+  setViewMode('pending')
+  setStatusFilter('All Status')
+  setAppliedStatus('All Status')
+}}
+    className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
+      viewMode === 'pending' && appliedStatus !== 'Canceled'
+        ? 'bg-blue-600 text-white border-blue-600'
+        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+    }`}
+  >
+    Pending
+  </button>
+
+  {/* Received */}
+  <button
+    onClick={() => {
+      setViewMode('received')
+      setStatusFilter('All Status')
+      setAppliedStatus('All Status')
+    }}
+    className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
+      viewMode === 'received' && appliedStatus !== 'Canceled'
+        ? 'bg-green-600 text-white border-green-600'
+        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+    }`}
+  >
+    Received
+  </button>
+
+  {/* NEW: Canceled Only Filter */}
+  <button
+onClick={() => {
+  setViewMode('canceled')
+  setStatusFilter('Canceled')
+  setAppliedStatus('Canceled')
+}}
+    className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
+      appliedStatus === 'Canceled'
+        ? 'bg-red-600 text-white border-red-600'
+        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+    }`}
+  >
+    Canceled
+  </button>
+</div>
 
       {/* FILTER BOX */}
       <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
