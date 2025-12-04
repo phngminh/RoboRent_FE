@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Eye, Flag, MessageCircle, Plus, Search, Truck } from 'lucide-react'
+import React, { useEffect, useState, useRef } from 'react'
+import { Eye, Flag, MessageCircle, Plus, Search, Truck, X, Upload } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '../../../components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
 import { Input } from '../../../components/ui/input'
@@ -54,7 +54,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   const [dateTo, setDateTo] = useState('')
   const [appliedDateTo, setAppliedDateTo] = useState('')
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
-  const [rawEvidenceFile, setRawEvidenceFile] = useState<File | null>(null)
+  const [rawEvidenceFiles, setRawEvidenceFiles] = useState<File[]>([])
   const [formData, setFormData] = useState<FormData>({
       draftClausesId: null,
       accusedId: 0,
@@ -62,6 +62,8 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
       evidencePath: ''
     })
   const [detailsMap, setDetailsMap] = useState<Record<number, boolean>>({});
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const pageSize = 5
   const totalPages = Math.max(1, Math.ceil(filteredRentals.length / pageSize))
@@ -98,9 +100,10 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   useEffect(() => {
     if (allRentals.length > 0) fetchDraftsForRentals()
   }, [allRentals])
-useEffect(() => {
-  if (allRentals.length > 0) fetchDetailsForRentals();
-}, [allRentals]);
+
+  useEffect(() => {
+    if (allRentals.length > 0) fetchDetailsForRentals()
+  }, [allRentals])
 
   const handleSendRequest = async (rentalId: number) => {
     try {
@@ -151,7 +154,7 @@ useEffect(() => {
     setSelectedClause(null)
     setClauses([])
     setErrors({})
-    setRawEvidenceFile(null)
+    setRawEvidenceFiles([])
   }
 
   const handleClauseChange = (clauseIdStr: string) => {
@@ -214,12 +217,12 @@ useEffect(() => {
     try {
       setLoading(true)
 
-      let evidencePath = formData.evidencePath
-      if (rawEvidenceFile) {
-        const uploadResult = await uploadToCloudinary(rawEvidenceFile)
-        evidencePath = uploadResult.secure_url
-        console.log('Uploaded evidence path:', evidencePath)
-        setFormData(prev => ({ ...prev, evidencePath }))
+      let evidencePath = ''
+      if (rawEvidenceFiles.length > 0) {
+        const uploadPromises = rawEvidenceFiles.map(uploadToCloudinary)
+        const uploadResults = await Promise.all(uploadPromises)
+        evidencePath = uploadResults.map(result => result.secure_url).join(';')
+        console.log('Uploaded evidence paths:', evidencePath)
       }
 
       const payload: CreateContractReportPayload = {
@@ -238,6 +241,24 @@ useEffect(() => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files || [])
+    const totalFiles = rawEvidenceFiles.length + newFiles.length
+    const maxFiles = 5
+
+    if (totalFiles > maxFiles) {
+      toast.error(`Maximum ${maxFiles} files allowed. You are trying to add ${totalFiles} files.`)
+      return
+    }
+
+    setRawEvidenceFiles(prev => [...prev, ...newFiles])
+    e.target.value = ''
+  }
+
+  const removeFile = (indexToRemove: number) => {
+    setRawEvidenceFiles(prev => prev.filter((_, index) => index !== indexToRemove))
   }
 
   const filterData = () => {
@@ -307,104 +328,103 @@ useEffect(() => {
   const statusOptions = ['All Status', 'Draft', 'Pending', 'Received', 'Rejected', 'Completed', 'Canceled']
 
   const handleCancelRental = async (id: number) => {
-  try {
-    setLoading(true)
-    const res = await customerCancelRentalAsync(id)
-    await fetchData()
-  } catch (err: any) {
-    console.error('Error cancel rental:', err)
-    alert(err?.response?.data?.message || 'Failed to cancel rental')
-  } finally {
-    setLoading(false)
-  }
-}
-
-const handleDeleteRental = async (id: number) => {
-  try {
-    setLoading(true)
-    const res = await customerDeleteRentalAsync(id)
-    await fetchData()
-  } catch (err: any) {
-    console.error('Error delete rental:', err)
-    alert(err?.response?.data?.message || 'Failed to delete rental')
-  } finally {
-    setLoading(false)
-  }
-}
-
-const fetchDetailsForRentals = async () => {
-  for (const rental of allRentals.filter(r => detailsMap[r.id!] === undefined)) {
     try {
-      const res = await getRentalDetailsByRentalIdAsync(rental.id);
-      const hasDetails = res.success && res.data && res.data.length > 0;
-
-      setDetailsMap(prev => ({
-        ...prev,
-        [rental.id]: hasDetails
-      }));
-    } catch (error) {
-      console.error("Error fetching rental detail:", rental.id, error);
-      setDetailsMap(prev => ({ ...prev, [rental.id]: false }));
+      setLoading(true)
+      const res = await customerCancelRentalAsync(id)
+      await fetchData()
+    } catch (err: any) {
+      console.error('Error cancel rental:', err)
+      alert(err?.response?.data?.message || 'Failed to cancel rental')
+    } finally {
+      setLoading(false)
     }
   }
-};
+
+  const handleDeleteRental = async (id: number) => {
+    try {
+      setLoading(true)
+      const res = await customerDeleteRentalAsync(id)
+      await fetchData()
+    } catch (err: any) {
+      console.error('Error delete rental:', err)
+      alert(err?.response?.data?.message || 'Failed to delete rental')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchDetailsForRentals = async () => {
+    for (const rental of allRentals.filter(r => detailsMap[r.id!] === undefined)) {
+      try {
+        const res = await getRentalDetailsByRentalIdAsync(rental.id);
+        const hasDetails = res.success && res.data && res.data.length > 0;
+
+        setDetailsMap(prev => ({
+          ...prev,
+          [rental.id]: hasDetails
+        }));
+      } catch (error) {
+        console.error("Error fetching rental detail:", rental.id, error);
+        setDetailsMap(prev => ({ ...prev, [rental.id]: false }));
+      }
+    }
+  }
 
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
       {/* QUICK FILTER BUTTONS */}
-<div className="flex justify-center gap-3 mb-4">
+      <div className="flex justify-center gap-3 mb-4">
+        {/* All */}
+        <Button
+          variant={appliedStatus === 'All Status' ? 'default' : 'outline'}
+          onClick={() => {
+            setStatusFilter('All Status')
+            setAppliedStatus('All Status')
+            setDateFrom('')
+            setAppliedDateFrom('')
+            setDateTo('')
+            setAppliedDateTo('')
+          }}
+        >
+          All
+        </Button>
 
-  {/* All */}
-  <Button
-    variant={appliedStatus === 'All Status' ? 'default' : 'outline'}
-    onClick={() => {
-      setStatusFilter('All Status')
-      setAppliedStatus('All Status')
-      setDateFrom('')
-      setAppliedDateFrom('')
-      setDateTo('')
-      setAppliedDateTo('')
-    }}
-  >
-    All
-  </Button>
+        {/* Pending */}
+        <Button
+          variant={appliedStatus === 'Pending' ? 'default' : 'outline'}
+          onClick={() => {
+            setStatusFilter('Pending')
+            setAppliedStatus('Pending')
+          }}
+          className="bg-yellow-500/20 text-yellow-800 hover:bg-yellow-500/30"
+        >
+          Pending
+        </Button>
 
-  {/* Pending */}
-  <Button
-    variant={appliedStatus === 'Pending' ? 'default' : 'outline'}
-    onClick={() => {
-      setStatusFilter('Pending')
-      setAppliedStatus('Pending')
-    }}
-    className="bg-yellow-500/20 text-yellow-800 hover:bg-yellow-500/30"
-  >
-    Pending
-  </Button>
+        {/* Completed */}
+        <Button
+          variant={appliedStatus === 'Completed' ? 'default' : 'outline'}
+          onClick={() => {
+            setStatusFilter('Completed')
+            setAppliedStatus('Completed')
+          }}
+          className="bg-blue-500/20 text-blue-800 hover:bg-blue-500/30"
+        >
+          Completed
+        </Button>
 
-  {/* Completed */}
-  <Button
-    variant={appliedStatus === 'Completed' ? 'default' : 'outline'}
-    onClick={() => {
-      setStatusFilter('Completed')
-      setAppliedStatus('Completed')
-    }}
-    className="bg-blue-500/20 text-blue-800 hover:bg-blue-500/30"
-  >
-    Completed
-  </Button>
-
-  {/* NEW: Canceled */}
-  <Button
-    variant={appliedStatus === 'Canceled' ? 'default' : 'outline'}
-    onClick={() => {
-      setStatusFilter('Canceled')
-      setAppliedStatus('Canceled')
-    }}
-    className="bg-red-500/20 text-red-800 hover:bg-red-500/30"
-  >
-    Canceled
-  </Button>
-</div>
+        {/* NEW: Canceled */}
+        <Button
+          variant={appliedStatus === 'Canceled' ? 'default' : 'outline'}
+          onClick={() => {
+            setStatusFilter('Canceled')
+            setAppliedStatus('Canceled')
+          }}
+          className="bg-red-500/20 text-red-800 hover:bg-red-500/30"
+        >
+          Canceled
+        </Button>
+      </div>
 
       {/* FILTER CARD */}
       <Card className='rounded-xl shadow-sm border border-gray-100'>
@@ -568,40 +588,40 @@ const fetchDetailsForRentals = async () => {
                         <TableCell className='text-center whitespace-nowrap'>{createdDate}</TableCell>
                         <TableCell className='text-center'>
                           <div className='flex justify-center space-x-3'>
-<button
-  onClick={() => {
-    if (request.status === "Draft" || request.status === "Canceled") {
-      onView(request.id)            // Canceled → onView
-    } else {
-      onDetaild(request.id)
-    }
-  }}
-  className='flex items-center space-x-1 bg-blue-100 text-blue-800 hover:bg-blue-200 px-2 py-1 rounded whitespace-nowrap'
->
-  <Eye size={14} />
-  <span>
-    {request.status === "Draft" || request.status === "Canceled" ? "View" : "Detail"}
-  </span>
-</button>
+                            <button
+                              onClick={() => {
+                                if (request.status === "Draft" || request.status === "Canceled") {
+                                  onView(request.id)            // Canceled → onView
+                                } else {
+                                  onDetaild(request.id)
+                                }
+                              }}
+                              className='flex items-center space-x-1 bg-blue-100 text-blue-800 hover:bg-blue-200 px-2 py-1 rounded whitespace-nowrap'
+                            >
+                              <Eye size={14} />
+                              <span>
+                                {request.status === "Draft" || request.status === "Canceled" ? "View" : "Detail"}
+                              </span>
+                            </button>
 
-{request.status === "Draft" && (
-  <button
-    onClick={() => handleCancelRental(request.id)}
-    className='flex items-center space-x-1 bg-red-100 text-red-800 hover:bg-red-200 px-2 py-1 rounded'
-  >
-    <span>❌</span>
-    <span>Cancel</span>
-  </button>
-)}
-{request.status === "Canceled" && (
-  <button
-    onClick={() => handleDeleteRental(request.id)}
-    className='flex items-center space-x-1 bg-gray-100 text-gray-800 hover:bg-gray-200 px-2 py-1 rounded'
-  >
-    <span>🗑️</span>
-    <span>Delete</span>
-  </button>
-)}
+                            {request.status === "Draft" && (
+                              <button
+                                onClick={() => handleCancelRental(request.id)}
+                                className='flex items-center space-x-1 bg-red-100 text-red-800 hover:bg-red-200 px-2 py-1 rounded'
+                              >
+                                <span>❌</span>
+                                <span>Cancel</span>
+                              </button>
+                            )}
+                            {request.status === "Canceled" && (
+                              <button
+                                onClick={() => handleDeleteRental(request.id)}
+                                className='flex items-center space-x-1 bg-gray-100 text-gray-800 hover:bg-gray-200 px-2 py-1 rounded'
+                              >
+                                <span>🗑️</span>
+                                <span>Delete</span>
+                              </button>
+                            )}
 
                             {hasDrafts && (
                               <button
@@ -613,41 +633,41 @@ const fetchDetailsForRentals = async () => {
                               </button>
                             )}
 
-{request.status !== "Draft" &&
- request.status !== "Pending" &&
- request.status !== "Canceled" && (     // 🔥 hide when Canceled
-  <button
-    onClick={() =>
-      navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))
-    }
-    className='flex items-center space-x-1 bg-purple-100 text-purple-800 hover:bg-purple-200 px-2 py-1 rounded'
-  >
-    <MessageCircle size={14} />
-    <span>Chat</span>
-  </button>
-)}
+                            {request.status !== "Draft" &&
+                            request.status !== "Pending" &&
+                            request.status !== "Canceled" && (     // 🔥 hide when Canceled
+                              <button
+                                onClick={() =>
+                                  navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))
+                                }
+                                className='flex items-center space-x-1 bg-purple-100 text-purple-800 hover:bg-purple-200 px-2 py-1 rounded'
+                              >
+                                <MessageCircle size={14} />
+                                <span>Chat</span>
+                              </button>
+                            )}
 
-{/* SEND BUTTON (only show if Draft AND has details) */}
-{request.status === "Draft" && detailsMap[request.id] === true && (
-  <button
-    onClick={() => handleSendRequest(request.id)}
-    className='flex items-center space-x-1 bg-green-100 text-green-800 hover:bg-green-200 px-2 py-1 rounded'
-  >
-    <span>📤</span>
-    <span>Send</span>
-  </button>
-)}
+                            {/* SEND BUTTON (only show if Draft AND has details) */}
+                            {request.status === "Draft" && detailsMap[request.id] === true && (
+                              <button
+                                onClick={() => handleSendRequest(request.id)}
+                                className='flex items-center space-x-1 bg-green-100 text-green-800 hover:bg-green-200 px-2 py-1 rounded'
+                              >
+                                <span>📤</span>
+                                <span>Send</span>
+                              </button>
+                            )}
 
-{/* Disabled send button when no details */}
-{request.status === "Draft" && detailsMap[request.id] === false && (
-  <button
-    disabled
-    className='flex items-center space-x-1 bg-gray-200 text-gray-500 px-2 py-1 rounded cursor-not-allowed'
-  >
-    <span>📤</span>
-    <span>No Details</span>
-  </button>
-)}
+                            {/* Disabled send button when no details */}
+                            {request.status === "Draft" && detailsMap[request.id] === false && (
+                              <button
+                                disabled
+                                className='flex items-center space-x-1 bg-gray-200 text-gray-500 px-2 py-1 rounded cursor-not-allowed'
+                              >
+                                <span>📤</span>
+                                <span>No Details</span>
+                              </button>
+                            )}
 
                             {(request.status === 'Accepted' || request.status === 'AcceptedDemo' || request.status === 'Completed' || request.status === 'DeliveryScheduled') && (
                               <button
@@ -770,16 +790,43 @@ const fetchDetailsForRentals = async () => {
                 {errors.description && <ErrorMessage message={errors.description} />}
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='evidence'>Evidence</Label>
+                <Label htmlFor='evidence'>Evidence (up to 5 files: images/videos/pdf)</Label>
                 <div className='flex flex-col space-y-2'>
                   <input 
+                    ref={fileInputRef}
                     id='evidence'
                     type='file'
+                    multiple
                     accept='image/*,video/*,application/pdf'
-                    onChange={(e) => setRawEvidenceFile(e.target.files?.[0] || null)}
-                    className='w-full'
+                    onChange={handleFileChange}
+                    className='absolute opacity-0 w-0 h-0 pointer-events-none'
                   />
-                  {rawEvidenceFile && <p className='text-sm text-gray-600'>Selected: {rawEvidenceFile.name}</p>}
+                  
+                  <button
+                    type='button'
+                    onClick={() => fileInputRef.current?.click()}
+                    className='flex items-center justify-center w-full px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 text-gray-700 cursor-pointer transition-colors'
+                  >
+                    <Upload className='mr-2 h-4 w-4' />
+                    {rawEvidenceFiles.length === 0 ? 'Upload your evidences...' : `Selected ${rawEvidenceFiles.length}/5 files`}
+                  </button>
+                  
+                  {rawEvidenceFiles.length > 0 && (
+                    <div className='space-y-1'>
+                      <label className='text-sm font-medium text-gray-700'>Selected files:</label>
+                      {rawEvidenceFiles.map((file, index) => (
+                        <div key={index} className='flex justify-between items-center p-2 bg-gray-100 rounded border'>
+                          <span className='text-sm text-gray-900 truncate flex-1'>{file.name}</span>
+                          <button 
+                            onClick={() => removeFile(index)} 
+                            className='text-red-500 hover:text-red-700 text-lg leading-none ml-2'
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

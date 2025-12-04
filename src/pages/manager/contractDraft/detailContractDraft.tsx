@@ -172,6 +172,7 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
                     <SelectItem value='PendingManagerSignature'>PendingManagerSignature</SelectItem>
                     <SelectItem value='PendingCustomerSignature'>PendingCustomerSignature</SelectItem>
                     <SelectItem value='ChangeRequested'>ChangeRequested</SelectItem>
+                    <SelectItem value='Modified'>Modified</SelectItem>
                     <SelectItem value='Expired'>Expired</SelectItem>
                     <SelectItem value='Active'>Active</SelectItem>
                     <SelectItem value='Rejected'>Rejected</SelectItem>

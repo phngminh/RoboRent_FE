@@ -4,12 +4,12 @@ import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Textarea } from '../../../components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
-import { ArrowLeft, Eye } from 'lucide-react'
-import { getDraftById, type ContractDraftResponse } from '../../../apis/contractDraft.api'
-import { getClausesByTemplate, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
+import { ArrowLeft, Pen } from 'lucide-react'
+import { getDraftById, type ContractDraftResponse, reviseDraft, type ReviseContractDraftPayload } from '../../../apis/contractDraft.api'
 import { getRequestById, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
 import { useParams } from 'react-router-dom'
-import ViewContractDraft from '../../manager/contractDraft/fullContractDraft'
+import { toast } from 'react-toastify'
+import FormInput from '../../../components/formInput'
 
 interface StaffDetailContractDraft {
   onBack: () => void
@@ -20,10 +20,11 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
   const draftId = draftIdString ? parseInt(draftIdString, 10) : 0
   const [draft, setDraft] = useState<ContractDraftResponse | null>(null)
   const [rental, setRental] = useState<RentalRequestResponse | null>(null)
-  const [clauses, setClauses] = useState<TemplateClauseResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isViewModalVisible, setIsViewModalVisible] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedTitle, setEditedTitle] = useState('')
+  const [editedBody, setEditedBody] = useState('')
 
   const fetchDraft = async () => {
     try {
@@ -31,9 +32,8 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
       const draftData = await getDraftById(draftId)
       if (draftData) {
         setDraft(draftData)
-        if (draftData.contractTemplatesId) {
-          fetchClauses(draftData.contractTemplatesId)
-        }
+        setEditedTitle(draftData.title)
+        setEditedBody(draftData.bodyJson || '')
         if (draftData.rentalId) {
           fetchRental(draftData.rentalId)
         }
@@ -45,15 +45,6 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
       setError('Failed to load draft details')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchClauses = async (templateId: number) => {
-    try {
-      const clauses = await getClausesByTemplate(templateId)
-      setClauses(clauses)
-    } catch (err) {
-      console.error('Failed to load clauses', err)
     }
   }
 
@@ -75,10 +66,36 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
     }
   }, [draftId])
 
-  const decodeHtml = (html: string) => {
-    const txt = document.createElement('textarea')
-    txt.innerHTML = html
-    return txt.value
+  const handleEdit = () => {
+    setIsEditing(true)
+  }
+
+  const handleCancel = () => {
+    if (draft) {
+      setEditedTitle(draft.title)
+      setEditedBody(draft.bodyJson || '')
+    }
+    setIsEditing(false)
+  }
+
+  const handleSave = async () => {
+    if (!draft) return
+    try {
+      const payload: ReviseContractDraftPayload = {
+        id: draftId,
+        title: editedTitle,
+        comments: draft.comments,
+        bodyJson: editedBody,
+      }
+      await reviseDraft(draftId, payload)
+      toast.success('Draft revised successfully!')
+      setIsEditing(false)
+      await fetchDraft()
+    } catch (err: any) {
+      console.error('Failed to revise draft', err)
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
+    }
   }
 
   if (loading) {
@@ -120,14 +137,32 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
 
       <Card className='rounded-lg shadow-sm border border-gray-200'>
         <CardHeader className='pb-3 border-b border-gray-200'>
-          <CardTitle className='text-2xl font-semibold text-gray-900 text-left'>Contract Details</CardTitle>
+          <div className='flex justify-between items-center'>
+            <CardTitle className='text-2xl font-semibold text-gray-900 text-left'>Contract Details</CardTitle>
+            {!isEditing ? (
+              <Button onClick={handleEdit} variant='outline'><Pen size={18} />Edit</Button>
+            ) : (
+              <div className='flex gap-2'>
+                <Button onClick={handleCancel} variant='outline'>Cancel</Button>
+                <Button onClick={handleSave}>Save</Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className='p-6 space-y-6'>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
             <div className='space-y-4'>
               <div>
                 <label className='block text-xs font-medium text-gray-600 mb-1'>Contract Title</label>
-                <Input value={draft.title} readOnly className='bg-white border-gray-300' />
+                {!isEditing ? (
+                  <Input value={draft.title} readOnly className='bg-white border-gray-300' />
+                ) : (
+                  <Input
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    className='border-gray-300'
+                  />
+                )}
               </div>
               <div>
                 <label className='block text-xs font-medium text-gray-600 mb-1'>Status</label>
@@ -140,6 +175,7 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
                     <SelectItem value='PendingManagerSignature'>PendingManagerSignature</SelectItem>
                     <SelectItem value='PendingCustomerSignature'>PendingCustomerSignature</SelectItem>
                     <SelectItem value='ChangeRequested'>ChangeRequested</SelectItem>
+                    <SelectItem value='Modified'>Modified</SelectItem>
                     <SelectItem value='Expired'>Expired</SelectItem>
                     <SelectItem value='Active'>Active</SelectItem>
                     <SelectItem value='Rejected'>Rejected</SelectItem>
@@ -147,8 +183,12 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
                 </Select>
               </div>
               <div>
-                <label className='block text-xs font-medium text-gray-600 mb-1'>Comments from Staff</label>
-                <Textarea value={draft.comments || 'N/A'} readOnly className='bg-white border-gray-300 min-h-[100px]' />
+                <label className='block text-xs font-medium text-gray-600 mb-1'>Comments from Customer</label>
+                <Textarea 
+                  value={draft.comments || 'N/A'} 
+                  readOnly 
+                  className='bg-white border-gray-300 min-h-[100px]' 
+                />
               </div>
             </div>
 
@@ -184,48 +224,27 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
 
       <Card className='rounded-lg shadow-sm border border-gray-200'>
         <CardHeader className='pb-3 border-b border-gray-200'>
-          <div className='flex justify-between items-center'>
-            <CardTitle className='text-2xl font-semibold text-gray-900 text-left'>Draft Clauses</CardTitle>
-            <Button variant='outline' className='flex items-center gap-1' onClick={() => setIsViewModalVisible(true)}>
-              <Eye size={16} />
-              View Full Contract
-            </Button>
-          </div>
+          <CardTitle className='text-2xl font-semibold text-gray-900 text-left'>Full Contract</CardTitle>
         </CardHeader>
         <CardContent className='p-6'>
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-            {clauses.map((clause) => {
-              return (
-                <Card key={clause.id}
-                  className='p-4 border border-gray-200 hover:shadow-md transition-shadow h-48 flex flex-col overflow-hidden space-y-2'
-                >
-                  <h4 className='font-semibold text-gray-900 text-sm leading-tight'>
-                    {decodeHtml(clause.title)}
-                  </h4>
-
-                  <div className='flex-1 overflow-hidden'>
-                    <div
-                      className='prose max-w-none prose-sm text-xs text-gray-600 overflow-hidden'
-                      style={{
-                        display: '-webkit-box',
-                        WebkitBoxOrient: 'vertical',
-                        WebkitLineClamp: 6,
-                      }}
-                      dangerouslySetInnerHTML={{ __html: clause.body }}
-                    />
-                  </div>
-                </Card>
-              )
-            })}
-          </div>
+          {!isEditing ? (
+            <div className='max-w-4xl mx-auto'>
+              <div className='space-y-2'>
+                <div
+                  className='prose max-w-none prose-sm'
+                  dangerouslySetInnerHTML={{ __html: draft.bodyJson }}
+                />
+              </div>
+            </div>
+          ) : (
+            <FormInput
+              editorKey={draft.id}
+              value={editedBody}
+              onChange={setEditedBody}
+            />
+          )}
         </CardContent>
       </Card>
-
-      <ViewContractDraft
-        open={isViewModalVisible}
-        onClose={() => setIsViewModalVisible(false)}
-        draft={draft}
-      />
     </div>
   )
 }

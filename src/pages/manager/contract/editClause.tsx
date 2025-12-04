@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
@@ -7,14 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { cn } from '../../../lib/utils'
 import { editClause, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
 import { toast } from 'react-toastify'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import FormInput from '../../../components/formInput'
+import { ArrowLeft } from 'lucide-react'
 
 interface EditTemplateClauseProps {
   open: boolean
   onClose: () => void
   onSuccess: () => void
-  clause: TemplateClauseResponse | null
+  clause: TemplateClauseResponse
 }
 
 interface FormData {
@@ -41,13 +41,18 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
     isEditable: false,
   })
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
-  const quillRef = useRef<ReactQuill>(null)
+
+  const decodeHtml = (html: string) => {
+    const txt = document.createElement('textarea')
+    txt.innerHTML = html
+    return txt.value
+  }
 
   useEffect(() => {
     if (open && clause) {
       const newFormData: FormData = {
-        clauseCode: clause.clauseCode,
-        title: clause.title,
+        clauseCode: decodeHtml(clause.clauseCode),
+        title: decodeHtml(clause.title),
         body: clause.body,
         isMandatory: clause.isMandatory,
         isEditable: clause.isEditable,
@@ -57,54 +62,6 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
       setErrors({})
     }
   }, [open, clause])
-
-  useEffect(() => {
-    if (!open) return
-    const quill = quillRef.current?.getEditor()
-    if (!quill) return
-
-    const resize = () => {
-      const container = (quill as any).container as HTMLDivElement
-      if (container) {
-        const scrollHeight = container.scrollHeight
-        container.style.minHeight = '150px'
-        container.style.height = scrollHeight < 150 ? '150px' : `${scrollHeight}px`
-      }
-    }
-
-    const handlePaste = (event: ClipboardEvent) => {
-      const items = event.clipboardData?.items
-      if (items) {
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].type.startsWith('image/')) {
-            event.preventDefault()
-            return false
-          }
-        }
-      }
-    }
-
-    quill.root.addEventListener('paste', handlePaste)
-    resize()
-    quill.on('text-change', resize)
-
-    return () => {
-      quill.root.removeEventListener('paste', handlePaste)
-      quill.off('text-change', resize)
-    }
-  }, [open])
-
-  useEffect(() => {
-    const quill = quillRef.current?.getEditor()
-    if (!quill) return
-
-    const container = (quill as any).container as HTMLDivElement
-    if (container) {
-      const borderColor = errors.body ? 'hsl(var(--destructive))' : 'hsl(var(--border))'
-      container.style.border = `1px solid ${borderColor}`
-      container.style.borderRadius = '0.375rem'
-    }
-  }, [errors.body])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -159,7 +116,7 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
     if (!validateForm() || !hasChanges() || !clause) return
     try {
       const payload = {
-        clauseCode: clause.clauseCode,
+        clauseCode: formData.clauseCode,
         title: formData.title,
         body: formData.body,
         isMandatory: formData.isMandatory,
@@ -209,12 +166,27 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
     }
   }
 
+  if (!clause) {
+    return (
+      <div className='space-y-6 bg-gray-50 p-6'>
+        <div className='flex items-center justify-center py-12'>
+          <p className='text-red-500'>{'Draft not found'}</p>
+        </div>
+        <div className='flex justify-center'>
+          <Button onClick={onClose} variant='outline'>
+            <ArrowLeft size={18} className='mr-2' />
+            Close
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <Dialog 
       open={open} 
       onOpenChange={(isOpen) => {
         if (!isOpen) {
-          resetForm()
           onClose()
         }
       }}
@@ -261,17 +233,10 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
                   flexDirection: 'column'
                 }}
               >
-                <ReactQuill
-                  ref={quillRef}
-                  theme='snow'
+                <FormInput
+                  editorKey={clause.id}
                   value={formData.body}
                   onChange={handleQuillChange}
-                  placeholder='Enter the content of the clause here...'
-                  style={{
-                    minHeight: '150px',
-                    height: 'auto',
-                    overflow: 'visible'
-                  }}
                 />
               </div>
               {errors.body && <ErrorMessage message={errors.body} />}

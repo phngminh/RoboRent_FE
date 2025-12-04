@@ -5,7 +5,7 @@ import { Input } from '../../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Button } from '../../../components/ui/button'
 import { Search, Plus, Edit, Trash2, Eye } from 'lucide-react'
-import { getAllClauses, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
+import { getAllClauses, getAllTemplates, type ContractTemplateResponse, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
 import DeleteTemplateClause from './deleteClause'
 import CreateTemplateClause from './createClause'
 import EditTemplateClause from './editClause'
@@ -14,6 +14,7 @@ import DetailTemplateClause from './detailClause'
 const Clauses: React.FC = () => {
   const [selectedClause, setSelectedClause] = useState<TemplateClauseResponse | null>(null)
   const [clauses, setClauses] = useState<TemplateClauseResponse[]>([])
+  const [templates, setTemplates] = useState<ContractTemplateResponse[]>([])
   const [filteredClauses, setFilteredClauses] = useState<TemplateClauseResponse[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
@@ -49,8 +50,23 @@ const Clauses: React.FC = () => {
     }
   }
 
+  const fetchTemplates = async () => {
+    try {
+      setLoading(true)
+      const templatesData = await getAllTemplates()
+      console.log('Fetched templates:', templatesData)
+      setTemplates(templatesData)
+    } catch (err) {
+      console.error('Failed to load templates', err)
+      setTemplates([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    fetchClauses()
+    fetchClauses() 
+    fetchTemplates()
   }, [])
 
   useEffect(() => {
@@ -97,13 +113,6 @@ const Clauses: React.FC = () => {
 
   const statusOptions = ['All Status', 'Editable', 'Non-Editable']
   const mandatoryOptions = ['All Status', 'Mandatory', 'Optional']
-  const templateOptions = Array.from(
-    new Set(
-      clauses
-        .map((clause) => clause.contractTemplateTitle)
-        .filter((title) => Boolean(title))
-    )
-  ).sort()
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -175,14 +184,6 @@ const Clauses: React.FC = () => {
     },
   ]
 
-  const getMandatoryColor = (isMandatory: boolean) => {
-    return isMandatory ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-  }
-
-  const getEditableColor = (isEditable: boolean) => {
-    return isEditable ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-  }
-
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
       <Card className='rounded-xl shadow-sm border border-gray-100'>
@@ -231,9 +232,9 @@ const Clauses: React.FC = () => {
                     <SelectValue placeholder='Select Template' />
                   </SelectTrigger>
                   <SelectContent>
-                    {templateOptions.map((template) => (
-                      <SelectItem key={template} value={template}>
-                        {template}
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.title}>
+                        {template.title}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -282,7 +283,7 @@ const Clauses: React.FC = () => {
           </h2>
           <Button
             onClick={() => setIsCreateModalVisible(true)}
-            disabled={templateOptions.length === 0}
+            disabled={templates.length === 0}
             className='absolute right-6 top-3.5 bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600'
           >
             <Plus size={18} />
@@ -333,13 +334,13 @@ const Clauses: React.FC = () => {
                             )
                           } else if (column.key === 'isMandatory') {
                             content = (
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getMandatoryColor(clause.isMandatory)}`}>
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${clause.isMandatory ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                                 {clause.isMandatory ? 'Yes' : 'No'}
                               </span>
                             )
                           } else if (column.key === 'isEditable') {
                             content = (
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEditableColor(clause.isEditable)}`}>
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${clause.isEditable ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
                                 {clause.isEditable ? 'Yes' : 'No'}
                               </span>
                             )

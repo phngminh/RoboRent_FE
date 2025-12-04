@@ -38,3 +38,8 @@
 .ql-editor {
   min-height: 120px !important;
 }
+
+.ql-better-table-resize-line,
+.ql-better-table-handle {
+  display: none !important;
+}

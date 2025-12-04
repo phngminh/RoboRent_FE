@@ -62,7 +62,12 @@ const EditContractTemplate: React.FC<EditContractTemplateProps> = ({ open, onClo
   }
 
   const hasChanges = () => {
-    return JSON.stringify(formData) !== JSON.stringify(originalFormData)
+    return (
+      formData.templateCode !== originalFormData.templateCode ||
+      formData.title !== originalFormData.title ||
+      formData.description !== originalFormData.description ||
+      formData.version !== originalFormData.version
+    )
   }
 
   const validateForm = (): boolean => {
@@ -152,12 +157,12 @@ const EditContractTemplate: React.FC<EditContractTemplateProps> = ({ open, onClo
         }
       }}
     >
-      <DialogContent className='sm:max-w-[680px] flex flex-col max-h-[90vh] p-8'>
+      <DialogContent className='sm:max-w-[520px] flex flex-col max-h-[90vh] p-8'>
         <DialogHeader>
           <DialogTitle>Edit Contract Template</DialogTitle>
         </DialogHeader>
         <DialogDescription></DialogDescription>
-        <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1'>
+        <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1 -mt-7'>
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
               <Label htmlFor='templateCode'>Template Code</Label>
