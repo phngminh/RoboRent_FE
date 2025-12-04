@@ -1,5 +1,5 @@
 import http from '../utils/http'
-const API_URL = 'https://localhost:7249/api/RobotTypeOfActivity'
+const API_URL = `${import.meta.env.VITE_API_URL}/RobotTypeOfActivity`
 
 export interface RobotTypeOfActivityDto {
   activityTypeId: number;

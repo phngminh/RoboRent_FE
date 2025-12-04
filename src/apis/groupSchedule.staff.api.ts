@@ -1,5 +1,5 @@
 import http from '../utils/http'
-const API_URL = 'https://localhost:7249/api/GroupSchedule'
+const API_URL = `${import.meta.env.VITE_API_URL}/GroupSchedule`
 
 export const getAllScheduleByGroupIdAsync = async (groupId: number) => {
     try {

@@ -1,6 +1,6 @@
 import type { Update } from 'vite/types/hmrPayload.js';
 import http from '../utils/http';
-const API_BASE = 'https://localhost:7249/api/RentalDetail';
+const API_BASE = `${import.meta.env.VITE_API_URL}/RentalDetail`;
 
 export interface CreateRentalDetailItem {
   rentalId: number;

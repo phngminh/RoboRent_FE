@@ -1,7 +1,7 @@
 import httpPython from "../utils/httpPython";
 import http from '../utils/http'
-const API_URL = 'https://localhost:7249/api/FaceProfiles'
-const API_URL_VERI = 'https://localhost:7249/api/FaceVerification'
+const API_URL =  `${import.meta.env.VITE_API_URL}/FaceProfiles`
+const API_URL_VERI = `${import.meta.env.VITE_API_URL}/FaceVerification`
 
 
 export async function createFaceProfileCCCD(data: {

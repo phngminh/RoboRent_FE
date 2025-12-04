@@ -7,7 +7,7 @@ import type {
   ManagerQuoteListItemResponse
 } from '../types/chat.types'
 
-const API_URL = 'https://localhost:7249/api'
+const API_URL = `${import.meta.env.VITE_API_URL}`
 
 export const createPriceQuote = async (request: CreatePriceQuoteRequest): Promise<PriceQuoteResponse> => {
   const response = await http.post(`${API_URL}/PriceQuotes`, request)

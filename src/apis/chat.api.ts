@@ -9,7 +9,7 @@ import type {
   ChatRoomListResponse
 } from '../types/chat.types'
 
-const API_URL = 'https://localhost:7249/api'
+const API_URL = `${import.meta.env.VITE_API_URL}`
 
 export const createOrGetChatRoom = async (
   rentalId: number,

@@ -2,7 +2,7 @@ import http from '../utils/http';
 import type { PaymentListResponse } from '../types/payment.types';
 
 // Hardcode URL hoặc lấy từ Env (đảm bảo đúng port backend của bạn)
-const API_URL = 'https://localhost:7249/api'; 
+const API_URL = `${import.meta.env.VITE_API_URL}`; 
 
 export const paymentApi = {
   /**

@@ -6,7 +6,7 @@ class HttpPython {
 
   constructor() {
     this.instance = axios.create({
-      baseURL: "http://127.0.0.1:8000",   // Python FastAPI
+      baseURL: import.meta.env.VITE_PYTHON_API_URL || "http://127.0.0.1:8000",   // Python FastAPI
       timeout: 1000000000,
       headers: {
         "Content-Type": "application/json",

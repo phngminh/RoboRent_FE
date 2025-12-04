@@ -1,5 +1,5 @@
 import http from '../utils/http'
-const API_URL = 'https://localhost:7249/api/ActivityType'
+const API_URL = `${import.meta.env.VITE_API_URL}/ActivityType`
 
 export const getActivityTypeByEAIdAsync = async (
     eventActivityId: number
