@@ -63,18 +63,26 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
     setCurrentPage(1)
   }, [drafts, search, appliedStatus])
 
-  const statusOptions = ['All Status', 'Draft', 'PendingManagerSignature', 'PendingCustomerSignature', 'Expired', 'Active', 'Rejected']
+  const statusOptions = ['All Status', 'Draft', 'PendingManagerSignature', 'PendingCustomerSignature', 'ChangeRequested', 'Modified', 'Expired', 'Active', 'Rejected']
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'Draft':
+        return 'bg-gray-100 text-gray-800'
+      case 'ChangeRequested':
+        return 'bg-yellow-100 text-yellow-800'
       case 'Active':
         return 'bg-green-100 text-green-800'
       case 'Rejected':
         return 'bg-red-100 text-red-800'
+      case 'RejectedByCustomer':
+        return 'bg-red-100 text-red-800'
+      case 'RejectedByManager':
+        return 'bg-red-100 text-red-800'
       case 'Expired':
-        return 'bg-yellow-300 text-yellow-700'
+        return 'bg-yellow-100 text-yellow-800'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-blue-100 text-blue-800'
     }
   }
 
@@ -106,7 +114,7 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
       key: 'comments',
       title: 'Comments',
       accessor: 'comments' as keyof ContractDraftResponse,
-      className: 'max-w-md',
+      className: 'max-w-[350px] truncate',
     },
     {
       key: 'rentalEventName',

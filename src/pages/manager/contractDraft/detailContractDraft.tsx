@@ -11,6 +11,7 @@ import { getClausesByTemplate, type TemplateClauseResponse } from '../../../apis
 import { getRequestById, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
 import { useParams } from 'react-router-dom'
 import ViewContractDraft from './fullContractDraft'
+import DetailTemplateClause from '../contract/detailClause'
 import { toast } from 'react-toastify'
 
 interface DetailContractDraftProps {
@@ -30,6 +31,7 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
   const [rejectOpen, setRejectOpen] = useState(false)
   const [signature, setSignature] = useState('')
   const [reason, setReason] = useState('')
+  const [selectedClause, setSelectedClause] = useState<TemplateClauseResponse | null>(null)
 
   const fetchDraft = async () => {
     try {
@@ -231,9 +233,15 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
             {clauses.map((clause) => {
               return (
-                <Card key={clause.id}
-                  className='p-4 border border-gray-200 hover:shadow-md transition-shadow h-48 flex flex-col overflow-hidden space-y-2'
+                <Card 
+                  key={clause.id}
+                  className='relative p-4 border border-gray-200 group hover:shadow-lg hover:bg-gray-50 transition-all duration-200 h-48 flex flex-col overflow-hidden space-y-2 cursor-pointer'
+                  onClick={() => setSelectedClause(clause)}
                 >
+                  <div className='absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 bg-black/20 group-hover:bg-black/10'>
+                    <Eye size={32} className='text-white drop-shadow-lg' />
+                  </div>
+
                   <h4 className='font-semibold text-gray-900 text-sm leading-tight'>
                     {decodeHtml(clause.title)}
                   </h4>
@@ -348,6 +356,12 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
         open={isViewModalVisible}
         onClose={() => setIsViewModalVisible(false)}
         draft={draft}
+      />
+
+      <DetailTemplateClause
+        open={!!selectedClause}
+        onClose={() => setSelectedClause(null)}
+        clause={selectedClause}
       />
     </div>
   )

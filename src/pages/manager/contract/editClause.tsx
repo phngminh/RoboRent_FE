@@ -8,7 +8,6 @@ import { cn } from '../../../lib/utils'
 import { editClause, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
 import { toast } from 'react-toastify'
 import FormInput from '../../../components/formInput'
-import { ArrowLeft } from 'lucide-react'
 
 interface EditTemplateClauseProps {
   open: boolean
@@ -26,6 +25,7 @@ interface FormData {
 }
 
 const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, onSuccess, clause }) => {
+  const [isEditorReady, setIsEditorReady] = useState(false)
   const [formData, setFormData] = useState<FormData>({
     clauseCode: '',
     title: '',
@@ -60,6 +60,10 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
       setFormData(newFormData)
       setOriginalFormData(newFormData)
       setErrors({})
+      setIsEditorReady(true)
+    } else {
+      setIsEditorReady(false)
+      resetForm()
     }
   }, [open, clause])
 
@@ -166,21 +170,7 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
     }
   }
 
-  if (!clause) {
-    return (
-      <div className='space-y-6 bg-gray-50 p-6'>
-        <div className='flex items-center justify-center py-12'>
-          <p className='text-red-500'>{'Draft not found'}</p>
-        </div>
-        <div className='flex justify-center'>
-          <Button onClick={onClose} variant='outline'>
-            <ArrowLeft size={18} className='mr-2' />
-            Close
-          </Button>
-        </div>
-      </div>
-    )
-  }
+  if (!clause) return null
 
   return (
     <Dialog 
@@ -233,11 +223,27 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
                   flexDirection: 'column'
                 }}
               >
-                <FormInput
-                  editorKey={clause.id}
-                  value={formData.body}
-                  onChange={handleQuillChange}
-                />
+                <div
+                  className={cn(errors.body && 'border-destructive p-1')}
+                  style={{
+                    minHeight: '150px',
+                    height: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                >
+                  {isEditorReady ? (
+                    <FormInput
+                      editorKey={clause.id}
+                      value={formData.body}
+                      onChange={handleQuillChange}
+                    />
+                  ) : (
+                    <div className='flex items-center justify-center h-[150px] border border-gray-300 rounded-md text-gray-500'>
+                      Initializing editor...
+                    </div>
+                  )}
+                </div>
               </div>
               {errors.body && <ErrorMessage message={errors.body} />}
             </div>

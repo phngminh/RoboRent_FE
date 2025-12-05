@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useCallback, useEffect } from 'react'
+import React, { useRef, useMemo, useCallback, useEffect, useState } from 'react'
 import ReactQuill from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
 import Quill from 'quill'
@@ -14,20 +14,29 @@ interface FormInputProps {
 
 const FormInput: React.FC<FormInputProps> = ({ value, onChange, editorKey }) => {
   const quillRef = useRef<any>(null)
+  const [showTableModal, setShowTableModal] = useState(false)
+  const [hoveredRows, setHoveredRows] = useState(2)
+  const [hoveredCols, setHoveredCols] = useState(3)
+
+  const maxGridRows = 8
+  const maxGridCols = 10
 
   const handleInsertTable = useCallback(() => {
+    setShowTableModal(true)
+    setHoveredRows(2)
+    setHoveredCols(3)
+  }, [])
+
+  const handleTableInsert = useCallback((rows: number, cols: number) => {
     const quill = quillRef.current?.getEditor?.() ?? quillRef.current?.editor
     if (!quill) return
     const tableModule = quill.getModule('better-table')
     if (tableModule) {
-      const rowsInput = prompt('Enter number of rows (default: 3):') || '3'
-      const colsInput = prompt('Enter number of columns (default: 3):') || '3'
-      const rows = parseInt(rowsInput, 10) || 3
-      const cols = parseInt(colsInput, 10) || 3
       tableModule.insertTable(Math.max(1, rows), Math.max(1, cols))
     } else {
       console.error('Better-table module not found')
     }
+    setShowTableModal(false)
   }, [])
 
   const modules = useMemo(() => ({
@@ -109,11 +118,9 @@ const FormInput: React.FC<FormInputProps> = ({ value, onChange, editorKey }) => 
     }
 
     const handleDrop = (event: DragEvent) => {
-      console.log('Drop event fired')
       if (!event.dataTransfer?.files) return
       for (let i = 0; i < event.dataTransfer.files.length; i++) {
         if (event.dataTransfer.files[i].type.startsWith('image/')) {
-          console.log('Blocked image drop')
           event.preventDefault()
           event.stopPropagation()
           return
@@ -148,19 +155,65 @@ const FormInput: React.FC<FormInputProps> = ({ value, onChange, editorKey }) => 
     }
   }, [])
 
-  console.log(value)
-
   return (
-    <ReactQuill
-      key={editorKey}
-      theme='snow'
-      value={value}
-      onChange={onChange}
-      modules={modules}
-      className='h-96'
-      ref={quillRef}
-      placeholder='Enter content...'
-    />
+    <div className='relative h-[250px] overflow-hidden'>
+      <ReactQuill
+        key={editorKey}
+        theme='snow'
+        value={value}
+        onChange={onChange}
+        modules={modules}
+        className='h-full'
+        ref={quillRef}
+        placeholder='Enter content...'
+      />
+      {showTableModal && (
+        <div
+          className='fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center'
+          onClick={() => setShowTableModal(false)}
+        >
+          <div
+            className='bg-white p-6 rounded-xl shadow-xl min-w-[300px] text-center animate-[fadeIn_0.15s_ease]'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className='text-lg font-semibold mb-4'>Insert Table</h3>
+
+            <div className='inline-block bg-gray-200 p-2 rounded-md mb-3'>
+              <div
+                className='grid gap-1 bg-gray-300 p-1 rounded'
+                style={{
+                  gridTemplateColumns: `repeat(${maxGridCols}, 18px)`,
+                  gridTemplateRows: `repeat(${maxGridRows}, 18px)`
+                }}
+              >
+                {Array.from({ length: maxGridRows }).map((_, rowIndex) =>
+                  Array.from({ length: maxGridCols }).map((_, colIndex) => {
+                    const isSelected = rowIndex < hoveredRows && colIndex < hoveredCols
+                    return (
+                      <div
+                        key={`${rowIndex}-${colIndex}`}
+                        className={`w-[18px] h-[18px] bg-white border
+                          ${isSelected ? 'border-orange-500' : 'border-gray-300'}
+                          cursor-pointer transition-colors duration-75`}
+                        onMouseEnter={() => {
+                          setHoveredRows(rowIndex + 1)
+                          setHoveredCols(colIndex + 1)
+                        }}
+                        onClick={() => handleTableInsert(rowIndex + 1, colIndex + 1)}
+                      />
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
+            <p className='text-sm text-gray-600'>
+              {hoveredRows} rows × {hoveredCols} columns
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 

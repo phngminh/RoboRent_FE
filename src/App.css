@@ -33,10 +33,37 @@
 
 .ql-container {
   min-height: 150px !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
 }
 
 .ql-editor {
   min-height: 120px !important;
+  max-height: calc(100% - 40px) !important;
+  overflow-y: auto !important;
+}
+
+.ql-editor table {
+  width: 100% !important;
+  table-layout: fixed !important;
+  word-wrap: break-word;
+}
+
+.ql-editor table td, .ql-editor table th {
+  max-width: 200px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.form-field {
+  flex: 1;
+  min-height: 0;
 }
 
 .ql-better-table-resize-line,

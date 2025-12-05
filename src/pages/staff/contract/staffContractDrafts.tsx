@@ -102,6 +102,10 @@ const StaffContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
         return 'bg-green-100 text-green-800'
       case 'Rejected':
         return 'bg-red-100 text-red-800'
+      case 'RejectedByCustomer':
+        return 'bg-red-100 text-red-800'
+      case 'RejectedByManager':
+        return 'bg-red-100 text-red-800'
       case 'Expired':
         return 'bg-yellow-100 text-yellow-800'
       default:
@@ -141,7 +145,7 @@ const StaffContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
       key: 'comments',
       title: 'Comments',
       accessor: 'comments' as keyof ContractDraftResponse,
-      className: 'max-w-md',
+      className: 'max-w-[350px] truncate',
     },
     {
       key: 'rentalEventName',
