@@ -1,5 +1,5 @@
 import http from '../utils/http'
-const API_URL = 'https://localhost:7249/api/Rental'
+const API_URL = `${import.meta.env.VITE_API_URL}/Rental`
 
 export const getPendingRentalAsync = async () => {
     try {

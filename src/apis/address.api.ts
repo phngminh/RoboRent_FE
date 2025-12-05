@@ -1,5 +1,6 @@
 import http from '../utils/http'
-const API_URL = 'https://localhost:7249/api/Admin/address'
+const API_URL = `${import.meta.env.VITE_API_URL}/Admin/address`
+
 
 export const getAllProvincesAsync = async () => {
     try {
