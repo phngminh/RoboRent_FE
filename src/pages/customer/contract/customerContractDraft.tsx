@@ -34,7 +34,6 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
           || d.status === 'ChangeRequested'
           || d.status === 'Modified'
           || d.status === 'Active'
-          || d.status === 'Rejected'
         )
       if (pendingDraft) {
         setDraft(pendingDraft)
@@ -163,21 +162,21 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       <div className='flex justify-end gap-3 mr-36'>
         <Button 
           onClick={() => setRequestOpen(true)} 
-          disabled={draft.status != 'PendingCustomerSignature' && draft.status != 'Modified'}
+          disabled={draft.status != 'PendingCustomerSignature'}
           className='bg-gray-100 border border-gray-400 text-black hover:bg-gray-200 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
           Request Changes
         </Button>
         <Button 
           onClick={() => setRejectOpen(true)} 
-          disabled={draft.status != 'PendingCustomerSignature' && draft.status != 'Modified'}
+          disabled={draft.status != 'PendingCustomerSignature'}
           className='bg-red-500 text-white hover:bg-red-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
           Reject
         </Button>
         <Button 
           onClick={() => setApproveOpen(true)} 
-          disabled={draft.status != 'PendingCustomerSignature' && draft.status != 'Modified'}
+          disabled={draft.status != 'PendingCustomerSignature'}
           className='bg-indigo-600 hover:bg-indigo-700 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
           Sign

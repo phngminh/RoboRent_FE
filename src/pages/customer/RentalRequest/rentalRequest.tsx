@@ -566,9 +566,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                     const hasDrafts = drafts.length > 0 
                       && drafts.some(d => d.status === 'PendingCustomerSignature' 
                                       || d.status === 'ChangeRequested'
-                                      || d.status === 'Modified'
-                                      || d.status === 'Active'
-                                      || d.status === 'Rejected')
+                                      || d.status === 'Active')
                     const canReport = drafts.length > 0 && drafts.some(d => d.status === 'Active')
 
                     return (

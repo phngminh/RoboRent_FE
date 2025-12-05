@@ -85,8 +85,8 @@ export const customerRejects = (id: number, reason: string) => {
   return http.patch(`/ContractDrafts/${id}/customer-reject`, { reason })
 }
 
-export const customerRequestChange = (id: number, requests: string) => {
-  return http.patch(`/ContractDrafts/${id}/customer-request-change`, { requests })
+export const customerRequestChange = (id: number, comment: string) => {
+  return http.patch(`/ContractDrafts/${id}/customer-request-change`, { comment })
 }
 
 export interface CreateContractDraftPayload {

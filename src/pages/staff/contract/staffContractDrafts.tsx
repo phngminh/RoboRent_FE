@@ -304,7 +304,7 @@ const StaffContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
                     </TableRow>
                   ) : (
                     paginatedDrafts.map((draft) => {
-                      const canSend = draft.status === 'Draft'
+                      const canSend = draft.status === 'Draft' || draft.status === 'Modified'
 
                       return (
                         <TableRow key={draft.id} className='hover:bg-gray-50'>

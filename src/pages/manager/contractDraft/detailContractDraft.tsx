@@ -176,11 +176,13 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
                     <SelectItem value='Expired'>Expired</SelectItem>
                     <SelectItem value='Active'>Active</SelectItem>
                     <SelectItem value='Rejected'>Rejected</SelectItem>
+                    <SelectItem value='RejectedByManager'>RejectedByManager</SelectItem>
+                    <SelectItem value='RejectedByCustomer'>RejectedByCustomer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className='block text-xs font-medium text-gray-600 mb-1'>Comments from Staff</label>
+                <label className='block text-xs font-medium text-gray-600 mb-1'>Comments</label>
                 <Textarea value={draft.comments || 'N/A'} readOnly className='bg-white border-gray-300 min-h-[100px]' />
               </div>
             </div>
