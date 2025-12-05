@@ -1,5 +1,5 @@
-import { Eye, MessageCircle, Send, Search, Flag } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import { Eye, MessageCircle, Send, Search, Flag, X, Upload } from 'lucide-react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import path from '../../constants/path'
 import { cn } from '../../lib/utils'
@@ -21,7 +21,7 @@ interface RentalRequestsContentProps {
 }
 
 interface FormData {
-  draftClausesId: number,
+  draftClausesId: number | null,
   accusedId: number,
   description: string,
   evidencePath: string
@@ -31,8 +31,8 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
   const navigate = useNavigate()
   const { user } = useAuth()
   const staffId = user?.accountId
-  const [allItems, setAllItems] = useState<any[]>([])
-  const [filteredItems, setFilteredItems] = useState<any[]>([])
+  const [allItems, setAllItems] = useState<RentalRequestResponse[]>([])
+  const [filteredItems, setFilteredItems] = useState<RentalRequestResponse[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize] = useState(5)
   const [search, setSearch] = useState('')
@@ -48,18 +48,20 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
   const [viewMode, setViewMode] = useState<'pending' | 'received' | 'canceled'>('pending')
 
   const [reportOpen, setReportOpen] = useState(false)
-  const [selectedClauseId, setSelectedClauseId] = useState<number | null>(null)
+  const [selectedClause, setSelectedClause] = useState<DraftClausesResponse | null>(null)
   const [clauses, setClauses] = useState<DraftClausesResponse[]>([])
   const [selectedRental, setSelectedRental] = useState<RentalRequestResponse>({} as RentalRequestResponse)
   const [draftsMap, setDraftsMap] = useState<Record<number, ContractDraftResponse[]>>({})
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
-  const [rawEvidenceFile, setRawEvidenceFile] = useState<File | null>(null)
+  const [rawEvidenceFiles, setRawEvidenceFiles] = useState<File[]>([])
   const [formData, setFormData] = useState<FormData>({
-    draftClausesId: 0,
+    draftClausesId: null,
     accusedId: 0,
     description: '',
     evidencePath: ''
   })
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
 const fetchData = async () => {
   try {
@@ -73,9 +75,7 @@ const fetchData = async () => {
       res = await getReceivedRentalByStaffIdAsync(staffId)
     }
     else if (viewMode === 'canceled') {
-      res = await getReceivedRentalByStaffIdAsync(staffId) 
-      // 🔥 KEEP ALL — do NOT filter here
-      // filtering handled below
+      res = await getReceivedRentalByStaffIdAsync(staffId)
     }
 
     setAllItems(res.data ?? [])
@@ -110,15 +110,13 @@ const fetchData = async () => {
   const filterData = () => {
     let filtered = [...allItems]
 
-// Auto-hide canceled when in RECEIVED view
-if (viewMode === 'received') {
-  filtered = filtered.filter(r => r.status !== 'Canceled')
-}
+    if (viewMode === 'received') {
+      filtered = filtered.filter(r => r.status !== 'Canceled')
+    }
 
-// Show ONLY canceled when in canceled view
-if (viewMode === 'canceled') {
-  filtered = filtered.filter(r => r.status === 'Canceled')
-}
+    if (viewMode === 'canceled') {
+      filtered = filtered.filter(r => r.status === 'Canceled')
+    }
 
     if (appliedStatus !== 'All Status') {
       filtered = filtered.filter((r) => r.status === appliedStatus)
@@ -169,7 +167,7 @@ if (viewMode === 'canceled') {
       setReceiving(id)
 
       if (!staffId) {
-        alert("Staff ID missing!")
+        alert('Staff ID missing!')
         return
       }
 
@@ -191,7 +189,7 @@ if (viewMode === 'canceled') {
     }
   }
 
-  const handleOpenReport = async (rental: any) => {
+  const handleOpenReport = async (rental: RentalRequestResponse) => {
     setSelectedRental(rental)
     clearFields()
     try {
@@ -217,14 +215,23 @@ if (viewMode === 'canceled') {
   }
 
   const clearFields = () => {
-    setFormData({ ...formData, description: '', draftClausesId: 0, evidencePath: '' })
-    setSelectedClauseId(null)
+    setFormData({
+      draftClausesId: 0,
+      accusedId: 0,
+      description: '',
+      evidencePath: '',
+    })
+    setSelectedClause(null)
     setClauses([])
+    setErrors({})
+    setRawEvidenceFiles([])
   }
 
-  const handleDraftClauseChange = (clauseId: number) => {
-    setSelectedClauseId(clauseId)
-    setFormData((prev) => ({ ...prev, draftClausesId: clauseId }))
+  const handleClauseChange = (clauseIdStr: string) => {
+    const clauseId = Number(clauseIdStr)
+    const clause = clauses.find(c => c.id === clauseId)
+    setSelectedClause(clause || null)
+    setFormData((prev) => ({ ...prev, draftClausesId: clause ? clauseId : null }))
     if (errors.draftClausesId) {
       setErrors((prev) => {
         const { draftClausesId, ...rest } = prev
@@ -244,7 +251,7 @@ if (viewMode === 'canceled') {
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {}
     
-    if (!selectedClauseId) {
+    if (!selectedClause) {
       newErrors.draftClausesId = 'Draft Clause is required!'
     }
 
@@ -272,24 +279,25 @@ if (viewMode === 'canceled') {
   }
 
   const handleSendReport = async () => {
-    if (validateForm() === false) {
+    if (!validateForm()) {
       return
     }
     try {
       setLoading(true)
 
       let evidencePath = ''
-      if (rawEvidenceFile) {
-        const uploadResult = await uploadToCloudinary(rawEvidenceFile)
-        evidencePath = uploadResult.secure_url
-        console.log('Uploaded evidence path:', evidencePath)
+      if (rawEvidenceFiles.length > 0) {
+        const uploadPromises = rawEvidenceFiles.map(uploadToCloudinary)
+        const uploadResults = await Promise.all(uploadPromises)
+        evidencePath = uploadResults.map(result => result.secure_url).join(';')
+        console.log('Uploaded evidence paths:', evidencePath)
       }
 
       const payload: CreateContractReportPayload = {
-        draftClausesId: selectedClauseId!,
+        draftClausesId: selectedClause!.id,
         accusedId: selectedRental.accountId,
         description: formData.description,
-        evidencePath: evidencePath
+        evidencePath
       }
       await sendReport(payload)
       toast.success('Report sent successfully')
@@ -301,6 +309,24 @@ if (viewMode === 'canceled') {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files || [])
+    const totalFiles = rawEvidenceFiles.length + newFiles.length
+    const maxFiles = 5
+
+    if (totalFiles > maxFiles) {
+      toast.error(`Maximum ${maxFiles} files allowed. You are trying to add ${totalFiles} files.`)
+      return
+    }
+
+    setRawEvidenceFiles(prev => [...prev, ...newFiles])
+    e.target.value = ''
+  }
+
+  const removeFile = (indexToRemove: number) => {
+    setRawEvidenceFiles(prev => prev.filter((_, index) => index !== indexToRemove))
   }
 
   const decodeHtml = (html: string) => {
@@ -315,58 +341,55 @@ if (viewMode === 'canceled') {
 
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
+      <div className='flex justify-center gap-3'>
+        {/* Pending */}
+        <button
+          onClick={() => {
+            setViewMode('pending')
+            setStatusFilter('All Status')
+            setAppliedStatus('All Status')
+          }}
+          className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
+            viewMode === 'pending' && appliedStatus !== 'Canceled'
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+          }`}
+        >
+          Pending
+        </button>
 
-{/* SWITCH BUTTONS */}
-<div className="flex justify-center gap-3">
+        {/* Received */}
+        <button
+          onClick={() => {
+            setViewMode('received')
+            setStatusFilter('All Status')
+            setAppliedStatus('All Status')
+          }}
+          className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
+            viewMode === 'received' && appliedStatus !== 'Canceled'
+              ? 'bg-green-600 text-white border-green-600'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+          }`}
+        >
+          Received
+        </button>
 
-  {/* Pending */}
-  <button
-onClick={() => {
-  setViewMode('pending')
-  setStatusFilter('All Status')
-  setAppliedStatus('All Status')
-}}
-    className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
-      viewMode === 'pending' && appliedStatus !== 'Canceled'
-        ? 'bg-blue-600 text-white border-blue-600'
-        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-    }`}
-  >
-    Pending
-  </button>
-
-  {/* Received */}
-  <button
-    onClick={() => {
-      setViewMode('received')
-      setStatusFilter('All Status')
-      setAppliedStatus('All Status')
-    }}
-    className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
-      viewMode === 'received' && appliedStatus !== 'Canceled'
-        ? 'bg-green-600 text-white border-green-600'
-        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-    }`}
-  >
-    Received
-  </button>
-
-  {/* NEW: Canceled Only Filter */}
-  <button
-onClick={() => {
-  setViewMode('canceled')
-  setStatusFilter('Canceled')
-  setAppliedStatus('Canceled')
-}}
-    className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
-      appliedStatus === 'Canceled'
-        ? 'bg-red-600 text-white border-red-600'
-        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-    }`}
-  >
-    Canceled
-  </button>
-</div>
+        {/* NEW: Canceled Only Filter */}
+        <button
+          onClick={() => {
+            setViewMode('canceled')
+            setStatusFilter('Canceled')
+            setAppliedStatus('Canceled')
+          }}
+          className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
+            appliedStatus === 'Canceled'
+              ? 'bg-red-600 text-white border-red-600'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+          }`}
+        >
+          Canceled
+        </button>
+      </div>
 
       {/* FILTER BOX */}
       <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
@@ -477,7 +500,7 @@ onClick={() => {
                   <td colSpan={7} className='text-center py-6 text-gray-500'>No requests found.</td>
                 </tr>
               ) : (
-                paginatedItems.map((request: any) => {
+                paginatedItems.map((request: RentalRequestResponse) => {
                   const drafts = draftsMap[request.id] ?? []
                   const canReport = drafts.length > 0 && drafts.some(d => d.status === 'Active')
 
@@ -527,7 +550,7 @@ onClick={() => {
                           {/* Chat button only in RECEIVED view */}
                           {viewMode === 'received' && (
                             <button
-                              onClick={() => navigate(path.STAFF_CHAT.replace(':rentalId', String(request.id)))} // Adjust path if needed
+                              onClick={() => navigate(path.STAFF_CHAT.replace(':rentalId', String(request.id)))}
                               className='px-3 py-1 rounded-lg bg-purple-600 text-white hover:bg-purple-700 flex items-center space-x-1'
                             >
                               <MessageCircle size={14} />
@@ -602,9 +625,7 @@ onClick={() => {
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setReportOpen(false)
-            setFormData({ ...formData, description: '', draftClausesId: 0, evidencePath: '' })
-            setSelectedClauseId(null)
-            setClauses([])
+            clearFields()
           }
         }}
       >
@@ -619,7 +640,10 @@ onClick={() => {
             <div className='space-y-4 py-4'>
               <div className='space-y-2'>
                 <Label htmlFor='clause'>Select Clause</Label>
-                <Select value={formData.draftClausesId.toString()} onValueChange={v => handleDraftClauseChange(Number(v))}>
+                <Select 
+                  value={selectedClause?.id.toString() || ''} 
+                  onValueChange={handleClauseChange}
+                >
                   <SelectTrigger id='clause' className='w-full'>
                     <SelectValue placeholder='Select a clause to report' />
                   </SelectTrigger>
@@ -647,15 +671,43 @@ onClick={() => {
                 {errors.description && <ErrorMessage message={errors.description} />}
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='evidence'>Evidence</Label>
+                <Label htmlFor='evidence'>Evidence (up to 5 files: images/videos)</Label>
                 <div className='flex flex-col space-y-2'>
                   <input 
+                    ref={fileInputRef}
                     id='evidence'
                     type='file'
-                    accept='image/*,video/*,application/pdf'
-                    onChange={(e) => setRawEvidenceFile(e.target.files?.[0] || null)}
-                    className='w-full'
+                    multiple
+                    accept='image/*,video/*'
+                    onChange={handleFileChange}
+                    className='absolute opacity-0 w-0 h-0 pointer-events-none'
                   />
+                  
+                  <button
+                    type='button'
+                    onClick={() => fileInputRef.current?.click()}
+                    className='flex items-center justify-center w-full px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 text-gray-700 cursor-pointer transition-colors'
+                  >
+                    <Upload className='mr-2 h-4 w-4' />
+                    {rawEvidenceFiles.length === 0 ? 'Upload your evidences...' : `Selected ${rawEvidenceFiles.length}/5 files`}
+                  </button>
+                  
+                  {rawEvidenceFiles.length > 0 && (
+                    <div className='space-y-1'>
+                      <label className='text-sm font-medium text-gray-700'>Selected files:</label>
+                      {rawEvidenceFiles.map((file, index) => (
+                        <div key={index} className='flex justify-between items-center p-2 bg-gray-100 rounded border'>
+                          <span className='text-sm text-gray-900 truncate flex-1'>{file.name}</span>
+                          <button 
+                            onClick={() => removeFile(index)} 
+                            className='text-red-500 hover:text-red-700 text-lg leading-none ml-2'
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -671,7 +723,7 @@ onClick={() => {
             <Button 
               type='button'
               onClick={handleSendReport} 
-              disabled={!formData.draftClausesId || !formData.description.trim() || loading}
+              disabled={!selectedClause || !formData.description.trim() || loading}
               className={cn('bg-red-600 hover:bg-red-700 disabled:bg-gray-400')}
             >
               {loading ? 'Sending...' : 'Send Report'}

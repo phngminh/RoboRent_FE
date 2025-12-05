@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { cn } from '../../../lib/utils'
 import { createClause, getAllTemplates } from '../../../apis/contractTemplates.api'
 import { toast } from 'react-toastify'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import FormInput from '../../../components/formInput'
 
 interface CreateTemplateClauseProps {
   open: boolean
@@ -39,7 +38,6 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
     isEditable: false,
   })
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
-  const quillRef = useRef<ReactQuill>(null)
 
   const fetchTemplates = async () => {
     try {
@@ -58,54 +56,6 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
   useEffect(() => {
     fetchTemplates()
   }, [])
-
-  useEffect(() => {
-    if (!open) return
-    const quill = quillRef.current?.getEditor()
-    if (!quill) return
-
-    const resize = () => {
-      const container = (quill as any).container as HTMLDivElement
-      if (container) {
-        const scrollHeight = container.scrollHeight
-        container.style.minHeight = '150px'
-        container.style.height = scrollHeight < 150 ? '150px' : `${scrollHeight}px`
-      }
-    }
-
-    const handlePaste = (event: ClipboardEvent) => {
-      const items = event.clipboardData?.items
-      if (items) {
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].type.startsWith('image/')) {
-            event.preventDefault()
-            return false
-          }
-        }
-      }
-    }
-
-    quill.root.addEventListener('paste', handlePaste)
-    resize()
-    quill.on('text-change', resize)
-
-    return () => {
-      quill.root.removeEventListener('paste', handlePaste)
-      quill.off('text-change', resize)
-    }
-  }, [open])
-
-  useEffect(() => {
-    const quill = quillRef.current?.getEditor()
-    if (!quill) return
-
-    const container = (quill as any).container as HTMLDivElement
-    if (container) {
-      const borderColor = errors.body ? 'hsl(var(--destructive))' : 'hsl(var(--border))'
-      container.style.border = `1px solid ${borderColor}`
-      container.style.borderRadius = '0.375rem'
-    }
-  }, [errors.body])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -168,9 +118,10 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
 
       resetForm()
       onSuccess()
-    } catch (err) {
+    } catch (err : any) {
       console.error(err)
-      toast.error('Failed to create clause!')
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
     }
   }
 
@@ -218,9 +169,12 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
               <Label htmlFor='contractTemplateId'>Template</Label>
-              <Select value={formData.contractTemplateId.toString()} onValueChange={handleTemplateChange}>
-                <SelectTrigger className={cn('w-full', errors.contractTemplateId && 'border-destructive')}>
-                  <SelectValue placeholder='Select Template' />
+              <Select 
+                value={formData.contractTemplateId ? formData.contractTemplateId.toString() : ''}
+                onValueChange={handleTemplateChange}
+              >
+                <SelectTrigger id='contractTemplateId' className='w-full'>
+                  <SelectValue placeholder='Select a template' />
                 </SelectTrigger>
                 <SelectContent>
                   {templates.length === 0 ? (
@@ -261,17 +215,9 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
                   flexDirection: 'column'
                 }}
               >
-                <ReactQuill
-                  ref={quillRef}
-                  theme='snow'
+                <FormInput
                   value={formData.body}
                   onChange={handleQuillChange}
-                  placeholder='Enter the content of the clause here...'
-                  style={{
-                    minHeight: '150px',
-                    height: 'auto',
-                    overflow: 'visible'
-                  }}
                 />
               </div>
               {errors.body && <ErrorMessage message={errors.body} />}

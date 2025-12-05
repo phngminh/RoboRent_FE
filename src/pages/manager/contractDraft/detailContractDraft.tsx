@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
 import { ArrowLeft, CheckCircle, Eye, XCircle } from 'lucide-react'
 import { getDraftById, managerRejects, managerSigns, type ContractDraftResponse } from '../../../apis/contractDraft.api'
-import { getClausesByTemplate, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
 import { getRequestById, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
 import { useParams } from 'react-router-dom'
 import ViewContractDraft from './fullContractDraft'
+import DetailTemplateClause from '../contract/detailClause'
 import { toast } from 'react-toastify'
+import { getDraftsByContractId, type DraftClausesResponse } from '../../../apis/draftClause.api'
 
 interface DetailContractDraftProps {
   onBack: () => void
@@ -22,7 +23,7 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
   const draftId = draftIdString ? parseInt(draftIdString, 10) : 0
   const [draft, setDraft] = useState<ContractDraftResponse | null>(null)
   const [rental, setRental] = useState<RentalRequestResponse | null>(null)
-  const [clauses, setClauses] = useState<TemplateClauseResponse[]>([])
+  const [clauses, setClauses] = useState<DraftClausesResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isViewModalVisible, setIsViewModalVisible] = useState(false)
@@ -30,6 +31,7 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
   const [rejectOpen, setRejectOpen] = useState(false)
   const [signature, setSignature] = useState('')
   const [reason, setReason] = useState('')
+  const [selectedClause, setSelectedClause] = useState<DraftClausesResponse | null>(null)
 
   const fetchDraft = async () => {
     try {
@@ -37,12 +39,10 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
       const draftData = await getDraftById(draftId)
       if (draftData) {
         setDraft(draftData)
-        if (draftData.contractTemplatesId) {
-          fetchClauses(draftData.contractTemplatesId)
-        }
         if (draftData.rentalId) {
           fetchRental(draftData.rentalId)
         }
+        fetchClauses(draftData.id)
       } else {
         setError('Failed to load draft')
       }
@@ -54,9 +54,9 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
     }
   }
 
-  const fetchClauses = async (templateId: number) => {
+  const fetchClauses = async (draftId: number) => {
     try {
-      const clauses = await getClausesByTemplate(templateId)
+      const clauses = await getDraftsByContractId(draftId)
       setClauses(clauses)
     } catch (err) {
       console.error('Failed to load clauses', err)
@@ -172,14 +172,17 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
                     <SelectItem value='PendingManagerSignature'>PendingManagerSignature</SelectItem>
                     <SelectItem value='PendingCustomerSignature'>PendingCustomerSignature</SelectItem>
                     <SelectItem value='ChangeRequested'>ChangeRequested</SelectItem>
+                    <SelectItem value='Modified'>Modified</SelectItem>
                     <SelectItem value='Expired'>Expired</SelectItem>
                     <SelectItem value='Active'>Active</SelectItem>
                     <SelectItem value='Rejected'>Rejected</SelectItem>
+                    <SelectItem value='RejectedByManager'>RejectedByManager</SelectItem>
+                    <SelectItem value='RejectedByCustomer'>RejectedByCustomer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className='block text-xs font-medium text-gray-600 mb-1'>Comments from Staff</label>
+                <label className='block text-xs font-medium text-gray-600 mb-1'>Comments</label>
                 <Textarea value={draft.comments || 'N/A'} readOnly className='bg-white border-gray-300 min-h-[100px]' />
               </div>
             </div>
@@ -228,9 +231,15 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
             {clauses.map((clause) => {
               return (
-                <Card key={clause.id}
-                  className='p-4 border border-gray-200 hover:shadow-md transition-shadow h-48 flex flex-col overflow-hidden space-y-2'
+                <Card 
+                  key={clause.id}
+                  className='relative p-4 border border-gray-200 group hover:shadow-lg hover:bg-gray-50 transition-all duration-200 h-48 flex flex-col overflow-hidden space-y-2 cursor-pointer'
+                  onClick={() => setSelectedClause(clause)}
                 >
+                  <div className='absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 bg-black/20 group-hover:bg-black/10'>
+                    <Eye size={32} className='text-white drop-shadow-lg' />
+                  </div>
+
                   <h4 className='font-semibold text-gray-900 text-sm leading-tight'>
                     {decodeHtml(clause.title)}
                   </h4>
@@ -345,6 +354,12 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
         open={isViewModalVisible}
         onClose={() => setIsViewModalVisible(false)}
         draft={draft}
+      />
+
+      <DetailTemplateClause
+        open={!!selectedClause}
+        onClose={() => setSelectedClause(null)}
+        clause={selectedClause}
       />
     </div>
   )

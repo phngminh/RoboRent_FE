@@ -21,7 +21,7 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
   const [requestOpen, setRequestOpen] = useState(false)
   const [approveOpen, setApproveOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
-  const [requests, setRequests] = useState('')
+  const [comment, setComment] = useState('')
   const [signature, setSignature] = useState('')
   const [reason, setReason] = useState('')
 
@@ -32,8 +32,8 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       const pendingDraft = draftData
         .find(d => d.status === 'PendingCustomerSignature' 
           || d.status === 'ChangeRequested'
+          || d.status === 'Modified'
           || d.status === 'Active'
-          || d.status === 'Rejected'
         )
       if (pendingDraft) {
         setDraft(pendingDraft)
@@ -63,14 +63,15 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       return
     }
     try {
-      await customerRequestChange(draft.id, requests)
-      toast.success('Approved successfully!')
+      await customerRequestChange(draft.id, comment)
+      toast.success('Requested successfully!')
       setApproveOpen(false)
       setSignature('')
       onBack()
-    } catch (err) {
-      console.error('Approval failed', err)
-      toast.error('Approval failed')
+    } catch (err : any) {
+      console.error(err)
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
     }
   }
 
@@ -85,9 +86,10 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       setApproveOpen(false)
       setSignature('')
       onBack()
-    } catch (err) {
-      console.error('Approval failed', err)
-      toast.error('Approval failed')
+    } catch (err : any) {
+      console.error(err)
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
     }
   }
 
@@ -102,9 +104,10 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       setRejectOpen(false)
       setReason('')
       onBack()
-    } catch (err) {
-      console.log('err:', err)
-      toast.error('Rejection failed')
+    } catch (err : any) {
+      console.error(err)
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
     }
   }
 
@@ -159,21 +162,21 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       <div className='flex justify-end gap-3 mr-36'>
         <Button 
           onClick={() => setRequestOpen(true)} 
-          disabled={draft.status !== 'PendingCustomerSignature' && draft.status !== 'ChangeRequested'}
+          disabled={draft.status != 'PendingCustomerSignature'}
           className='bg-gray-100 border border-gray-400 text-black hover:bg-gray-200 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
           Request Changes
         </Button>
         <Button 
           onClick={() => setRejectOpen(true)} 
-          disabled={draft.status !== 'PendingCustomerSignature' && draft.status !== 'ChangeRequested'}
+          disabled={draft.status != 'PendingCustomerSignature'}
           className='bg-red-500 text-white hover:bg-red-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
           Reject
         </Button>
         <Button 
           onClick={() => setApproveOpen(true)} 
-          disabled={draft.status !== 'PendingCustomerSignature' && draft.status !== 'ChangeRequested'}
+          disabled={draft.status != 'PendingCustomerSignature'}
           className='bg-indigo-600 hover:bg-indigo-700 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
           Sign
@@ -191,16 +194,16 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       >
         <DialogContent className='sm:max-w-[425px]'>
           <DialogHeader>
-            <DialogTitle>Enter Your Requests</DialogTitle>
+            <DialogTitle>Enter Your Comment</DialogTitle>
             <DialogDescription>
               Please provide the changes you would like to request.
             </DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4 -mt-4'>
             <Textarea
-              placeholder='Enter your request...'
-              value={requests}
-              onChange={(e) => setRequests(e.target.value)}
+              placeholder='Enter your comment...'
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
               className='min-h-[100px]'
             />
           </div>
@@ -208,7 +211,7 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
             <Button type='submit' variant='outline' onClick={() => setRequestOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmRequest} disabled={!requests.trim()}>
+            <Button onClick={handleConfirmRequest} disabled={!comment.trim()}>
               Confirm
             </Button>
           </DialogFooter>

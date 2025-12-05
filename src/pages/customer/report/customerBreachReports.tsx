@@ -4,18 +4,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from '../../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Button } from '../../../components/ui/button'
-import { Search, SettingsIcon } from 'lucide-react'
-import { getDraftsByManager, type ContractDraftResponse } from '../../../apis/contractDraft.api'
-import { useAuth } from '../../../contexts/AuthContext'
+import { Search, Eye } from 'lucide-react'
+import { getMyReports, type ContractReportResponse } from '../../../apis/contractReport.api'
 
-interface ContractDraftsProps {
-  onView: (draftId: number) => void
+interface CustomerBreachReportsProps {
+  onView: (reportId: number) => void
 }
 
-const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
-  const { user } = useAuth()
-  const [drafts, setDrafts] = useState<ContractDraftResponse[]>([])
-  const [filteredDrafts, setFilteredDrafts] = useState<ContractDraftResponse[]>([])
+const CustomerBreachReports: React.FC<CustomerBreachReportsProps> = ({ onView }) => {
+  const [reports, setReports] = useState<ContractReportResponse[]>([])
+  const [filteredReports, setFilteredReports] = useState<ContractReportResponse[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [appliedStatus, setAppliedStatus] = useState('All Status')
@@ -23,67 +21,65 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
   const [currentPage, setCurrentPage] = useState(1)
 
   const pageSize = 5
-  const totalPages = Math.ceil(filteredDrafts.length / pageSize)
-  const paginatedDrafts = filteredDrafts.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const totalPages = Math.ceil(filteredReports.length / pageSize)
+  const paginatedReports = filteredReports.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
-  const fetchDrafts = async () => {
+  const fetchReports = async () => {
     try {
       setLoading(true)
-      const draftsData = await getDraftsByManager(user?.accountId)
-      console.log('Fetched drafts:', draftsData)
-      setDrafts(draftsData)
-      setFilteredDrafts(draftsData)
+      const reportsData = await getMyReports()
+      console.log('Fetched reports:', reportsData)
+      setReports(reportsData)
+      setFilteredReports(reportsData)
     } catch (err) {
-      console.error('Failed to load drafts', err)
-      setDrafts([])
-      setFilteredDrafts([])
+      console.error('Failed to load reports', err)
+      setReports([])
+      setFilteredReports([])
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchDrafts()
+    fetchReports()
   }, [])
 
   useEffect(() => {
-    let filtered = [...drafts]
+    let filtered = [...reports]
     if (search.trim()) {
       const searchTerm = search.toLowerCase()
-      filtered = filtered.filter((draft) =>
-        draft.title.toLowerCase().includes(searchTerm)
+      filtered = filtered.filter((report) =>
+        report.draftClauseTitle.toLowerCase().includes(searchTerm)
       )
     }
 
     if (appliedStatus !== 'All Status') {
-      filtered = filtered.filter((draft) => draft.status === appliedStatus)
+      filtered = filtered.filter((report) => report.status === appliedStatus)
     }
 
-    setFilteredDrafts(filtered)
+    setFilteredReports(filtered)
     setCurrentPage(1)
-  }, [drafts, search, appliedStatus])
+  }, [reports, search, appliedStatus])
 
-  const statusOptions = ['All Status', 'Draft', 'PendingManagerSignature', 'PendingCustomerSignature', 'ChangeRequested', 'Modified', 'Expired', 'Active', 'Rejected']
+  const statusOptions = ['All Status', 'Pending', 'Rejected', 'Resolved']
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Draft':
-        return 'bg-gray-100 text-gray-800'
-      case 'ChangeRequested':
+      case 'Pending':
         return 'bg-yellow-100 text-yellow-800'
-      case 'Active':
-        return 'bg-green-100 text-green-800'
       case 'Rejected':
         return 'bg-red-100 text-red-800'
-      case 'RejectedByCustomer':
-        return 'bg-red-100 text-red-800'
-      case 'RejectedByManager':
-        return 'bg-red-100 text-red-800'
-      case 'Expired':
-        return 'bg-yellow-100 text-yellow-800'
+      case 'Resolved':
+        return 'bg-green-100 text-green-800'
       default:
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  const decodeHtml = (html: string) => {
+    const txt = document.createElement('textarea')
+    txt.innerHTML = html
+    return txt.value
   }
 
   const handlePageChange = (page: number) => {
@@ -105,39 +101,28 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
 
   const columns = [
     {
-      key: 'title',
+      key: 'id',
+      title: 'ID',
+      accessor: 'id' as keyof ContractReportResponse,
+      className: 'w-[100px] whitespace-nowrap',
+    },
+     {
+      key: 'draftClauseTitle',
       title: 'Title',
-      accessor: 'title' as keyof ContractDraftResponse,
-      className: 'whitespace-nowrap',
+      accessor: 'draftClauseTitle' as keyof ContractReportResponse,
+      className: 'w-[100px] whitespace-nowrap',
     },
     {
-      key: 'comments',
-      title: 'Comments',
-      accessor: 'comments' as keyof ContractDraftResponse,
-      className: 'max-w-[350px] truncate',
-    },
-    {
-      key: 'rentalEventName',
-      title: 'Event Name',
-      accessor: 'rentalEventName' as keyof ContractDraftResponse,
-      className: 'max-w-md',
-    },
-    {
-      key: 'status',
-      title: 'Status',
+      key: 'accusedName',
+      title: 'Accused Name',
+      accessor: 'accusedName' as keyof ContractReportResponse,
       className: 'w-[120px] whitespace-nowrap',
     },
     {
-      key: 'contractTemplateTitle',
-      title: 'Contract Template',
-      accessor: 'contractTemplateTitle' as keyof ContractDraftResponse,
-      className: 'w-[120px] whitespace-nowrap',
-    },
-    {
-      key: 'staffName',
-      title: 'Staff',
-      accessor: 'staffName' as keyof ContractDraftResponse,
-      className: 'w-[120px] whitespace-nowrap',
+      key: 'description',
+      title: 'Description',
+      accessor: 'description' as keyof ContractReportResponse,
+      className: 'w-[80px] whitespace-nowrap',
     },
     {
       key: 'createdAt',
@@ -145,8 +130,20 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
       className: 'w-[120px] whitespace-nowrap',
     },
     {
-      key: 'updatedAt',
-      title: 'Updated At',
+      key: 'reporterName',
+      title: 'Reporter Name',
+      accessor: 'reporterName' as keyof ContractReportResponse,
+      className: 'w-[120px] whitespace-nowrap',
+    },
+    {
+      key: 'reportRole',
+      title: 'Reporter Role',
+      accessor: 'reportRole' as keyof ContractReportResponse,
+      className: 'max-w-md whitespace-nowrap',
+    },
+    {
+      key: 'status',
+      title: 'Status',
       className: 'w-[120px] whitespace-nowrap',
     },
     {
@@ -160,7 +157,7 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
     <div className='space-y-6 bg-gray-50 p-6'>
       <Card className='rounded-xl shadow-sm border border-gray-100'>
         <CardHeader className='pb-0'>
-          <h2 className='text-lg font-semibold text-gray-800 text-center mb-3'>Filter Drafts</h2>
+          <h2 className='text-lg font-semibold text-gray-800 text-center mb-3'>Filter Reports</h2>
         </CardHeader>
         <CardContent className='p-6 pt-0'>
           <div className='flex flex-col gap-4 md:flex-row md:items-end md:gap-4'>
@@ -186,7 +183,7 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
                 <div className='relative'>
                   <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
                   <Input
-                    placeholder='Enter draft title...'
+                    placeholder='Enter report title...'
                     className='w-full pl-10 pr-4 py-2 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -219,7 +216,7 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
       <Card className='rounded-xl shadow-sm border border-gray-300 relative'>
         <CardHeader className='p-6 border-b border-gray-100 relative'>
           <h2 className='text-xl text-gray-800 font-semibold text-center w-full'>
-            Contract Drafts
+            Breach of Contract Reports
           </h2>
         </CardHeader>
 
@@ -246,42 +243,49 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
                         Loading...
                       </TableCell>
                     </TableRow>
-                  ) : paginatedDrafts.length === 0 ? (
+                  ) : paginatedReports.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={columns.length} className='text-center py-6 text-gray-500 text-sm'>
-                        No drafts found.
+                        No reports found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedDrafts.map((draft) => (
-                      <TableRow key={draft.id} className='hover:bg-gray-50'>
+                    paginatedReports.map((report) => (
+                      <TableRow key={report.id} className='hover:bg-gray-50'>
                         {columns.map((column) => {
                           const cellClass = `px-6 py-4 text-sm text-gray-900 text-center ${column.className || ''}`
                           let content: React.ReactNode
-                          if (column.key === 'comments' || column.key === 'title' || column.key === 'rentalEventName' || column.key === 'contractTemplateTitle') {
-                            content = <span className='max-w-md truncate'>{draft[column.accessor as keyof ContractDraftResponse] || 'N/A'}</span>
+                          if (column.key === 'draftClauseTitle') {
+                            content = decodeHtml(report.draftClauseTitle)
                           } else if (column.key === 'status') {
-                            content = <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(draft.status)}`}>
-                              {draft.status}
+                            content = <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(report.status)}`}>
+                              {report.status}
                             </span>
-                          } else if (column.key === 'createdAt' || column.key === 'updatedAt') {
-                                content = draft[column.key as 'createdAt' | 'updatedAt'] 
-                                    ? new Date(draft[column.key as 'createdAt' | 'updatedAt']).toLocaleDateString()
-                                    : 'N/A'
+                          } else if (column.key === 'createdAt' || column.key === 'reviewedAt') {
+                            content = report[column.key as 'createdAt' | 'reviewedAt'] 
+                                ? new Date(report[column.key as 'createdAt' | 'reviewedAt']).toLocaleDateString()
+                                : 'N/A'
                           } else if (column.key === 'actions') {
                             content = (
                               <div className='flex items-center justify-center space-x-2 text-sm'>
                                 <button
-                                  onClick={() => onView(draft.id)}
+                                  onClick={() => onView(report.id)}
                                   className='flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
                                 >
-                                  <SettingsIcon size={14} />
+                                  <Eye size={14} />
                                   <span>View</span>
                                 </button>
                               </div>
                             )
                           } else {
-                            content = draft[column.accessor as keyof ContractDraftResponse]
+                            const value = report[column.accessor as keyof ContractReportResponse]
+                            if (value instanceof Date) {
+                              content = value.toLocaleDateString()
+                            } else if (value === null || value === undefined) {
+                              content = 'N/A'
+                            } else {
+                              content = String(value)
+                            }
                           }
                           return <TableCell key={column.key} className={cellClass}>{content}</TableCell>
                         })}
@@ -326,7 +330,7 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
               </Button>
             </div>
             <div className='text-sm text-gray-500'>
-              Showing {paginatedDrafts.length} of {filteredDrafts.length} draft{filteredDrafts.length === 1 ? '' : 's'}
+              Showing {paginatedReports.length} of {filteredReports.length} report{filteredReports.length === 1 ? '' : 's'}
             </div>
           </div>
         </CardContent>
@@ -335,4 +339,4 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
   )
 }
 
-export default ContractDrafts
+export default CustomerBreachReports

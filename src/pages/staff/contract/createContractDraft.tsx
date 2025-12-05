@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
-import { Textarea } from '../../../components/ui/textarea'
 import { Label } from '../../../components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { cn } from '../../../lib/utils'
@@ -117,10 +116,6 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
       newErrors.title = 'Title must not exceed 100 characters!'
     }
 
-    if (formData.comments.length > 200) {
-      newErrors.comments = 'Comments must not exceed 200 characters!'
-    }
-
     if (!formData.rentalId) {
       newErrors.rentalId = 'Rental is required!'
     }
@@ -142,19 +137,19 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
     try {
       const payload = {
         title: formData.title,
-        comments: formData.comments,
+        comments: '',
         contractTemplatesId: formData.contractTemplatesId!,
         rentalId: formData.rentalId!,
         managerId: formData.managerId!,
       }
       await createDraft(payload)
       toast.success('Contract draft created successfully!')
-
       resetForm()
       onSuccess()
-    } catch (err) {
+    } catch (err : any) {
       console.error(err)
-      toast.error('Failed to create contract draft!')
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
     }
   }
 
@@ -179,7 +174,7 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
     if (user?.accountId) {
       try {
         const rentalsData = await getReceivedRentalByStaffIdAsync(user.accountId)
-        const filteredRentals = rentalsData.data.filter((rental: RentalRequestResponse) => rental.status === 'AcceptedPriceQuote' || rental.status === 'Rejected')
+        const filteredRentals = rentalsData.data.filter((rental: RentalRequestResponse) => rental.status === 'AcceptedPriceQuote' || rental.status === 'PendingContract')
         setRentals(filteredRentals)
         const templatesData = await getAllTemplates()
         const filteredTemplates = templatesData.filter(t =>t.status === 'Updated' || t.status === 'Initiated')
@@ -230,18 +225,6 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
                 className={cn(errors.title && 'border-destructive')}
               />
               {errors.title && <ErrorMessage message={errors.title} />}
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='comments'>Comments</Label>
-              <Textarea
-                id='comments'
-                name='comments'
-                value={formData.comments}
-                onChange={handleInputChange}
-                placeholder='Enter comments (optional)'
-                className={cn(errors.comments && 'border-destructive')}
-              />
-              {errors.comments && <ErrorMessage message={errors.comments} />}
             </div>
             <div className='space-y-2'>
               <Label htmlFor='rentalId'>Rental</Label>
