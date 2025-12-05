@@ -24,7 +24,6 @@ export const getDraftsByContractId = async (id: number): Promise<DraftClausesRes
   return response.data.success ? response.data.data : []
 }
 
-
 export interface UpdateDraftClausesPayload {
   id: number
   title: string

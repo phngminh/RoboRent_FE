@@ -225,11 +225,11 @@ const Clauses: React.FC = () => {
                 </Select>
               </div>
 
-              <div className='flex-1'>
+              <div className='flex-1 min-w-0'>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>Template</label>
                 <Select value={templateFilter} onValueChange={setTemplateFilter}>
-                  <SelectTrigger className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
-                    <SelectValue placeholder='Select Template' />
+                  <SelectTrigger className='w-full max-w-full truncate px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-0'>
+                    <SelectValue className='max-w-full truncate block' placeholder='Select Template' />
                   </SelectTrigger>
                   <SelectContent>
                     {templates.map((template) => (
@@ -457,7 +457,7 @@ const Clauses: React.FC = () => {
           setIsEditModalVisible(false)
           fetchClauses()
         }}
-        clause={selectedClause}
+        clause={selectedClause!}
       />
 
       <DeleteTemplateClause

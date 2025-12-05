@@ -7,12 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
 import { ArrowLeft, CheckCircle, Eye, XCircle } from 'lucide-react'
 import { getDraftById, managerRejects, managerSigns, type ContractDraftResponse } from '../../../apis/contractDraft.api'
-import { getClausesByTemplate, type TemplateClauseResponse } from '../../../apis/contractTemplates.api'
 import { getRequestById, type RentalRequestResponse } from '../../../apis/rentalRequest.api'
 import { useParams } from 'react-router-dom'
 import ViewContractDraft from './fullContractDraft'
 import DetailTemplateClause from '../contract/detailClause'
 import { toast } from 'react-toastify'
+import { getDraftsByContractId, type DraftClausesResponse } from '../../../apis/draftClause.api'
 
 interface DetailContractDraftProps {
   onBack: () => void
@@ -23,7 +23,7 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
   const draftId = draftIdString ? parseInt(draftIdString, 10) : 0
   const [draft, setDraft] = useState<ContractDraftResponse | null>(null)
   const [rental, setRental] = useState<RentalRequestResponse | null>(null)
-  const [clauses, setClauses] = useState<TemplateClauseResponse[]>([])
+  const [clauses, setClauses] = useState<DraftClausesResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isViewModalVisible, setIsViewModalVisible] = useState(false)
@@ -31,7 +31,7 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
   const [rejectOpen, setRejectOpen] = useState(false)
   const [signature, setSignature] = useState('')
   const [reason, setReason] = useState('')
-  const [selectedClause, setSelectedClause] = useState<TemplateClauseResponse | null>(null)
+  const [selectedClause, setSelectedClause] = useState<DraftClausesResponse | null>(null)
 
   const fetchDraft = async () => {
     try {
@@ -39,12 +39,10 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
       const draftData = await getDraftById(draftId)
       if (draftData) {
         setDraft(draftData)
-        if (draftData.contractTemplatesId) {
-          fetchClauses(draftData.contractTemplatesId)
-        }
         if (draftData.rentalId) {
           fetchRental(draftData.rentalId)
         }
+        fetchClauses(draftData.id)
       } else {
         setError('Failed to load draft')
       }
@@ -56,9 +54,9 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
     }
   }
 
-  const fetchClauses = async (templateId: number) => {
+  const fetchClauses = async (draftId: number) => {
     try {
-      const clauses = await getClausesByTemplate(templateId)
+      const clauses = await getDraftsByContractId(draftId)
       setClauses(clauses)
     } catch (err) {
       console.error('Failed to load clauses', err)
