@@ -4,9 +4,14 @@ import HowItWorks from './howItWorks'
 import RobotCarousel from './robotCarousel'
 import emailImg from  '../../../assets/email.jpg'
 import Layout from '../../../components/layout'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../../contexts/AuthContext'
 
 export default function Home() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const [requireLoginModal, setRequireLoginModal] = useState(false)
   const [activeTab, setActiveTab] = useState('platform')
   const tabs = [
     {
@@ -44,8 +49,8 @@ export default function Home() {
       icon: '🔒'
     },
     {
-      title: 'Maintenance Complexity',
-      description: 'Robot ownership requires specialized technical expertise and ongoing maintenance costs that many businesses cannot sustain.',
+      title: 'Unclear Pricing & Availability',
+      description: 'Clients often receive inconsistent quotes and have no way to check real-time availability, making planning stressful and uncertain.',
       icon: '⚙️'
     }
   ]
@@ -57,6 +62,17 @@ export default function Home() {
       localStorage.removeItem('showVerifyModal')
     }
   }, [])
+
+  const handleSendRequestClick = () => {
+    const isLoggedIn = !!user
+
+    if (!isLoggedIn) {
+      setRequireLoginModal(true)
+      return
+    }
+
+    navigate('/create-request')
+  }
 
   return (
     <Layout>
@@ -140,7 +156,10 @@ export default function Home() {
                   </p>
 
                   <div className='flex justify-end'>
-                    <button className='bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 rounded-full flex items-center gap-2 transition-colors'>
+                    <button 
+                      className='bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 rounded-full flex items-center gap-2 transition-colors'
+                      onClick={handleSendRequestClick}
+                    >
                       Send A Request
                       <ArrowRight className='w-5 h-5' />
                     </button>
@@ -183,16 +202,16 @@ export default function Home() {
 
             <div className='bg-gradient-to-r from-teal-100 via-blue-50 to-teal-100 p-6 rounded-2xl border-2 border-blue-200' data-aos='fade-up'>
               <p className='text-lg text-gray-800 leading-relaxed text-center max-w-4xl mx-auto'>
-                <span className='font-bold text-blue-900'>The robotics industry faces a critical challenge:</span> businesses need advanced automation but cannot afford the upfront costs, maintenance burden, and inflexibility of robot ownership. This creates a barrier to innovation and growth.
+                <span className='font-bold text-blue-900'>The robotics industry faces a critical challenge:</span> businesses need advanced automation but cannot afford the upfront costs, maintenance burden, and inflexibility of robot ownership.
               </p>
             </div>
           </div>
 
-          <div className='max-w-7xl mx-auto p-8 py-12'>
+          <div className='max-w-7xl mx-auto p-8 py-12 pb-32'>
             <div className='flex gap-12 items-start'>
               <div className='flex-1'>
                 <h1 className='font-bold mb-5 leading-[1.1]' data-aos='fade-right'>
-                  <span className='text-teal-400 text-3xl mr-44'>OUR SOLUTION:</span>
+                  <span className='text-teal-400 text-3xl ml-4'>OUR SOLUTION:</span>
                   <br />
                     <span className='text-blue-900 text-[3rem] ml-14'>ROBORENT</span>
                 </h1>
@@ -236,7 +255,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className='w-full bg-white py-14 px-8'>
+          {/* <div className='w-full bg-white py-14 px-8'>
             <div className='bg-gradient-to-br from-teal-200 to-teal-400 py-10 rounded-3xl max-w-2xl mx-auto' data-aos='fade-up'>
               <div className='max-w-xl mx-auto'>
                 <h2 className='text-4xl font-bold font-orbitron mb-2 text-blue-900'>Contact us</h2>
@@ -289,7 +308,7 @@ export default function Home() {
                 </form>
               </div>
             </div>
-          </div>
+          </div> */}
         </section>
 
         <div className='bg-gray-800 py-12 px-6'>
@@ -301,10 +320,16 @@ export default function Home() {
               Join thousands of businesses and individuals who trust RoboRent for their automation needs.
             </p>
             <div className='flex flex-col sm:flex-row gap-3 justify-center'>
-              <button className='bg-green-500 hover:bg-green-600 border-black text-gray-00 font-semibold px-6 py-3 rounded-lg transition-colors'>
+              <a 
+                href='#our-products'
+                className='bg-green-500 hover:bg-green-600 border-black text-gray-00 font-semibold px-6 py-3 rounded-lg transition-colors'
+              >
                 Browse All Robots
-              </button>
-              <button className='bg-gray-200 border-2 border-gray-800 text-gray-900 hover:bg-gray-700 hover:text-white font-semibold px-6 py-3 rounded-lg transition-colors'>
+              </a>
+              <button 
+                className='bg-gray-200 border-2 border-gray-800 text-gray-900 hover:bg-gray-700 hover:text-white font-semibold px-6 py-3 rounded-lg transition-colors'
+                onClick={handleSendRequestClick}
+              >
                 Send A Request
               </button>
             </div>
@@ -340,6 +365,39 @@ export default function Home() {
                 <span className='font-bold text-blue-800'> RoboRent</span>
                 . If you don’t see the email, check your spam folder or 
                 <span className='font-bold hover:underline cursor-pointer'> request a new link.</span>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {requireLoginModal && (
+          <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+            <div className='bg-white p-8 rounded-xl shadow-2xl text-center max-w-xl mx-4 relative'>
+              <button
+                onClick={() => setRequireLoginModal(false)}
+                className='absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors'
+                aria-label='Close'
+              >
+                <X size={24} />
+              </button>
+
+              <div className='flex justify-center'>
+                <img
+                  src='https://media.istockphoto.com/id/1281150061/vector/register-account-submit-access-login-password-username-internet-online-website-concept.jpg?s=612x612&w=0&k=20&c=9HWSuA9IaU4o-CK6fALBS5eaO1ubnsM08EOYwgbwGBo='
+                  alt='Email verification'
+                  className='w-80 h-80 object-contain'
+                  loading='eager'
+                />
+              </div>
+
+              <h2 className='text-2xl font-bold font-orbitron -mt-4 mb-2 text-gray-800'>
+                Login to get started!
+              </h2>
+              
+              <p className='text-gray-600 mb-6 leading-relaxed text-base px-10'>
+                Please login to your account to send rental requests for 
+                <span className='font-bold text-blue-800'> RoboRent</span>
+                . If you don’t have an account yet, please sign up first.
               </p>
             </div>
           </div>

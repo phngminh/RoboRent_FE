@@ -6,9 +6,9 @@ const HowItWorks = () => {
   const slides = [
     {
       icon: Calendar,
-      title: 'Step 1: Inquiry & Selection',
-      description: 'Explore our catalog and get expert guidance to find the perfect robot for your event.',
-      features: ['Access To 100+ Robots', 'Customized Requests'],
+      title: 'Step 1: Activity Selection & Request',
+      description: 'Choose the activity type for your event and submit your rental request with preferred date and time.',
+      features: ['Activity-Based Selection', 'Flexible Scheduling'],
       gradient: 'from-blue-600 to-emerald-500',
       topGradient: 'from-blue-500 via-emerald-400 to-blue-500',
       image: 'https://www.shutterstock.com/image-photo/small-shopping-cart-on-laptop-600nw-2459651035.jpg'
@@ -24,9 +24,9 @@ const HowItWorks = () => {
     },
     {
       icon: CreditCard,
-      title: 'Step 3: Confirmation & Payment',
-      description: 'Secure your booking instantly through verified payment channels.',
-      features: ['Transparent Pricing', 'Refund Guarantee'],
+      title: 'Step 3: Contract Confirmation & Payment',
+      description: 'Review and sign the service contract to secure your booking, followed by safe and verified payment.',
+      features: ['Digital Contract', 'Transparent Pricing'],
       gradient: 'from-blue-600 to-emerald-500',
       topGradient: 'from-blue-500 via-emerald-400 to-blue-500',
       image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&h=600&fit=crop'
