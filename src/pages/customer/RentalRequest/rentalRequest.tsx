@@ -177,7 +177,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
       setErrors({})
     }
   }
-  
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {}
@@ -330,7 +329,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   const handleCancelRental = async (id: number) => {
     try {
       setLoading(true)
-      const res = await customerCancelRentalAsync(id)
+      await customerCancelRentalAsync(id)
       await fetchData()
     } catch (err: any) {
       console.error('Error cancel rental:', err)
@@ -343,7 +342,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   const handleDeleteRental = async (id: number) => {
     try {
       setLoading(true)
-      const res = await customerDeleteRentalAsync(id)
+      await customerDeleteRentalAsync(id)
       await fetchData()
     } catch (err: any) {
       console.error('Error delete rental:', err)
@@ -663,7 +662,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                                 className='flex items-center space-x-1 bg-gray-200 text-gray-500 px-2 py-1 rounded cursor-not-allowed'
                               >
                                 <span>📤</span>
-                                <span>No Details</span>
+                                <span className='truncate'>No Details</span>
                               </button>
                             )}
 

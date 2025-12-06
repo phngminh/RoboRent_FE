@@ -26,7 +26,7 @@ const Header = () => {
   const [currentSection, setCurrentSection] = useState('home')
   const [unreadCount, setUnreadCount] = useState(0)
 
-  const showNav = location.pathname === path.home
+  const isTransparentHeaderPage = location.pathname === path.home || location.pathname === path.create_request
 
   const handleLogout = () => {
     logout()
@@ -55,7 +55,7 @@ const Header = () => {
   }, [])
 
   useEffect(() => {
-    if (!showNav) return
+    if (!isTransparentHeaderPage) return
 
     const handleHashChange = () => {
       const hash = window.location.hash.slice(1)
@@ -65,7 +65,7 @@ const Header = () => {
     handleHashChange()
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [showNav])
+  }, [isTransparentHeaderPage])
 
   useEffect(() => {
     if (!user?.id) return
@@ -105,7 +105,8 @@ const Header = () => {
     return () => clearInterval(interval)
   }, [user?.id, user?.role])
 
-  const textColor = !showNav || isScrolled || isMenuOpen ? 'text-gray-700' : 'text-white'
+  const isHeaderWhite = !isTransparentHeaderPage || isScrolled || isMenuOpen
+  const textColor = isHeaderWhite ? 'text-gray-700' : 'text-white'
 
   const scrollToSection = (sectionId: string) => {
     setIsMenuOpen(false)
@@ -116,7 +117,7 @@ const Header = () => {
   }
 
   const handleNavClick = (sectionId: string, route?: string) => {
-    if (showNav) {
+    if (isTransparentHeaderPage) {
       scrollToSection(sectionId)
     } else if (route) {
       navigate(route)
@@ -128,7 +129,7 @@ const Header = () => {
     <>
       <header
         className={`fixed top-0 left-0 right-0 z-50 w-full transition-colors duration-300 ${
-          !showNav || isScrolled || isMenuOpen
+          isHeaderWhite
             ? 'bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-100'
             : 'bg-transparent'
         }`}
@@ -140,13 +141,13 @@ const Header = () => {
                 src={logo}
                 alt='logo'
                 className={`w-8 h-7 mr-3 mb-1 transition-all duration-200 ${
-                  isScrolled ? 'filter drop-shadow-[0_0_2px_black]' : ''
+                  isHeaderWhite ? 'filter drop-shadow-[0_0_2px_black]' : ''
                 }`}
               />
               <Link 
                 to={path.home} 
                 className={`font-orbitron text-2xl tracking-widest transition-colors duration-300 ${
-                  !showNav || isScrolled || isMenuOpen
+                  isHeaderWhite
                     ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent'
                     : 'text-white'
                 }`}
@@ -156,7 +157,7 @@ const Header = () => {
             </div>
 
             <div className='flex justify-center'>
-              {showNav && (
+              {isTransparentHeaderPage && (
                 <nav className='hidden md:flex justify-center space-x-8 tracking-wide text-lg'>
                   <a
                     href='#home'
@@ -165,10 +166,9 @@ const Header = () => {
                       handleNavClick('home')
                     }}
                     className={`transition-colors duration-200 relative pb-1 ${
-                      !showNav || isScrolled
+                      isHeaderWhite
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    }
                     }`}
                   >
                     HOME
@@ -180,13 +180,12 @@ const Header = () => {
                       handleNavClick('our-products')
                     }}
                     className={`transition-colors duration-200 relative pb-1 ${
-                      !showNav || isScrolled
+                      isHeaderWhite
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    }
                     }`}
                   >
-                    PRODUCTS
+                    SERVICES
                   </a>
                   <a
                     href='#about-us'
@@ -195,10 +194,9 @@ const Header = () => {
                       handleNavClick('about-us')
                     }}
                     className={`transition-colors duration-200 relative pb-1 ${
-                      !showNav || isScrolled
+                      isHeaderWhite
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    }
                     }`}
                   >
                     ABOUT US
