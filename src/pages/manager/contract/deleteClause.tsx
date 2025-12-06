@@ -24,9 +24,10 @@ const DeleteTemplateClause: React.FC<DeleteTemplateClauseProps> = ({ open, onClo
       await deleteClause(clause.id)
       toast.success(`Clause '${clause.title}' deleted successfully!`)
       onSuccess()
-    } catch (err) {
+    } catch (err : any) {
       console.error(err)
-      toast.error('Failed to delete clause!')
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
     }
   }
 

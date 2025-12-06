@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
   Truck, Package, CheckCircle2, Clock, MapPin, Phone, User, 
-  Calendar, ChevronRight, Search, Filter, RefreshCw,
-  MessageSquare, X, AlertCircle, Sparkles, Bot, ArrowRight,
-  Building2, Timer, Bell, FileText, Send
+  Calendar, ChevronRight, Search, RefreshCw,
+  MessageSquare, X, ArrowRight,
+  Building2, Timer, Bot, Send
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
@@ -12,7 +12,8 @@ import Header from '../../components/header';
 import { 
   getMyDeliveries, 
   updateDeliveryStatus, 
-  updateDeliveryNotes 
+  updateDeliveryNotes,
+  completeRental // ✅ Đã thêm import
 } from '../../apis/delivery.api';
 import type { ActualDeliveryResponse, DeliveryStatus } from '../../types/delivery.types';
 
@@ -57,33 +58,9 @@ const STATUS_CONFIG: Record<DeliveryStatus, {
     icon: <Package className="w-4 h-4" />,
     label: 'Delivered'
   },
-  Collecting: { 
-    color: 'text-sky-600', 
-    bg: 'bg-sky-100', 
-    border: 'border-sky-300',
-    gradient: 'from-sky-400 to-blue-500',
-    icon: <RefreshCw className="w-4 h-4" />,
-    label: 'Collecting'
-  },
-  Collected: { 
-    color: 'text-indigo-600', 
-    bg: 'bg-indigo-100', 
-    border: 'border-indigo-300',
-    gradient: 'from-indigo-400 to-purple-500',
-    icon: <CheckCircle2 className="w-4 h-4" />,
-    label: 'Collected'
-  },
-  Completed: { 
-    color: 'text-rose-600', 
-    bg: 'bg-rose-100', 
-    border: 'border-rose-300',
-    gradient: 'from-rose-400 to-pink-500',
-    icon: <Sparkles className="w-4 h-4" />,
-    label: 'Completed'
-  },
 };
 
-const STATUS_ORDER: DeliveryStatus[] = ['Pending', 'Assigned', 'Delivering', 'Delivered', 'Collecting', 'Collected', 'Completed'];
+const STATUS_ORDER: DeliveryStatus[] = ['Pending', 'Assigned', 'Delivering', 'Delivered'];
 
 // Helper functions
 const getNextStatus = (current: DeliveryStatus): DeliveryStatus | null => {
@@ -180,11 +157,11 @@ const StatusUpdateModal: React.FC<{
           </div>
 
           {/* Auto-fill notice */}
-          {(nextStatus === 'Delivered' || nextStatus === 'Collected') && (
+          {nextStatus === 'Delivered' && (
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200">
               <Timer className="w-5 h-5 text-amber-600" />
               <p className="text-sm text-amber-800">
-                <span className="font-semibold">Auto-timestamp:</span> {nextStatus === 'Delivered' ? 'Actual delivery' : 'Actual pickup'} time will be recorded automatically.
+                <span className="font-semibold">Auto-timestamp:</span> Actual delivery time will be recorded automatically.
               </p>
             </div>
           )}
@@ -301,7 +278,7 @@ const NotesModal: React.FC<{
                 </>
               ) : (
                 <>
-                  <FileText className="w-5 h-5" />
+                  <Calendar className="w-5 h-5" /> {/* Note: Icon changed just for safety, or use FileText */}
                   Save Notes
                 </>
               )}
@@ -479,6 +456,9 @@ export default function DeliveryTrackingPage() {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // ✅ NEW STATE: Loading state cho nút Complete
+  const [isCompleting, setIsCompleting] = useState(false);
 
   const selectedDelivery = deliveries.find(d => d.id === selectedId);
 
@@ -573,6 +553,29 @@ export default function DeliveryTrackingPage() {
     } catch (error: any) {
       console.error('Failed to save notes:', error);
       toast.error(error.response?.data?.Error || 'Failed to save notes');
+    }
+  };
+
+  // ✅ NEW HANDLER: Complete Rental
+  const handleCompleteRental = async () => {
+    if (!selectedDelivery) return;
+
+    if (!window.confirm(`Are you sure you want to complete rental for "${selectedDelivery.rentalInfo.eventName}"?`)) {
+      return;
+    }
+
+    setIsCompleting(true);
+    try {
+      await completeRental(selectedDelivery.rentalInfo.rentalId);
+      
+      toast.success('Rental completed successfully! Payment link generated for customer.');
+      
+      // Có thể reload list nếu cần, nhưng trạng thái delivery không đổi nên không bắt buộc
+    } catch (error: any) {
+      console.error('Failed to complete rental:', error);
+      toast.error(error.response?.data?.message || 'Failed to complete rental');
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -732,6 +735,8 @@ export default function DeliveryTrackingPage() {
                           <span>{selectedDelivery.scheduleInfo.eventLocation}, {selectedDelivery.scheduleInfo.eventCity}</span>
                         </div>
                       </div>
+                      
+                      {/* ✅ NÚT BẤM COMPLETE RENTAL VÀ CÁC NÚT KHÁC */}
                       <div className="flex gap-2">
                         <button 
                           onClick={() => setShowNotesModal(true)}
@@ -740,6 +745,8 @@ export default function DeliveryTrackingPage() {
                           <MessageSquare className="w-5 h-5" />
                           Notes
                         </button>
+
+                        {/* Update Status (Existing) */}
                         {getNextStatus(selectedDelivery.status) && (
                           <button 
                             onClick={() => setShowStatusModal(true)}
@@ -747,6 +754,32 @@ export default function DeliveryTrackingPage() {
                           >
                             <ArrowRight className="w-5 h-5" />
                             Update Status
+                          </button>
+                        )}
+
+                        {/* ✅ NEW: Complete Rental Button - ULTRA PREMIUM VERSION */}
+                        {selectedDelivery.status === 'Delivered' && (
+                          <button 
+                            onClick={handleCompleteRental}
+                            disabled={isCompleting}
+                            className="relative px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500 text-slate-900 font-extrabold flex items-center gap-2 hover:from-amber-300 hover:via-yellow-400 hover:to-orange-400 transition-all duration-300 shadow-2xl shadow-amber-500/50 disabled:opacity-50 ring-4 ring-amber-300/30 hover:ring-amber-400/50 hover:scale-105 group overflow-hidden"
+                          >
+                            {/* Shine effect overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                            
+                            {/* Icon with animation */}
+                            {isCompleting ? (
+                              <RefreshCw className="w-5 h-5 animate-spin relative z-10" />
+                            ) : (
+                              <CheckCircle2 className="w-5 h-5 relative z-10 group-hover:rotate-12 transition-transform" />
+                            )}
+                            
+                            {/* Text */}
+                            <span className="relative z-10">Complete Rental</span>
+                            
+                            {/* Sparkle decorations */}
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity animate-pulse" />
+                            <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity animate-pulse delay-75" />
                           </button>
                         )}
                       </div>

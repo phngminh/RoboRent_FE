@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '../../../components/ui/dialog'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
@@ -7,9 +7,8 @@ import { Textarea } from '../../../components/ui/textarea'
 import { cn } from '../../../lib/utils'
 import { createTemplateWithBody, createTemplate } from '../../../apis/contractTemplates.api'
 import { toast } from 'react-toastify'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
 import { useAuth } from '../../../contexts/AuthContext'
+import FormInput from '../../../components/formInput'
 
 interface CreateContractTemplateProps {
   open: boolean
@@ -36,7 +35,6 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
     body: '',
   })
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
-  const quillRef = useRef<ReactQuill>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -108,9 +106,10 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
 
       resetForm()
       onSuccess()
-    } catch (err) {
+    } catch (err : any) {
       console.error(err)
-      toast.error('Failed to create template!')
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
     }
   }
 
@@ -128,40 +127,6 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
   const ErrorMessage = ({ message }: { message: string }) => (
     <p className='text-sm text-destructive mt-1'>{message}</p>
   )
-
-  useEffect(() => {
-    const quill = quillRef.current?.getEditor()
-    if (!quill) return
-
-    const handlePaste = (event: ClipboardEvent) => {
-      const items = event.clipboardData?.items
-      if (!items) return
-
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.startsWith('image/')) {
-          event.preventDefault()
-          return
-        }
-      }
-    }
-
-    quill.root.addEventListener('paste', handlePaste)
-    return () => {
-      quill.root.removeEventListener('paste', handlePaste)
-    }
-  }, [open])
-
-  useEffect(() => {
-    const quill = quillRef.current?.getEditor()
-    if (!quill) return
-
-    const container = (quill as any).container as HTMLDivElement
-    if (container) {
-      const borderColor = errors.body ? 'hsl(var(--destructive))' : 'hsl(var(--border))'
-      container.style.border = `1px solid ${borderColor}`
-      container.style.borderRadius = '0.375rem'
-    }
-  }, [errors.body])
 
   const handleQuillChange = (value: string) => {
     setFormData((prev) => ({ ...prev, body: value }))
@@ -256,17 +221,9 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
                     flexDirection: 'column'
                   }}
                 >
-                  <ReactQuill
-                    ref={quillRef}
-                    theme='snow'
+                  <FormInput
                     value={formData.body}
                     onChange={handleQuillChange}
-                    placeholder='Enter the template body here...'
-                    style={{
-                      minHeight: '150px',
-                      height: 'auto',
-                      overflow: 'visible'
-                    }}
                   />
                 </div>
                 {errors.body && <ErrorMessage message={errors.body} />}

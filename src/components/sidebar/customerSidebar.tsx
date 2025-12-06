@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, CreditCard, ChevronRight, User } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, ChevronRight, User,ScanFace, ChartColumn  } from 'lucide-react'
 import path from '../../constants/path'
 
 interface ProfileSidebarProps {
@@ -14,7 +14,9 @@ const CustomerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
     { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.CUSTOMER_DASHBOARD },
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.CUSTOMER_REQUESTS },
     { id: 'transactions', label: 'Transactions', icon: CreditCard, path: path.CUSTOMER_TRANSACTIONS },
+    { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.CUSTOMER_REPORTS },
     { id: 'account', label: 'Account', icon: User, path: path.CUSTOMER_ACCOUNT },
+    { id: 'face-profile', label: 'Face Profile', icon:ScanFace, path: path.FACE_PROFILE }
   ]
 
   return (

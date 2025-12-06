@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, CreditCard, ChevronRight, ChartColumn, Newspaper, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, ChevronRight, ChartColumn, Newspaper, ChevronDown, UserPlus } from 'lucide-react'
 import path from '../../constants/path'
 
 interface ProfileSidebarProps {
@@ -16,7 +16,8 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.MANAGER_REQUESTS },
     { id: 'quotes', label: 'Price Quotes', icon: CreditCard, path: path.MANAGER_QUOTES },
     { id: 'contracts', label: 'Contracts', icon: Newspaper, hasSubItems: true },
-    { id: 'reports', label: 'Reports', icon: ChartColumn, path: path.MANAGER_REPORTS },
+    { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.MANAGER_REPORTS },
+    { id: 'staff-assignment', label: 'Staff Assignment', icon: UserPlus, path: path.MANAGER_STAFF_ASSIGNMENT },
   ]
 
   const contractSubItems = [
