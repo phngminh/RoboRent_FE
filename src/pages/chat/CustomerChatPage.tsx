@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { signalRService } from '../../utils/signalr'
 import { getChatMessages, sendMessage, getCustomerChatRooms, getMyChatRooms } from '../../apis/chat.api'
 import { getQuotesByRentalId, customerAction, getPriceQuoteById } from '../../apis/priceQuote.api'
-import type { ChatMessageResponse, RentalDetailsPlaceholder, RentalQuotesResponse, PriceQuoteResponse } from '../../types/chat.types'
+import type { ChatMessageResponse, RentalQuotesResponse, PriceQuoteResponse } from '../../types/chat.types'
 import { MessageType, DemoStatus, QuoteStatus } from '../../types/chat.types'
 import ChatMessage from '../../components/chat/ChatMessage'
 import DemoVideoCard from '../../components/chat/DemoVideoCard'
@@ -44,16 +44,16 @@ export default function CustomerChatPage() {
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const [customerRentals, setCustomerRentals] = useState<CustomerRental[]>([])
   const [isLoadingRentals, setIsLoadingRentals] = useState(false)
-  const [rentalStatus, setRentalStatus] = useState<string>('')
+  const [, setRentalStatus] = useState<string>('')
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [sidebarWidth, setSidebarWidth] = useState(320)
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true)
   const [lastViewedQuoteTime, setLastViewedQuoteTime] = useState<Date | null>(null)
   const [rentalInfo, setRentalInfo] = useState<any | null>(null)
 
-  const hasPendingDemo = messages.some(
-    msg => msg.messageType === MessageType.Demo && msg.status === DemoStatus.Pending
-  )
+  // const hasPendingDemo = messages.some(
+  //   msg => msg.messageType === MessageType.Demo && msg.status === DemoStatus.Pending
+  // )
 
   // Add resize handler
   const handleMouseDown = (e: React.MouseEvent) => {

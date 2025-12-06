@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { Upload, Camera, Loader2, ArrowLeft } from "lucide-react";
 import { verifyFace } from "../../../apis/biometric.verification.api";
 import { useAuth } from "../../../contexts/AuthContext";

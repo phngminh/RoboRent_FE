@@ -12,8 +12,6 @@ import QuoteApprovalModal from '../../components/manager/QuoteApprovalModal'
 import { toast } from 'react-toastify'
 
 export default function ManagerQuotesPage() {
-  const navigate = useNavigate()
-  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'reviewed'>('pending')
   const [selectedQuote, setSelectedQuote] = useState<number | null>(null)

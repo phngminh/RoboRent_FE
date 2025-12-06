@@ -1,21 +1,20 @@
 // src/pages/staff/DeliveryTrackingPage.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react'
 import { 
   Truck, Package, CheckCircle2, Clock, MapPin, Phone, User, 
   Calendar, ChevronRight, Search, RefreshCw,
   MessageSquare, X, ArrowRight,
   Building2, Timer, Bot, Send
-} from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { toast } from 'react-toastify';
-import Header from '../../components/header';
-import { 
+} from 'lucide-react'
+import { toast } from 'react-toastify'
+import Header from '../../components/header'
+import {
   getMyDeliveries, 
   updateDeliveryStatus, 
   updateDeliveryNotes,
-  completeRental // ✅ Đã thêm import
-} from '../../apis/delivery.api';
-import type { ActualDeliveryResponse, DeliveryStatus } from '../../types/delivery.types';
+  completeRental
+} from '../../apis/delivery.api'
+import type { ActualDeliveryResponse, DeliveryStatus } from '../../types/delivery.types'
 
 // Status configuration with vibrant colors
 const STATUS_CONFIG: Record<DeliveryStatus, { 
@@ -447,7 +446,6 @@ const TimeComparison: React.FC<{
 
 // Main Dashboard Component
 export default function DeliveryTrackingPage() {
-  const { user } = useAuth();
   const [deliveries, setDeliveries] = useState<ActualDeliveryResponse[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -455,7 +453,6 @@ export default function DeliveryTrackingPage() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // ✅ NEW STATE: Loading state cho nút Complete
   const [isCompleting, setIsCompleting] = useState(false);
@@ -495,17 +492,17 @@ export default function DeliveryTrackingPage() {
   });
 
   // Refresh handler
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await loadDeliveries();
-      toast.success('Deliveries refreshed');
-    } catch (error) {
-      toast.error('Failed to refresh');
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, []);
+  // const handleRefresh = useCallback(async () => {
+  //   setIsRefreshing(true);
+  //   try {
+  //     await loadDeliveries();
+  //     toast.success('Deliveries refreshed');
+  //   } catch (error) {
+  //     toast.error('Failed to refresh');
+  //   } finally {
+  //     setIsRefreshing(false);
+  //   }
+  // }, []);
 
   // Auto-refresh every 30 seconds ← bỏ luôn cái này
   // useEffect(() => {

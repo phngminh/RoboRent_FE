@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
-  Search, 
-  Filter, 
+  Search,
   CreditCard, 
   CheckCircle2, 
   Clock, 
@@ -9,8 +8,7 @@ import {
   AlertCircle, 
   ExternalLink,
   Calendar,
-  Wallet,
-  ArrowUpRight
+  Wallet
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { paymentApi } from '../../apis/payment.api';

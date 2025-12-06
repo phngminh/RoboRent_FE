@@ -7,13 +7,11 @@ import { signalRService } from '../../utils/signalr'
 import { 
   getChatMessages, 
   sendMessage,
-  getStaffChatRooms,
   getMyChatRooms
 } from '../../apis/chat.api'
 import { getQuotesByRentalId } from '../../apis/priceQuote.api'
 import type { 
-  ChatMessageResponse, 
-  RentalDetailsPlaceholder,
+  ChatMessageResponse,
   RentalQuotesResponse,
 } from '../../types/chat.types'
 import { MessageType, QuoteStatus, DemoStatus } from '../../types/chat.types'
