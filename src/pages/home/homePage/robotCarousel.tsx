@@ -1,132 +1,166 @@
 import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { getAllRoboTypes, type RoboTypeResponse } from '../../../apis/robotype.api'
 
-const mockRobots = [
+const mockRobots : RoboTypeResponse[] = [
   {
-    id: 1,
-    robotName: 'PartyBot Pro',
-    roboType: 'Entertainment',
+    typeName: 'PartyBot Pro',
     image: 'https://www.thedailyupside.com/wp-content/uploads/2025/02/cio_humanoid-robot_02-10-25_iStock-iLexx.png',
     description: 'Interactive party robot that sings, dances and entertains guests'
   },
   {
-    id: 2,
-    robotName: 'EventServo',
-    roboType: 'Event Service',
+    typeName: 'EventServo',
     image: 'https://www.thedailyupside.com/wp-content/uploads/2025/02/cio_humanoid-robot_02-10-25_iStock-iLexx.png',
     description: 'Professional event robot for serving drinks and appetizers'
   },
   {
-    id: 3,
-    robotName: 'DanceMaster',
-    roboType: 'Performance',
+    typeName: 'DanceMaster',
     image: 'https://www.thedailyupside.com/wp-content/uploads/2025/02/cio_humanoid-robot_02-10-25_iStock-iLexx.png',
     description: 'Advanced dancing robot with choreographed performances'
   },
   {
-    id: 4,
-    robotName: 'CaterBot',
-    roboType: 'Catering',
+    typeName: 'CaterBot',
     image: 'https://www.thedailyupside.com/wp-content/uploads/2025/02/cio_humanoid-robot_02-10-25_iStock-iLexx.png',
     description: 'Smart catering robot for weddings and special events'
   },
   {
-    id: 5,
-    robotName: 'DJ Robo',
-    roboType: 'Music',
+    typeName: 'DJ Robo',
     image: 'https://www.thedailyupside.com/wp-content/uploads/2025/02/cio_humanoid-robot_02-10-25_iStock-iLexx.png',
     description: 'Musical robot DJ for parties and celebrations'
   },
   {
-    id: 6,
-    robotName: 'PhotoBot',
-    roboType: 'Photography',
+    typeName: 'PhotoBot',
     image: 'https://www.thedailyupside.com/wp-content/uploads/2025/02/cio_humanoid-robot_02-10-25_iStock-iLexx.png',
     description: 'Event photography robot with AI-powered photo taking'
   },
   {
-    id: 7,
-    robotName: 'HostBot',
-    roboType: 'Hosting',
+    typeName: 'HostBot',
     image: 'https://www.thedailyupside.com/wp-content/uploads/2025/02/cio_humanoid-robot_02-10-25_iStock-iLexx.png',
     description: 'Interactive host robot for greeting and guiding event guests'
   }
 ]
 
 const RobotCarousel = () => {
+  const [loading, setLoading] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [robotTypes, setRobotTypes] = useState<RoboTypeResponse[]>([])
   const [isTransitioning, setIsTransitioning] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const imageModules = import.meta.glob("../../../assets/*.{png,jpg,jpeg}", {
+    eager: true,
+  })
+
+  const cleanFileName = (name: string) => {
+    return name
+      .replace(/\//g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/ /g, "_")
+  }
+
+  const getRobotImage = (name: string) => {
+    const clean = cleanFileName(name)
+    const entries = Object.entries(imageModules)
+    const match = entries.find(([path]) =>
+      path.toLowerCase().includes(clean.toLowerCase())
+    )
+
+    return match ? (match[1] as any).default : "";
+  }
+
+  const fetchRobotTypes = async () => {
+    try {
+      setLoading(true)
+      const types = await getAllRoboTypes()
+      const mapped = types.map(t => ({
+        ...t,
+        image: getRobotImage(t.typeName ?? "")
+      }))
+      setRobotTypes(mapped)
+    } catch (error) {
+      console.error('Error fetching rentals:', error)
+      setRobotTypes(mockRobots)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const startAutoSlide = () => {
-      intervalRef.current = setInterval(() => {
-        setCurrentIndex((prevIndex) => {
-          setIsTransitioning(true)
-          setTimeout(() => setIsTransitioning(false), 500)
-          return (prevIndex + 1) % mockRobots.length
-        })
-      }, 5000)
+    fetchRobotTypes()
+  }, [])
+
+  useEffect(() => {
+    if (robotTypes.length === 0) return
+
+    const handleNext = () => {
+      setIsTransitioning(true)
+      setCurrentIndex((prev) => (prev + 1) % robotTypes.length)
+      setTimeout(() => setIsTransitioning(false), 500)
     }
 
-    startAutoSlide()
+    intervalRef.current = setInterval(handleNext, 2000)
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current)
     }
+  }, [robotTypes.length])
+
+  useEffect(() => {
+    return () => setIsTransitioning(false)
   }, [])
 
   const goToSlide = (index: number) => {
-    if (isTransitioning) return
-    
+    if (isTransitioning || robotTypes.length === 0) return
     setIsTransitioning(true)
     setCurrentIndex(index)
     setTimeout(() => setIsTransitioning(false), 500)
   }
 
   const goToPrevious = () => {
-    if (isTransitioning) return
-    
+    if (isTransitioning || robotTypes.length === 0) return
     setIsTransitioning(true)
-    setCurrentIndex((prevIndex) => 
-      prevIndex === 0 ? mockRobots.length - 1 : prevIndex - 1
-    )
+    setCurrentIndex((prev) => (prev === 0 ? robotTypes.length - 1 : prev - 1))
     setTimeout(() => setIsTransitioning(false), 500)
   }
 
   const goToNext = () => {
-    if (isTransitioning) return
-    
+    if (isTransitioning || robotTypes.length === 0) return
     setIsTransitioning(true)
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % mockRobots.length)
+    setCurrentIndex((prev) => (prev + 1) % robotTypes.length)
     setTimeout(() => setIsTransitioning(false), 500)
   }
 
-  const extendedRobots = [...mockRobots, ...mockRobots, ...mockRobots]
-  const startIndex = mockRobots.length + currentIndex
+  const extendedRobots = [...robotTypes, ...robotTypes, ...robotTypes]
+  const startIndex = robotTypes.length + currentIndex
+
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center h-96'>
+        Loading...
+      </div>
+    )
+  }
 
   return (
     <div className='relative bg-white py-20 px-6 overflow-hidden'>
       <div className='relative max-w-8xl mx-auto text-center -mt-8'>
         <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1 bg-white' data-aos='fade-down'>
-          POPULAR ROBOTS
+          OUR SERVICES
         </p>
         <h1 className='text-[2.5rem] font-bold text-blue-900 mb-12' data-aos='fade-up'>
-          Our <span className='text-teal-500'>most requested</span> robots, trusted by thousands of customers
+          Our <span className='text-teal-500'> featured </span>robots, built with quality you can rely on
         </h1>
 
         <div className='relative w-full overflow-hidden' data-aos='fade-left'>
           <div 
-            className='flex transition-transform duration-500 ease-in-out'
+            className='flex transition-transform duration-200 ease-in-out'
             style={{
               transform: `translateX(-${startIndex * (100 / 4.5)}%)`,
             }}
           >
             {extendedRobots.map((robot, index) => (
               <div
-                key={`${robot.id}-${index}`}
+                key={`${robot.typeName}-${index}`}
                 className='flex-shrink-0 px-3'
                 style={{ width: `${100 / 3.6}%` }}
               >
@@ -134,7 +168,7 @@ const RobotCarousel = () => {
                   <div className='relative h-96 bg-gray-100'>
                     <img
                       src={robot.image || '/placeholder.svg'}
-                      alt={robot.robotName}
+                      alt={robot.typeName}
                       className='w-full h-full object-cover'
                       onError={(e) => {
                         const target = e.target as HTMLImageElement
@@ -143,11 +177,8 @@ const RobotCarousel = () => {
                     />
                     <div className='absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent' />
                     <div className='absolute bottom-4 left-4 right-4 text-left text-white'>
-                      <div className='inline-block bg-blue-900 text-white px-3 py-1 text-sm font-medium mb-3 rounded'>
-                        {robot.roboType}
-                      </div>
                       <h3 className='text-2xl font-bold mb-2 drop-shadow-lg'>
-                        {robot.robotName}
+                        {robot.typeName}
                       </h3>
                       <p className='text-base opacity-95 leading-snug drop-shadow-md mb-4'>
                         {robot.description}
@@ -180,7 +211,7 @@ const RobotCarousel = () => {
         </div>
         
         <div className='flex justify-center gap-2 mt-8'>
-            {mockRobots.map((_, index) => (
+            {robotTypes.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToSlide(index)}

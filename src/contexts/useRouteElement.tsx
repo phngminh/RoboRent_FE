@@ -39,11 +39,44 @@ import StaffBreachReports from '../pages/staff/report/staffBreachReports'
 import StaffReportDetail from '../pages/staff/report/staffReportDetail'
 import StaffAssignmentPage from '../pages/manager/StaffAssignmentPage'
 import CustomerDeliveryTrackingPage from '../pages/customer/CustomerDeliveryTrackingPage'
+import CreateRentalRequestHome from '../pages/home/request/createRentalRequest'
+import CreateRentalDetailHome from '../pages/home/request/createRentalRequestDetail'
+import { toast } from 'react-toastify'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
   const routeElements = useRoutes([
     { path: path.home, element: <Home /> },
+    {
+      path: path.create_request,
+      element: <ProtectedRoute allowedRoles={['customer']} />,
+      children: [
+        { 
+          index: true, 
+          element: 
+            <CreateRentalRequestHome
+              onNextStep={(rentalId, activityTypeId) => navigate(`/create-request-detail/${rentalId}/${activityTypeId}`)} 
+            /> 
+        }
+      ]
+    },
+    {
+      path: `${path.create_request_detail}/:rentalId/:activityTypeId`,
+      element: <ProtectedRoute allowedRoles={['customer']} />,
+      children: [
+        { 
+          index: true, 
+          element: 
+            <CreateRentalDetailHome
+              onBack={() => navigate(-1)}
+              onSave={() => {
+                toast.success('Rental request created successfully!')
+                navigate(`${path.BASE_CUSTOMER}/rental-requests`)
+              }}
+            /> 
+        }
+      ]
+    },
     { path: path.callback, element: <AuthCallback /> },
     //================ Customer routes ================
     {

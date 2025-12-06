@@ -17,22 +17,22 @@ const Footer = () => {
             </p>
           </div>
 
-          <div>
+          <div className='ml-28'>
             <h4 className='text-white font-semibold mb-4 font-orbitron'>Company</h4>
             <ul className='space-y-3 text-sm'>
               <li>
                 <Link to='/' className='hover:text-white transition-colors'>Home</Link>
               </li>
               <li>
-                <a href='#' className='hover:text-white transition-colors'>About Us</a>
+                <a href='#about-us' className='hover:text-white transition-colors'>About Us</a>
               </li>
               <li>
-                <a href='#' className='hover:text-white transition-colors'>Products</a>
+                <a href='#our-products' className='hover:text-white transition-colors'>Services</a>
               </li>
             </ul>
           </div>
 
-          <div>
+          <div className='ml-14'>
             <h4 className='text-white font-semibold mb-4 font-orbitron'>Resources</h4>
             <ul className='space-y-3 text-sm'>
               <li>
@@ -70,7 +70,7 @@ const Footer = () => {
               </div>
               <div className='flex items-center space-x-2'>
                 <MapPin size={16} />
-                <span>123 Innovation Way, San Francisco, CA</span>
+                <span>123 NVH, TP. HCM</span>
               </div>
             </div>
           </div>
