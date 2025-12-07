@@ -2,7 +2,7 @@
 import * as signalR from '@microsoft/signalr'
 import type { ChatMessageResponse } from '../types/chat.types'
 
-const API_URL = `${import.meta.env.VITE_API_URL}`
+const API_URL = import.meta.env.VITE_API_URL.replace('/api', '')
 
 class SignalRService {
   private connection: signalR.HubConnection | null = null
