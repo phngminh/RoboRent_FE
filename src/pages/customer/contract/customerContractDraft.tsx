@@ -1,16 +1,18 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Textarea } from '../../../components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
 import { ArrowLeft } from 'lucide-react'
-import { customerRejects, customerRequestChange, customerSigns, getDraftsByRentalId, type ContractDraftResponse } from '../../../apis/contractDraft.api'
+import { customerRejects, customerRequestChange, customerSigns, getDraftsByRentalId, sendVerificationCode, verifyCode, type ContractDraftResponse } from '../../../apis/contractDraft.api'
 import { useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 interface CustomerContractDraftProps {
   onBack: () => void
 }
+
+type SignStep = 'request' | 'verify' | 'sign'
 
 const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack }) => {
   const { rentalId: rentalIdString } = useParams<{ rentalId: string }>()
@@ -24,6 +26,12 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
   const [comment, setComment] = useState('')
   const [signature, setSignature] = useState('')
   const [reason, setReason] = useState('')
+  const [otpStep, setOtpStep] = useState<SignStep>('request')
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([])
+  const [isVerified, setIsVerified] = useState(false)
+  const [verificationExpiry, setVerificationExpiry] = useState<Date | null>(null)
+  const [timeLeft, setTimeLeft] = useState(300)
 
   const fetchDraft = async (rentalId: number) => {
     try {
@@ -57,6 +65,113 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
     }
   }, [rentalId])
 
+  useEffect(() => {
+    if (verificationExpiry && Date.now() < verificationExpiry.getTime()) {
+      const interval = setInterval(() => {
+        const now = Date.now()
+        const expiry = verificationExpiry.getTime()
+        const remaining = Math.floor((expiry - now) / 1000)
+        setTimeLeft(Math.max(0, remaining))
+        if (remaining <= 0) {
+          setIsVerified(false)
+          setOtpStep('request')
+          setVerificationExpiry(null)
+          toast.warning('Verification expired. Please request a new code.')
+        }
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+  }, [verificationExpiry])
+
+  useEffect(() => {
+    if (otpStep === 'verify' && inputRefs.current[0]) {
+      inputRefs.current[0]?.focus()
+    }
+  }, [otpStep])
+
+  const resetOtpStates = () => {
+    setOtpStep('request')
+    setOtp(['', '', '', '', '', ''])
+    setIsVerified(false)
+    setVerificationExpiry(null)
+    setTimeLeft(300)
+    setSignature('')
+  }
+
+  const handleInputChange = (index: number, value: string) => {
+    if (value.length > 1) {
+      value = value[0]
+    }
+   
+    const newOtp = [...otp]
+    newOtp[index] = value
+    setOtp(newOtp)
+   
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus()
+    }
+  }
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number) => {
+    e.preventDefault()
+    const pasteData = e.clipboardData.getData('Text').trim().slice(0, 6 - index)
+    if (/^\d+$/.test(pasteData)) {
+      const newOtp = [...otp]
+      for (let i = 0; i < pasteData.length && index + i < 6; i++) {
+        newOtp[index + i] = pasteData[i]
+      }
+      setOtp(newOtp)
+      const nextFocus = Math.min(index + pasteData.length, 5)
+      inputRefs.current[nextFocus]?.focus()
+    }
+  }
+
+  const handleRequestOtp = async () => {
+    if (!draft) {
+      toast.error('No draft loaded.')
+      return
+    }
+    try {
+      await sendVerificationCode(draft.id)
+      toast.success('Verification code sent to your email!')
+      setOtp(['', '', '', '', '', ''])
+      setOtpStep('verify')
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to send code.'
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleVerifyOtp = async () => {
+    if (!draft || otp.some(digit => !digit)) {
+      toast.error('Please enter the full code.')
+      return
+    }
+    const otpValue = otp.join('')
+    try {
+      await verifyCode(draft.id, otpValue)
+      setIsVerified(true)
+      setOtpStep('sign')
+      const expiry = new Date()
+      expiry.setMinutes(expiry.getMinutes() + 5)
+      setVerificationExpiry(expiry)
+      toast.success('Code verified! You have 5 minutes to sign.')
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Invalid or expired code.'
+      toast.error(errorMessage)
+      setOtp(['', '', '', '', '', ''])
+      if (inputRefs.current[0]) {
+        inputRefs.current[0]?.focus()
+      }
+    }
+  }
+
   const handleConfirmRequest = async () => {
     if (!draft) {
       toast.error('No draft loaded to request changes.')
@@ -65,31 +180,35 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
     try {
       await customerRequestChange(draft.id, comment)
       toast.success('Requested successfully!')
-      setApproveOpen(false)
-      setSignature('')
+      setRequestOpen(false)
+      setComment('')
       onBack()
-    } catch (err : any) {
-      console.error(err)
+    } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
       toast.error(errorMessage)
     }
   }
 
   const handleConfirmApprove = async () => {
-    if (!draft) {
-      toast.error('No draft loaded to approve.')
+    if (!draft || !signature.trim()) {
+      toast.error('Please enter your signature.')
+      return
+    }
+    if (!isVerified) {
+      toast.error('Please verify your code first.')
       return
     }
     try {
       await customerSigns(draft.id, signature)
       toast.success('Signed successfully!')
       setApproveOpen(false)
-      setSignature('')
+      resetOtpStates()
       onBack()
-    } catch (err : any) {
-      console.error(err)
+    } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
       toast.error(errorMessage)
+      setIsVerified(false)
+      setOtpStep('request')
     }
   }
 
@@ -104,8 +223,7 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       setRejectOpen(false)
       setReason('')
       onBack()
-    } catch (err : any) {
-      console.error(err)
+    } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
       toast.error(errorMessage)
     }
@@ -162,21 +280,24 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       <div className='flex justify-end gap-3 mr-36'>
         <Button 
           onClick={() => setRequestOpen(true)} 
-          disabled={draft.status != 'PendingCustomerSignature'}
+          disabled={draft.status !== 'PendingCustomerSignature'}
           className='bg-gray-100 border border-gray-400 text-black hover:bg-gray-200 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
           Request Changes
         </Button>
         <Button 
           onClick={() => setRejectOpen(true)} 
-          disabled={draft.status != 'PendingCustomerSignature'}
+          disabled={draft.status !== 'PendingCustomerSignature'}
           className='bg-red-500 text-white hover:bg-red-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
           Reject
         </Button>
         <Button 
-          onClick={() => setApproveOpen(true)} 
-          disabled={draft.status != 'PendingCustomerSignature'}
+          onClick={() => {
+            setOtpStep('request')
+            setApproveOpen(true)
+          }} 
+          disabled={draft.status !== 'PendingCustomerSignature'}
           className='bg-indigo-600 hover:bg-indigo-700 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
           Sign
@@ -188,16 +309,14 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setRequestOpen(false)
-            setSignature('')
+            setComment('')
           }
         }}
       >
         <DialogContent className='sm:max-w-[425px]'>
           <DialogHeader>
             <DialogTitle>Enter Your Comment</DialogTitle>
-            <DialogDescription>
-              Please provide the changes you would like to request.
-            </DialogDescription>
+            <DialogDescription>Please provide the changes you would like to request.</DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4 -mt-4'>
             <Textarea
@@ -223,31 +342,68 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setApproveOpen(false)
-            setSignature('')
+            resetOtpStates()
           }
         }}
       >
         <DialogContent className='sm:max-w-[425px]'>
           <DialogHeader>
-            <DialogTitle>Enter Signature</DialogTitle>
+            <DialogTitle>{otpStep === 'request' ? 'Verify Your Identity' : otpStep === 'verify' ? 'Enter Verification Code' : 'Sign the Contract'}</DialogTitle>
             <DialogDescription>
-              Please enter your name as the signature to approve the contract.
+              {otpStep === 'request' && 'To sign, we need to verify your email. A code will be sent to your email.'}
+              {otpStep === 'verify' && `Check your email for the 6-digit code. Expires in 5 minutes.`}
+              {otpStep === 'sign' && `Verification complete! You have 5 minutes to sign.`}
             </DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4 -mt-4'>
-            <Input
-              placeholder='Enter your name as signature'
-              value={signature}
-              onChange={(e) => setSignature(e.target.value)}
-            />
+            {otpStep === 'verify' && (
+              <div className="flex justify-center space-x-2 mb-4">
+                {otp.map((digit, index) => (
+                  <Input
+                    key={index}
+                    ref={(el) => { inputRefs.current[index] = el }}
+                    className="w-12 h-12 text-center text-lg font-semibold flex-1"
+                    type="text"
+                    value={digit}
+                    onChange={(e) => handleInputChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
+                    onPaste={(e) => handlePaste(e, index)}
+                    maxLength={1}
+                    autoFocus={index === 0}
+                  />
+                ))}
+              </div>
+            )}
+            {otpStep === 'sign' && (
+              <>
+                <Input
+                  placeholder='Enter your name as signature'
+                  value={signature}
+                  onChange={(e) => setSignature(e.target.value)}
+                />
+                {timeLeft > 0 && <p className='text-sm text-orange-600'>Time remaining: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</p>}
+              </>
+            )}
           </div>
           <DialogFooter>
-            <Button type='submit' variant='outline' onClick={() => setApproveOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmApprove} disabled={!signature.trim()}>
-              Confirm
-            </Button>
+            {otpStep !== 'request' && otpStep !== 'sign' && (
+              <Button type='button' variant='outline' onClick={() => setOtpStep('request')} className='-mt-6'>
+                Back
+              </Button>
+            )}
+            {otpStep === 'request' && (
+              <Button onClick={handleRequestOtp} className='-mt-7'>Send Code</Button>
+            )}
+            {otpStep === 'verify' && (
+              <Button onClick={handleVerifyOtp} disabled={otp.some(digit => !digit)} className='bg-green-600 -mt-6'>
+                Verify
+              </Button>
+            )}
+            {otpStep === 'sign' && (
+              <Button onClick={handleConfirmApprove} disabled={!signature.trim() || timeLeft <= 0} className='-mt-6'>
+                Sign Contract
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -264,9 +420,7 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
         <DialogContent className='sm:max-w-[425px]'>
           <DialogHeader>
             <DialogTitle>Enter Rejection Reason</DialogTitle>
-            <DialogDescription>
-              Please provide a reason for rejecting the contract.
-            </DialogDescription>
+            <DialogDescription>Please provide a reason for rejecting the contract.</DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4 -mt-4'>
             <Textarea
