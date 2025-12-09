@@ -89,6 +89,14 @@ export const customerRequestChange = (id: number, comment: string) => {
   return http.patch(`/ContractDrafts/${id}/customer-request-change`, { comment })
 }
 
+export const sendVerificationCode = async (id: number) => {
+  return await http.post(`/ContractDrafts/${id}/send-verification-code`)
+}
+
+export const verifyCode = async (id: number, code: string) => {
+  return await http.post(`/ContractDrafts/${id}/verify-code`, { code })
+}
+
 export interface CreateContractDraftPayload {
   title: string
   comments: string
