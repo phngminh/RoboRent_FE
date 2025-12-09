@@ -78,7 +78,7 @@ export const customerSigns = async (id: number, signature: string) => {
 }
 
 export const managerRejects = (id: number, reason: string) => {
-  return http.patch(`/ContractDrafts/${id}/manager-reject`, { reason })
+  return http.patch(`/ContractDrafts/${id}/manager-cancel`, { reason })
 }
 
 export const customerRejects = (id: number, reason: string) => {

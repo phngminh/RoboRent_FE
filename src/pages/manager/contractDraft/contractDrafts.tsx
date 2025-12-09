@@ -77,7 +77,7 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
         return 'bg-red-100 text-red-800'
       case 'RejectedByCustomer':
         return 'bg-red-100 text-red-800'
-      case 'RejectedByManager':
+      case 'Cancelled':
         return 'bg-red-100 text-red-800'
       case 'Expired':
         return 'bg-yellow-100 text-yellow-800'

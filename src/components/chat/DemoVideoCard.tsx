@@ -37,10 +37,9 @@ export default function DemoVideoCard({ message, isCustomer, onStatusUpdate }: D
   const isRejected = currentStatus === DemoStatus.Rejected
 
   return (
-    <div className="flex justify-start mb-4">
-      <div className="max-w-md">
-        {/* Video thumbnail */}
-        <div className="relative bg-gray-900 rounded-2xl overflow-hidden">
+    <div className={`flex ${isCustomer ? 'justify-start' : 'justify-end'} mb-4`}>
+      <div className='max-w-md'>
+        <div className={`relative bg-gray-900 rounded-2xl overflow-hidden ${isCustomer ? 'ml-0' : 'mr-0'}`}>
           {videoUrl ? (
             <video 
               src={videoUrl} 
@@ -55,7 +54,6 @@ export default function DemoVideoCard({ message, isCustomer, onStatusUpdate }: D
           )}
         </div>
 
-        {/* Demo info */}
         <div className="bg-white rounded-2xl p-4 mt-2 shadow-sm border border-gray-200">
           <h3 className="font-semibold text-gray-900 mb-1">
             {message.content || 'Registration Assistant Robot Demo'}
@@ -64,7 +62,6 @@ export default function DemoVideoCard({ message, isCustomer, onStatusUpdate }: D
             This demo shows how our robots can handle event check-ins, provide information, and assist attendees.
           </p>
 
-          {/* Status / Action buttons */}
           {isCustomer && isPending && (
             <div className="flex gap-2">
               <button
@@ -105,7 +102,6 @@ export default function DemoVideoCard({ message, isCustomer, onStatusUpdate }: D
           )}
         </div>
 
-        {/* Timestamp */}
         <div className="text-xs text-gray-500 mt-2 text-center">
           Demo phase in progress • {new Date(message.createdAt).toLocaleTimeString('en-US', { 
             hour: '2-digit', 

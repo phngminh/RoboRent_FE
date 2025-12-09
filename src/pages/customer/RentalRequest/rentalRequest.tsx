@@ -549,7 +549,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                         ? 'bg-yellow-100 text-yellow-800'
                         : request.status === 'Draft'
                         ? 'bg-gray-100 text-gray-800'
-                        : request.status === 'Rejected'
+                        : request.status === 'Rejected' || request.status === 'ForceCancelled'
                         ? 'bg-red-100 text-red-800'
                         : 'bg-blue-100 text-blue-800'
 

@@ -493,46 +493,46 @@ useEffect(() => {
 
         {/* Center - Chat Area */}
         <div className="flex-1 flex flex-col bg-white">
-{/* Chat Header */}
-<div className="border-b border-gray-200 p-4 bg-white">
-  <div className="flex items-center justify-between">
-    <div className="flex items-center gap-3">
-      <button
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        title={isSidebarOpen ? "Hide sidebar (Cmd/Ctrl + [)" : "Show sidebar (Cmd/Ctrl + [)"}
-      >
-        {isSidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-      </button>
+          {/* Chat Header */}
+          <div className="border-b border-gray-200 p-4 bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title={isSidebarOpen ? "Hide sidebar (Cmd/Ctrl + [)" : "Show sidebar (Cmd/Ctrl + [)"}
+                >
+                  {isSidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+                </button>
 
-      {/* Safe avatar */}
-      <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-        {rentalInfo?.customerName?.charAt(0) || "?"}
-      </div>
+                {/* Safe avatar */}
+                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                  {rentalInfo?.customerName?.charAt(0) || "?"}
+                </div>
 
-      <div>
-        {/* Customer Name */}
-        <h1 className="text-lg font-bold text-gray-900">
-          {rentalInfo?.customerName || "Loading..."}
-        </h1>
+                <div>
+                  {/* Customer Name */}
+                  <h1 className="text-lg font-bold text-gray-900">
+                    {rentalInfo?.customerName || "Loading..."}
+                  </h1>
 
-        {/* Rental ID + Package */}
-        <p className="text-sm text-gray-500">
-          #{rentalId} • {rentalInfo?.eventName || "Loading..."} •{" "}
-          <span className="text-green-600">Online</span>
-        </p>
-      </div>
-    </div>
+                  {/* Rental ID + Package */}
+                  <p className="text-sm text-gray-500">
+                    #{rentalId} • {rentalInfo?.eventName || "Loading..."} •{" "}
+                    <span className="text-green-600">Online</span>
+                  </p>
+                </div>
+              </div>
 
-    <button
-      onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-      title={isRightSidebarOpen ? "Hide details (Cmd/Ctrl + ])" : "Show details (Cmd/Ctrl + ])"}
-    >
-      {isRightSidebarOpen ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-    </button>
-  </div>
-</div>
+              <button
+                onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title={isRightSidebarOpen ? "Hide details (Cmd/Ctrl + ])" : "Show details (Cmd/Ctrl + ])"}
+              >
+                {isRightSidebarOpen ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+              </button>
+            </div>
+          </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -648,64 +648,64 @@ useEffect(() => {
           className="border-l border-gray-200 bg-gray-50 overflow-hidden transition-all duration-300 ease-in-out"
         >
           <div className="w-96 overflow-y-auto h-full">
-{/* Rental Info */}
-<div className="p-6 bg-white border-b border-gray-200">
-  <h2 className="text-lg font-bold text-gray-900 mb-4">Rental Information</h2>
+            {/* Rental Info */}
+            <div className="p-6 bg-white border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Rental Information</h2>
 
-  {!rentalInfo ? (
-    <p className="text-gray-500 text-sm">Loading...</p>
-  ) : (
-    <div className="space-y-4">
+              {!rentalInfo ? (
+                <p className="text-gray-500 text-sm">Loading...</p>
+              ) : (
+                <div className="space-y-4">
 
-      {/* DATE + TIME */}
-      <div className="flex items-start gap-3">
-        <Calendar className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            {new Date(rentalInfo.eventDate).toLocaleDateString("en-US", {
-              month: "long",
-              day: "numeric",
-              year: "numeric"
-            })}
-          </p>
+                  {/* DATE + TIME */}
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {new Date(rentalInfo.eventDate).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric"
+                        })}
+                      </p>
 
-          <p className="text-xs text-gray-600">
-            {rentalInfo.startTime?.substring(0,5)} – {rentalInfo.endTime?.substring(0,5)}
-          </p>
-        </div>
-      </div>
+                      <p className="text-xs text-gray-600">
+                        {rentalInfo.startTime?.substring(0,5)} – {rentalInfo.endTime?.substring(0,5)}
+                      </p>
+                    </div>
+                  </div>
 
-      {/* LOCATION */}
-      <div className="flex items-start gap-3">
-        <MapPin className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm text-gray-900">{rentalInfo.address}</p>
-          <p className="text-xs text-gray-600">{rentalInfo.city}</p>
-        </div>
-      </div>
+                  {/* LOCATION */}
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-900">{rentalInfo.address}</p>
+                      <p className="text-xs text-gray-600">{rentalInfo.city}</p>
+                    </div>
+                  </div>
 
-      {/* PACKAGE */}
-      <div className="flex items-start gap-3">
-        <Package className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-gray-900">{rentalInfo.eventActivityName}</p>
-          <p className="text-xs text-gray-600">{rentalInfo.activityTypeName}</p>
-        </div>
-      </div>
+                  {/* PACKAGE */}
+                  <div className="flex items-start gap-3">
+                    <Package className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{rentalInfo.eventActivityName}</p>
+                      <p className="text-xs text-gray-600">{rentalInfo.activityTypeName}</p>
+                    </div>
+                  </div>
 
-      {/* CUSTOMER NAME */}
-      <div className="flex items-start gap-3">
-        <div className="w-5 h-5 mt-0.5 flex-shrink-0 text-blue-600 font-bold">👤</div>
-        <div>
-          <p className="text-sm font-medium text-gray-900">{rentalInfo.customerName}</p>
-          <p className="text-xs text-gray-600">{rentalInfo.phoneNumber}</p>
-          <p className="text-xs text-gray-600">{rentalInfo.email}</p>
-        </div>
-      </div>
+                  {/* CUSTOMER NAME */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-5 h-5 mt-0.5 flex-shrink-0 text-blue-600 font-bold">👤</div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{rentalInfo.customerName}</p>
+                      <p className="text-xs text-gray-600">{rentalInfo.phoneNumber}</p>
+                      <p className="text-xs text-gray-600">{rentalInfo.email}</p>
+                    </div>
+                  </div>
 
-    </div>
-  )}
-</div>
+                </div>
+              )}
+            </div>
 
             {/* Quick Actions */}
             <div className="p-6">
