@@ -79,7 +79,7 @@ const fetchData = async () => {
     }
 
     setAllItems(res.data ?? [])
-      setDraftsMap({})
+    setDraftsMap({})
   } catch (err) {
     console.error('Failed to load rental requests', err)
   } finally {
@@ -167,23 +167,23 @@ const fetchData = async () => {
       setReceiving(id)
 
       if (!staffId) {
-        alert('Staff ID missing!')
+        toast.error('Staff ID missing!')
         return
       }
 
       const res = await receiveRentalAsync(id, staffId)
 
       if (res.success) {
-        alert(`Rental ID ${id} successfully received!`)
+        toast.success(`Rental ID ${id} successfully received!`)
       } else {
-        alert(`Failed: ${res.message || 'Unknown error'}`)
+        toast.error(`Failed: ${res.message || 'Unknown error'}`)
       }
 
       await fetchData()
 
     } catch (err) {
       console.error(err)
-      alert('Failed to receive rental')
+      toast.error('Failed to receive rental')
     } finally {
       setReceiving(null)
     }
