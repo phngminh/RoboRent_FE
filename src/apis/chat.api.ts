@@ -65,25 +65,3 @@ export const getMyChatRooms = async (
   })
   return response.data
 }
-
-export const getStaffChatRooms = async (
-  staffId: number,
-  page: number = 1,
-  pageSize: number = 50
-): Promise<ChatRoomListResponse> => {
-  const response = await http.get(`${API_URL}/Chat/rooms/staff/${staffId}`, {
-    params: { page, pageSize }
-  })
-  return response.data
-}
-
-export const getCustomerChatRooms = async (
-  customerId: number,
-  page: number = 1,
-  pageSize: number = 50
-): Promise<ChatRoomListResponse> => {
-  const response = await http.get(`${API_URL}/Chat/rooms/customer/${customerId}`, {
-    params: { page, pageSize }
-  })
-  return response.data
-}

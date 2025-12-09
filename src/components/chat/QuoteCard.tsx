@@ -90,10 +90,6 @@ export default function QuoteCard({ quote, onViewDetails, isNew = false }: Quote
           </div>
         )}
         <div className="flex justify-between text-gray-600">
-          <span>Delivery (Manual)</span>
-          <span>${quote.delivery?.toLocaleString() || '0.00'}</span>
-        </div>
-        <div className="flex justify-between text-gray-600">
           <span>Deposit</span>
           <span>${quote.deposit?.toLocaleString() || '0.00'}</span>
         </div>

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Send, Calendar, MapPin, Package, CheckCircle2, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { signalRService } from '../../utils/signalr'
-import { getChatMessages, sendMessage, getCustomerChatRooms, getMyChatRooms } from '../../apis/chat.api'
+import { getChatMessages, sendMessage, getMyChatRooms } from '../../apis/chat.api'
 import { getQuotesByRentalId, customerAction, getPriceQuoteById } from '../../apis/priceQuote.api'
 import type { ChatMessageResponse, RentalQuotesResponse, PriceQuoteResponse } from '../../types/chat.types'
 import { MessageType, DemoStatus, QuoteStatus } from '../../types/chat.types'
@@ -77,7 +77,7 @@ export default function CustomerChatPage() {
   }
 
   // Filter rentals based on search
-  const filteredRentals = customerRentals.filter(rental => 
+  const filteredRentals = customerRentals.filter(rental =>
     rental.packageName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     rental.rentalId.toString().includes(searchQuery) ||
     rental.eventDate.toLowerCase().includes(searchQuery.toLowerCase())
@@ -88,8 +88,8 @@ export default function CustomerChatPage() {
   }
 
   useEffect(() => {
-  const loadRentalInfo = async () => {
-    if (!rentalId) return
+    const loadRentalInfo = async () => {
+      if (!rentalId) return
       try {
         const data = await getRentalByIdAsync(parseInt(rentalId))
         setRentalInfo(data)
@@ -124,7 +124,7 @@ export default function CustomerChatPage() {
     try {
       const quotes = await getQuotesByRentalId(parseInt(rentalId))
       setQuotesData(quotes)
-      
+
       const fullQuoteDetails = await Promise.all(
         quotes.quotes
           .filter(q => q.status !== QuoteStatus.PendingManager)
@@ -158,7 +158,7 @@ export default function CustomerChatPage() {
   useEffect(() => {
     const loadRentals = async () => {
       if (!user?.id) return
-      
+
       setIsLoadingRentals(true)
       try {
         const response = await getMyChatRooms(1, 50)
@@ -169,13 +169,13 @@ export default function CustomerChatPage() {
           eventDate: room.eventDate || 'TBD',
           status: room.status || 'Unknown',
           lastMessage: room.lastMessage || 'No messages',
-          timestamp: room.lastMessageTime 
+          timestamp: room.lastMessageTime
             ? formatDistanceToNow(new Date(room.lastMessageTime), { addSuffix: true })
             : 'No messages',
           unread: room.unreadCount
         }))
         setCustomerRentals(mappedRentals)
-        
+
         const currentRental = response.rooms.find(r => r.rentalId === parseInt(rentalId || '0'))
         if (currentRental?.rentalStatus) {
           setRentalStatus(currentRental.rentalStatus)
@@ -204,7 +204,7 @@ export default function CustomerChatPage() {
 
         const handleReceiveMessage = (message: ChatMessageResponse) => {
           if (!isSubscribed) return
-          
+
           setMessages(prev => {
             if (prev.some(m => m.id === message.id)) {
               console.warn('⚠️ Duplicate message ignored:', message.id)
@@ -219,29 +219,29 @@ export default function CustomerChatPage() {
         const handleDemoStatusChanged = (messageId: number, status: string) => {
           if (!isSubscribed) return
 
-          setMessages(prev => prev.map(msg => 
+          setMessages(prev => prev.map(msg =>
             msg.id === messageId ? { ...msg, status: status as DemoStatus } : msg
           ))
         }
 
         const handleQuoteAccepted = async (quoteId: number) => {
           if (!isSubscribed) return
-          
+
           console.log('📢 Quote accepted event received:', quoteId)
           await loadQuotes()
         }
 
-        const handleQuoteStatusChanged = async (data: { 
+        const handleQuoteStatusChanged = async (data: {
           QuoteId: number
           Status: string
           QuoteNumber: number
-          Total: number 
+          Total: number
         }) => {
           if (!isSubscribed) return
           console.log('📢 Quote status changed:', data)
           await loadQuotes()
         }
-        
+
         const handleQuoteCreated = async (data: {
           QuoteId: number
           QuoteNumber: number
@@ -256,7 +256,7 @@ export default function CustomerChatPage() {
         const handleSidebarUpdate = async () => {
           if (!isSubscribed || !user?.id) return
           try {
-            const response = await getCustomerChatRooms(user.id, 1, 50)
+            const response = await getMyChatRooms(1, 50)
             const mappedRentals: CustomerRental[] = response.rooms.map(room => ({
               id: room.id,
               rentalId: room.rentalId,
@@ -264,7 +264,7 @@ export default function CustomerChatPage() {
               eventDate: room.eventDate || 'TBD',
               status: room.status || 'Unknown',
               lastMessage: room.lastMessage || 'No messages',
-              timestamp: room.lastMessageTime 
+              timestamp: room.lastMessageTime
                 ? formatDistanceToNow(new Date(room.lastMessageTime), { addSuffix: true })
                 : 'No messages',
               unread: room.unreadCount
@@ -280,7 +280,7 @@ export default function CustomerChatPage() {
           originalReceiveMessage(message)
           handleSidebarUpdate()
         }
-        
+
         signalRService.onReceiveMessage(wrappedReceiveMessage)
         signalRService.onDemoStatusChanged(handleDemoStatusChanged)
         signalRService.onQuoteAccepted(handleQuoteAccepted)
@@ -337,20 +337,20 @@ export default function CustomerChatPage() {
       const result = await customerAction(quoteId, 'approve')
       toast.success(result.message || 'Quote accepted successfully!')
       setSelectedQuote(null)
-      
+
       await loadQuotes()
     } catch (error: any) {
       console.error('Failed to accept quote:', error)
       toast.error(error.response?.data?.error || 'Failed to accept quote')
     }
   }
-  
+
   const handleRejectQuote = async (quoteId: number, reason: string) => {
     try {
       const result = await customerAction(quoteId, 'reject', reason)
       toast.success(result.message || 'Quote rejected successfully!')
       setSelectedQuote(null)
-      
+
       await loadQuotes()
     } catch (error: any) {
       console.error('Failed to reject quote:', error)
@@ -387,11 +387,11 @@ export default function CustomerChatPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="pt-16 h-screen flex">
         {/* Left Sidebar - Rental List */}
         {isSidebarOpen && (
-          <div 
+          <div
             style={{ width: `${sidebarWidth}px` }}
             className="border-r border-gray-200 bg-white flex flex-col relative"
           >
@@ -425,9 +425,8 @@ export default function CustomerChatPage() {
                   <div
                     key={rental.id}
                     onClick={() => handleRentalClick(rental.rentalId)}
-                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      rental.rentalId.toString() === rentalId ? 'bg-orange-50 border-l-4 border-l-orange-500' : ''
-                    }`}
+                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${rental.rentalId.toString() === rentalId ? 'bg-orange-50 border-l-4 border-l-orange-500' : ''
+                      }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
@@ -447,7 +446,7 @@ export default function CustomerChatPage() {
                         </span>
                       )}
                     </div>
-                    
+
                     <div className="ml-6 space-y-1">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-3 h-3 text-gray-400" />
@@ -506,20 +505,20 @@ export default function CustomerChatPage() {
           </div>
 
           {/* Messages */}
-          <div 
+          <div
             ref={chatContainerRef}
             className="flex-1 overflow-y-auto p-6 space-y-4"
           >
             {messages.map((message) => (
               <div key={message.id}>
                 {message.messageType === MessageType.Demo ? (
-                  <DemoVideoCard 
-                    message={message} 
+                  <DemoVideoCard
+                    message={message}
                     isCustomer={true}
-                    onStatusUpdate={() => {}}
+                    onStatusUpdate={() => { }}
                   />
                 ) : (
-                  <ChatMessage 
+                  <ChatMessage
                     message={message}
                     isOwnMessage={
                       message.senderRole === 'Customer' || message.senderId === user?.id
@@ -571,64 +570,64 @@ export default function CustomerChatPage() {
         {/* Right Sidebar */}
         {isRightSidebarOpen && (
           <div className="w-96 border-l border-gray-200 bg-gray-50 overflow-y-auto">
-{/* Rental Request Info */}
-<div className="p-6 bg-white border-b border-gray-200">
-  <h2 className="text-lg font-bold text-gray-900 mb-4">
-    Your Rental Request
-  </h2>
+            {/* Rental Request Info */}
+            <div className="p-6 bg-white border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">
+                Your Rental Request
+              </h2>
 
-  {!rentalInfo ? (
-    <p className="text-gray-500 text-sm">Loading...</p>
-  ) : (
-    <div className="space-y-4">
+              {!rentalInfo ? (
+                <p className="text-gray-500 text-sm">Loading...</p>
+              ) : (
+                <div className="space-y-4">
 
-      {/* DATE + TIME */}
-      <div className="flex items-start gap-3">
-        <Calendar className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            {new Date(rentalInfo.eventDate).toLocaleDateString("en-US", {
-              month: "long",
-              day: "numeric",
-              year: "numeric"
-            })}
-          </p>
+                  {/* DATE + TIME */}
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {new Date(rentalInfo.eventDate).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric"
+                        })}
+                      </p>
 
-          <p className="text-xs text-gray-600">
-            {rentalInfo.startTime?.substring(0,5)} - {rentalInfo.endTime?.substring(0,5)}
-          </p>
-        </div>
-      </div>
+                      <p className="text-xs text-gray-600">
+                        {rentalInfo.startTime?.substring(0, 5)} - {rentalInfo.endTime?.substring(0, 5)}
+                      </p>
+                    </div>
+                  </div>
 
-      {/* LOCATION */}
-      <div className="flex items-start gap-3">
-        <MapPin className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm text-gray-900">
-            {rentalInfo.address}
-          </p>
-          <p className="text-xs text-gray-600">
-            {rentalInfo.city}
-          </p>
-        </div>
-      </div>
+                  {/* LOCATION */}
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-900">
+                        {rentalInfo.address}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {rentalInfo.city}
+                      </p>
+                    </div>
+                  </div>
 
-      {/* PACKAGE */}
-      <div className="flex items-start gap-3">
-        <Package className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            {rentalInfo.eventActivityName}
-          </p>
-          <p className="text-xs text-gray-600">
-            {rentalInfo.activityTypeName}
-          </p>
-        </div>
-      </div>
+                  {/* PACKAGE */}
+                  <div className="flex items-start gap-3">
+                    <Package className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {rentalInfo.eventActivityName}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {rentalInfo.activityTypeName}
+                      </p>
+                    </div>
+                  </div>
 
-    </div>
-  )}
-</div>
+                </div>
+              )}
+            </div>
             {/* Quotes Received */}
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -643,7 +642,7 @@ export default function CustomerChatPage() {
               <div className="space-y-3">
                 {fullQuotes.map((quote) => {
                   // Check if quote is new (created after last viewed time)
-                  const isNew = lastViewedQuoteTime 
+                  const isNew = lastViewedQuoteTime
                     ? new Date(quote.createdAt) > lastViewedQuoteTime
                     : false
 

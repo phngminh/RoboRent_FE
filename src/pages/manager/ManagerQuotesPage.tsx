@@ -245,8 +245,8 @@ export default function ManagerQuotesPage() {
                   {/* Price Breakdown */}
                   <div className="space-y-2 mb-4 text-sm">
                     <div className="flex justify-between text-gray-600">
-                      <span>Delivery Fee</span>
-                      <span className="font-medium">${quote.delivery?.toLocaleString() ?? 0}</span>
+                      <span>Delivery Fee (Auto)</span>
+                      <span className="font-medium">${quote.deliveryFee?.toLocaleString() ?? 0}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Deposit</span>

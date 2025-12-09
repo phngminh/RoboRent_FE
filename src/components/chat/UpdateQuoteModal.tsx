@@ -24,20 +24,18 @@ export default function UpdateQuoteModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Form fields
-  const [delivery, setDelivery] = useState<string>('')
   const [deposit, setDeposit] = useState<string>('')
   const [complete, setComplete] = useState<string>('')
   const [service, setService] = useState<string>('')
   const [staffDescription, setStaffDescription] = useState<string>('')
 
-  const deliveryNum = parseFloat(delivery) || 0
   const depositNum = parseFloat(deposit) || 0
   const completeNum = parseFloat(complete) || 0
   const serviceNum = parseFloat(service) || 0
   
-  // ✅ NEW: Tính subtotal (4 fields) + DeliveryFee
-  const subtotal = deliveryNum + depositNum + completeNum + serviceNum
+  // Total = deposit + complete + service + DeliveryFee (auto)
   const deliveryFee = quote?.deliveryFee || 0
+  const subtotal = depositNum + completeNum + serviceNum
   const total = subtotal + deliveryFee
 
   // Load quote details
@@ -61,7 +59,6 @@ export default function UpdateQuoteModal({
       setQuote(data)
       
       // Pre-fill form with current values
-      setDelivery(data.delivery?.toString() || '0')
       setDeposit(data.deposit?.toString() || '0')
       setComplete(data.complete?.toString() || '0')
       setService(data.service?.toString() || '0')
@@ -79,7 +76,7 @@ export default function UpdateQuoteModal({
     e.preventDefault()
 
     // Validation
-    if (deliveryNum < 0 || depositNum < 0 || completeNum < 0 || serviceNum < 0) {
+    if (depositNum < 0 || completeNum < 0 || serviceNum < 0) {
       toast.error('All amounts must be non-negative')
       return
     }
@@ -97,7 +94,6 @@ export default function UpdateQuoteModal({
     // Check if anything changed
     if (quote) {
       const noChanges =
-        deliveryNum === (quote.delivery || 0) &&
         depositNum === (quote.deposit || 0) &&
         completeNum === (quote.complete || 0) &&
         serviceNum === (quote.service || 0) &&
@@ -113,7 +109,6 @@ export default function UpdateQuoteModal({
 
     try {
       const request: Partial<CreatePriceQuoteRequest> = {
-        delivery: deliveryNum,
         deposit: depositNum,
         complete: completeNum,
         service: serviceNum,
@@ -233,24 +228,28 @@ export default function UpdateQuoteModal({
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Update Cost Breakdown</h3>
               
               <div className="grid grid-cols-2 gap-4">
-                {/* Delivery Fee (Manual) */}
+                {/* Delivery Fee (Auto) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Delivery Fee (Manual)
+                    Delivery Fee (Auto)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={delivery}
-                      onChange={(e) => setDelivery(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <div className="w-full pl-8 pr-4 py-2 border border-purple-300 bg-purple-50 rounded-lg flex items-center">
+                      <Truck className="w-4 h-4 text-purple-600 mr-2" />
+                      <div className="flex-1">
+                        <span className="text-sm text-purple-700 font-medium">
+                          ${deliveryFee.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </span>
+                        {quote.deliveryDistance && (
+                          <p className="text-xs text-purple-600 mt-0.5">
+                            {quote.deliveryDistance} km (round-trip)
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Original: ${quote.delivery?.toLocaleString() || '0.00'}
+                    Auto-calculated based on city
                   </p>
                 </div>
 

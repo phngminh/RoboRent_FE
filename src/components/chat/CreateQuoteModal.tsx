@@ -20,7 +20,6 @@ export default function CreateQuoteModal({
   onClose, 
   onSuccess 
 }: CreateQuoteModalProps) {
-  const [delivery, setDelivery] = useState<string>('')
   const [distance, setDistance] = useState<string>('')
   const [deposit, setDeposit] = useState<string>('')
   const [complete, setComplete] = useState<string>('')
@@ -29,14 +28,12 @@ export default function CreateQuoteModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [canCreate, setCanCreate] = useState(true)
 
-  const deliveryNum = parseFloat(delivery) || 0
   const depositNum = parseFloat(deposit) || 0
   const completeNum = parseFloat(complete) || 0
   const serviceNum = parseFloat(service) || 0
   
-  // ⚠️ NOTE: DeliveryFee sẽ được backend tự động tính
-  // Total hiển thị ở đây chỉ là preview (chưa có DeliveryFee)
-  const subtotal = deliveryNum + depositNum + completeNum + serviceNum
+  // Total = deposit + complete + service (DeliveryFee will be auto-calculated by backend)
+  const total = depositNum + completeNum + serviceNum
   const distanceNum = parseFloat(distance)
 
   const quoteNumber = currentQuoteCount + 1
@@ -57,12 +54,12 @@ export default function CreateQuoteModal({
     e.preventDefault()
 
     // Validation
-    if (deliveryNum < 0 || depositNum < 0 || completeNum < 0 || serviceNum < 0) {
+    if (depositNum < 0 || completeNum < 0 || serviceNum < 0) {
       toast.error('All amounts must be non-negative')
       return
     }
 
-    if (subtotal <= 0) {
+    if (total <= 0) {
       toast.error('Total amount must be greater than 0')
       return
     }
@@ -82,7 +79,6 @@ export default function CreateQuoteModal({
     try {
       const request: CreatePriceQuoteRequest = {
         rentalId,
-        delivery: deliveryNum,
         deposit: depositNum,
         complete: completeNum,
         service: serviceNum,
@@ -94,7 +90,6 @@ export default function CreateQuoteModal({
       toast.success(`Quote #${quoteNumber} created successfully`)
       
       // Reset form
-      setDelivery('')
       setDeposit('')
       setComplete('')
       setService('')
@@ -179,24 +174,21 @@ export default function CreateQuoteModal({
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
             
             <div className="grid grid-cols-2 gap-4">
-              {/* Delivery Fee */}
+              {/* Delivery Fee (Auto) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Delivery Fee (Manual)
+                  Delivery Fee (Auto)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={delivery}
-                    onChange={(e) => setDelivery(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="w-full pl-8 pr-4 py-2 border border-purple-300 bg-purple-50 rounded-lg flex items-center">
+                    <Truck className="w-4 h-4 text-purple-600 mr-2" />
+                    <span className="text-sm text-purple-700 font-medium">
+                      Auto-calculated based on city
+                    </span>
+                  </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Additional delivery charges (if any).
+                  Delivery fee will be automatically calculated and added to total.
                 </p>
               </div>
 
@@ -267,17 +259,17 @@ export default function CreateQuoteModal({
 </div>
 
 
-          {/* ✅ UPDATED: Subtotal Preview (before auto DeliveryFee) */}
+          {/* Total (DeliveryFee will be added by backend) */}
           <div className="bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-300">
             <div className="flex items-center justify-between">
-              <span className="text-lg font-semibold text-gray-700">Subtotal (Preview):</span>
+              <span className="text-lg font-semibold text-gray-700">Total:</span>
               <span className="text-2xl font-bold text-gray-900">
-                ${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
               <Truck className="w-3 h-3" />
-              Auto-calculated delivery fee will be added to this amount
+              Auto-calculated delivery fee will be added to this amount by backend
             </p>
           </div>
 

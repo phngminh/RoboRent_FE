@@ -4,7 +4,8 @@ import type {
   PriceQuoteResponse,
   CreatePriceQuoteRequest,
   RentalQuotesResponse,
-  ManagerQuoteListItemResponse
+  ManagerQuoteListItemResponse,
+  DeliveryFeePreviewResponse
 } from '../types/chat.types'
 
 const API_URL = `${import.meta.env.VITE_API_URL}`

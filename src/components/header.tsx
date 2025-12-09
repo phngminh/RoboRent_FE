@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { X, LogOut, Bell, Menu } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { googleLogin } from '../apis/auth.api'
-import { getStaffChatRooms, getCustomerChatRooms } from '../apis/chat.api'
+import { getMyChatRooms } from '../apis/chat.api'
 import { getQuotesByRentalId } from '../apis/priceQuote.api'
 import { QuoteStatus } from '../types/chat.types'
 import logo from '../assets/logo1.png'
@@ -74,9 +74,8 @@ const Header = () => {
       try {
         let totalUnread = 0
         const isStaff = user.role === 'Staff'
-        const getRooms = isStaff ? getStaffChatRooms : getCustomerChatRooms
-        
-        const response = await getRooms(user.id, 1, 50)
+
+        const response = await getMyChatRooms(1, 50)
         totalUnread = response.rooms.reduce((sum, room) => sum + room.unreadCount, 0)
 
         if (!isStaff) {

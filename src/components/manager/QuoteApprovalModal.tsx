@@ -161,12 +161,6 @@ export default function QuoteApprovalModal({
                       </tr>
                     )}
                     <tr>
-                      <td className="px-4 py-3 text-gray-900">Delivery & Setup (Manual)</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                        ${quote.delivery?.toLocaleString() || '0.00'}
-                      </td>
-                    </tr>
-                    <tr>
                       <td className="px-4 py-3 text-gray-900">Deposit (Refundable)</td>
                       <td className="px-4 py-3 text-right font-semibold text-gray-900">
                         ${quote.deposit?.toLocaleString() || '0.00'}

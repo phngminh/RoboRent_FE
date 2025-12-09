@@ -85,7 +85,6 @@ export interface UpdateMessageStatusRequest {
 export interface PriceQuoteResponse {
   id: number
   rentalId: number
-  delivery: number | null
   deposit: number | null
   complete: number | null
   service: number | null
@@ -102,13 +101,11 @@ export interface PriceQuoteResponse {
 
 export interface CreatePriceQuoteRequest {
   rentalId: number
-  delivery?: number
   deposit?: number
   complete?: number
   service?: number
   staffDescription?: string
   managerFeedback?: string
-  deliveryDistance: number
 }
 
 export interface RentalQuotesResponse {
@@ -163,6 +160,14 @@ export interface ChatRoomListResponse {
   hasPreviousPage: boolean
 }
 
+export interface DeliveryFeePreviewResponse {
+  rentalId: number
+  city: string
+  deliveryFee: number
+  distanceKm: number | null
+  description: string
+}
+
 export interface ManagerQuoteListItemResponse {
   id: number
   rentalId: number
@@ -170,7 +175,8 @@ export interface ManagerQuoteListItemResponse {
   customerName: string
   packageName: string
   eventDate: string
-  delivery: number | null
+  deliveryFee: number | null
+  deliveryDistance: number | null
   deposit: number | null
   complete: number | null
   service: number | null

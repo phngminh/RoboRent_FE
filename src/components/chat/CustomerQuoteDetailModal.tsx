@@ -166,12 +166,6 @@ export default function CustomerQuoteDetailModal({
                     </tr>
                   )}
                   <tr>
-                    <td className="px-4 py-3 text-gray-900">Delivery & Setup (Manual)</td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ${quote.delivery?.toLocaleString() || '0.00'}
-                    </td>
-                  </tr>
-                  <tr>
                     <td className="px-4 py-3 text-gray-900">
                       Deposit <span className="text-sm text-gray-500">(Refundable)</span>
                     </td>
