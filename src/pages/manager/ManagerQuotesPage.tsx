@@ -311,6 +311,7 @@ export default function ManagerQuotesPage() {
       {selectedQuote && (
         <QuoteApprovalModal
           quoteId={selectedQuote}
+          rentalInfo={quotes.find(q => q.id === selectedQuote)}
           isOpen={!!selectedQuote}
           onClose={() => setSelectedQuote(null)}
           onSuccess={() => {

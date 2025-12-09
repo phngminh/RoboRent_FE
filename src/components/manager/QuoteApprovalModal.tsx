@@ -2,11 +2,12 @@
 import { useState, useEffect } from 'react'
 import { X, CheckCircle, XCircle, AlertCircle, Calendar, Package, User, Truck } from 'lucide-react'
 import { getPriceQuoteById, managerAction } from '../../apis/priceQuote.api'
-import type { PriceQuoteResponse } from '../../types/chat.types'
+import type { PriceQuoteResponse, ManagerQuoteListItemResponse } from '../../types/chat.types'
 import { toast } from 'react-toastify'
 
 interface QuoteApprovalModalProps {
   quoteId: number
+  rentalInfo?: ManagerQuoteListItemResponse // Optional: rental info from list
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
@@ -14,6 +15,7 @@ interface QuoteApprovalModalProps {
 
 export default function QuoteApprovalModal({
   quoteId,
+  rentalInfo,
   isOpen,
   onClose,
   onSuccess
@@ -102,16 +104,25 @@ export default function QuoteApprovalModal({
               <h3 className="text-sm font-semibold text-purple-900 mb-3">Rental Information</h3>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-purple-800">
-                  <User className="w-4 h-4" />
-                  <span className="font-medium">Customer Name (from rental data)</span>
+                  <User className="w-4 h-4 flex-shrink-0" />
+                  <span className="font-medium">{rentalInfo?.customerName || 'Customer'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-purple-800">
-                  <Package className="w-4 h-4" />
-                  <span>Package Name (from rental data)</span>
+                  <Package className="w-4 h-4 flex-shrink-0" />
+                  <span>{rentalInfo?.packageName || 'Package'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-purple-800">
-                  <Calendar className="w-4 h-4" />
-                  <span>Event Date (from rental data)</span>
+                  <Calendar className="w-4 h-4 flex-shrink-0" />
+                  <span>
+                    {rentalInfo?.eventDate 
+                      ? new Date(rentalInfo.eventDate).toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })
+                      : 'Event Date TBD'}
+                  </span>
                 </div>
               </div>
             </div>

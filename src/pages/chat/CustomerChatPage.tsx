@@ -1,7 +1,7 @@
 // src/pages/chat/CustomerChatPage.tsx
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Send, Calendar, MapPin, Package, CheckCircle2, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Send, Calendar, MapPin, Package, CheckCircle2, Search, ChevronLeft, ChevronRight, Circle, XCircle, Loader2, Truck, Video, FileText, CreditCard, PartyPopper, Bot } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { signalRService } from '../../utils/signalr'
 import { getChatMessages, sendMessage, getMyChatRooms } from '../../apis/chat.api'
@@ -157,7 +157,7 @@ export default function CustomerChatPage() {
   // Load rentals from API
   useEffect(() => {
     const loadRentals = async () => {
-      if (!user?.id) return
+      if (!user?.accountId) return
 
       setIsLoadingRentals(true)
       try {
@@ -189,7 +189,7 @@ export default function CustomerChatPage() {
     }
 
     loadRentals()
-  }, [user?.id, rentalId])
+  }, [user?.accountId, rentalId])
 
   // SignalR setup
   useEffect(() => {
@@ -254,7 +254,7 @@ export default function CustomerChatPage() {
         }
 
         const handleSidebarUpdate = async () => {
-          if (!isSubscribed || !user?.id) return
+          if (!isSubscribed || !user?.accountId) return
           try {
             const response = await getMyChatRooms(1, 50)
             const mappedRentals: CustomerRental[] = response.rooms.map(room => ({
@@ -306,7 +306,7 @@ export default function CustomerChatPage() {
         signalRService.offQuoteCreated()
       }
     }
-  }, [rentalId, user?.id])
+  }, [rentalId, user?.accountId])
 
   useEffect(() => {
     scrollToBottom()
@@ -382,6 +382,155 @@ export default function CustomerChatPage() {
       default:
         return 'text-gray-600'
     }
+  }
+
+  // Helper function to determine progress steps
+  type StepStatus = 'completed' | 'in-progress' | 'pending' | 'failed'
+
+  interface ProgressStep {
+    id: string
+    label: string
+    status: StepStatus
+    icon: React.ReactNode
+    substatus: string
+  }
+
+  const getProgressSteps = (): ProgressStep[] => {
+    const status = rentalInfo?.status || ''
+    const steps: ProgressStep[] = []
+
+    // Step 1: Robot Scheduling
+    const scheduleStatus: StepStatus = 
+      ['Scheduled', 'PendingDemo', 'AcceptedDemo', 'DeniedDemo', 'PendingPriceQuote', 'AcceptedPriceQuote', 'RejectedPriceQuote', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
+        ? 'completed'
+        : status === 'Received'
+        ? 'in-progress'
+        : 'pending'
+    
+    steps.push({
+      id: 'schedule',
+      label: 'Robot Scheduling',
+      status: scheduleStatus,
+      icon: <Bot className="w-5 h-5" />,
+      substatus: 
+        scheduleStatus === 'completed' ? 'Robots scheduled ✓' :
+        scheduleStatus === 'in-progress' ? 'Staff is scheduling robots...' :
+        'Waiting for staff to schedule robots'
+    })
+
+    // Step 2: Demo Review
+    const demoStatus: StepStatus = 
+      ['AcceptedDemo', 'PendingPriceQuote', 'AcceptedPriceQuote', 'RejectedPriceQuote', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
+        ? 'completed'
+        : status === 'PendingDemo'
+        ? 'in-progress'
+        : status === 'DeniedDemo'
+        ? 'failed'
+        : 'pending'
+    
+    steps.push({
+      id: 'demo',
+      label: 'Demo Review',
+      status: demoStatus,
+      icon: <Video className="w-5 h-5" />,
+      substatus: 
+        demoStatus === 'completed' ? 'Demo approved ✓' :
+        demoStatus === 'in-progress' ? 'Review demo video...' :
+        demoStatus === 'failed' ? 'Demo rejected - awaiting new demo' :
+        'Waiting for staff to send demo'
+    })
+
+    // Step 3: Price Quote
+    const quoteStatus: StepStatus = 
+      ['AcceptedPriceQuote', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
+        ? 'completed'
+        : (status === 'PendingPriceQuote' || fullQuotes.some(q => q.status === 'PendingCustomer'))
+        ? 'in-progress'
+        : 'pending'
+    
+    steps.push({
+      id: 'quote',
+      label: 'Price Quote',
+      status: quoteStatus,
+      icon: <FileText className="w-5 h-5" />,
+      substatus: 
+        quoteStatus === 'completed' ? 'Quote approved ✓' :
+        quoteStatus === 'in-progress' ? `Reviewing quote #${quotesData?.totalQuotes || 1}` :
+        'Waiting for price quote'
+    })
+
+    // Step 4: Contract Signing
+    const contractStatus: StepStatus = 
+      ['PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
+        ? 'completed'
+        : status === 'PendingContract'
+        ? 'in-progress'
+        : 'pending'
+    
+    steps.push({
+      id: 'contract',
+      label: 'Contract Signing',
+      status: contractStatus,
+      icon: <FileText className="w-5 h-5" />,
+      substatus: 
+        contractStatus === 'completed' ? 'Contract signed ✓' :
+        contractStatus === 'in-progress' ? 'Review and sign contract' :
+        'Waiting for contract'
+    })
+
+    // Step 5: Deposit Payment
+    const depositStatus: StepStatus = 
+      ['DeliveryScheduled', 'Completed'].includes(status)
+        ? 'completed'
+        : status === 'PendingDeposit'
+        ? 'in-progress'
+        : 'pending'
+    
+    steps.push({
+      id: 'deposit',
+      label: 'Deposit Payment',
+      status: depositStatus,
+      icon: <CreditCard className="w-5 h-5" />,
+      substatus: 
+        depositStatus === 'completed' ? 'Deposit paid ✓' :
+        depositStatus === 'in-progress' ? 'Pay deposit to confirm' :
+        'Waiting for deposit payment'
+    })
+
+    // Step 6: Delivery Scheduled
+    const deliveryStatus: StepStatus = 
+      status === 'Completed'
+        ? 'completed'
+        : status === 'DeliveryScheduled'
+        ? 'in-progress'
+        : 'pending'
+    
+    steps.push({
+      id: 'delivery',
+      label: 'Delivery Scheduled',
+      status: deliveryStatus,
+      icon: <Truck className="w-5 h-5" />,
+      substatus: 
+        deliveryStatus === 'completed' ? 'Robots delivered ✓' :
+        deliveryStatus === 'in-progress' ? 'Delivery scheduled' :
+        'Waiting for delivery schedule'
+    })
+
+    // Step 7: Event Completed
+    const completedStatus: StepStatus = 
+      status === 'Completed' ? 'completed' : 'pending'
+    
+    steps.push({
+      id: 'completed',
+      label: 'Event Completed',
+      status: completedStatus,
+      icon: <PartyPopper className="w-5 h-5" />,
+      substatus: 
+        completedStatus === 'completed' ? 'Event completed successfully! ✓' :
+        'Awaiting event day'
+    })
+
+    return steps
   }
 
   return (
@@ -521,7 +670,7 @@ export default function CustomerChatPage() {
                   <ChatMessage
                     message={message}
                     isOwnMessage={
-                      message.senderRole === 'Customer' || message.senderId === user?.id
+                      message.senderRole === 'Customer' || message.senderId === user?.accountId
                     }
                   />
                 )}
@@ -664,25 +813,87 @@ export default function CustomerChatPage() {
               </div>
             </div>
 
-            {/* Next Steps */}
-            <div className="p-6 bg-white border-t border-gray-200">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Next Steps</h2>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span className="text-sm text-gray-600">Demo approved</span>
+            {/* Progress Timeline */}
+            <div className="p-6 bg-gradient-to-br from-white to-gray-50 border-t border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-6">Progress Timeline</h2>
+              
+              {(rentalInfo?.status === 'Canceled' || rentalInfo?.status === 'ForceCancelled') ? (
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+                  <p className="text-red-700 font-medium flex items-center gap-2">
+                    <XCircle className="w-5 h-5" />
+                    This rental has been cancelled
+                  </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full border-2 border-blue-500 flex items-center justify-center flex-shrink-0">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                  </div>
-                  <span className="text-sm text-gray-900 font-medium">Reviewing quote #{quotesData?.totalQuotes || 1}</span>
+              ) : (
+                <div className="relative space-y-0">
+                  {/* Vertical gradient line */}
+                  <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-green-300 via-blue-300 to-gray-200" />
+                  
+                  {getProgressSteps().map((step, index) => {
+                    const isLast = index === getProgressSteps().length - 1
+                    const statusColors = {
+                      completed: {
+                        bg: 'bg-green-50',
+                        border: 'border-green-500',
+                        text: 'text-green-700',
+                        icon: 'text-green-600'
+                      },
+                      'in-progress': {
+                        bg: 'bg-blue-50',
+                        border: 'border-blue-500',
+                        text: 'text-blue-900',
+                        icon: 'text-blue-600'
+                      },
+                      failed: {
+                        bg: 'bg-red-50',
+                        border: 'border-red-500',
+                        text: 'text-red-700',
+                        icon: 'text-red-600'
+                      },
+                      pending: {
+                        bg: 'bg-gray-50',
+                        border: 'border-gray-300',
+                        text: 'text-gray-400',
+                        icon: 'text-gray-400'
+                      }
+                    }
+                    
+                    const colors = statusColors[step.status]
+                    
+                    return (
+                      <div key={step.id} className={`relative flex items-start gap-3 pb-6 ${isLast ? 'pb-0' : ''}`}>
+                        {/* Icon circle */}
+                        <div className={`relative z-10 flex items-center justify-center w-6 h-6 rounded-full border-2 ${colors.border} ${colors.bg} ${colors.icon} flex-shrink-0 transition-all duration-300 ${step.status === 'in-progress' ? 'shadow-lg' : ''}`}>
+                          {step.status === 'completed' ? (
+                            <CheckCircle2 className="w-4 h-4" />
+                          ) : step.status === 'in-progress' ? (
+                            <div className="w-3 h-3 bg-blue-600 rounded-full animate-pulse" />
+                          ) : step.status === 'failed' ? (
+                            <XCircle className="w-4 h-4" />
+                          ) : (
+                            <Circle className="w-3 h-3" />
+                          )}
+                        </div>
+                        
+                        {/* Step content */}
+                        <div className={`flex-1 ${step.status === 'in-progress' ? 'transform scale-105' : ''} transition-all duration-300`}>
+                          <div className={`flex items-center gap-2 mb-1 ${colors.text}`}>
+                            <span className={`${colors.icon}`}>
+                              {step.icon}
+                            </span>
+                            <span className={`text-sm font-semibold ${step.status === 'in-progress' ? 'text-blue-900' : step.status === 'completed' ? 'text-gray-700' : colors.text}`}>
+                              {step.label}
+                            </span>
+                          </div>
+                          <p className={`text-xs ml-7 ${step.status === 'in-progress' ? 'text-blue-700 font-medium' : step.status === 'completed' ? 'text-gray-600' : colors.text}`}>
+                            {step.substatus}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex-shrink-0" />
-                  <span className="text-sm text-gray-400">Waiting for contract</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
