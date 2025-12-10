@@ -295,7 +295,21 @@ export default function useRouteElements() {
           children: [
             { path: 'dashboard', element: <DashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
-            { path: 'rental-requests', element: <ManagerRentalRequestsContent /> },
+            { 
+              path: 'rental-requests', 
+              element: 
+                <ManagerRentalRequestsContent 
+                  onView={(id) => navigate(`${path.BASE_MANAGER}/share-rental-request/${id}`)}
+                /> 
+            },
+            {
+              path: 'share-rental-request/:rentalId',
+              element: (
+                <ShareRentalRequestDetail
+                  onBack={() => navigate(`${path.BASE_MANAGER}/rental-requests`)}
+                />
+              )
+            },
             { path: 'quotes', element: <ManagerQuotesPage /> },
             { 
               path: 'contract-drafts', 

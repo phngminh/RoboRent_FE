@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, CheckCircle, XCircle, FileText, Calendar, User, ImageIcon, Eye } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, FileText, Calendar, User, ImageIcon, Eye, Download } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { Button } from '../../../components/ui/button'
@@ -43,23 +43,54 @@ const ReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
     return txt.value
   }
 
-  const evidenceItems = report && report.evidencePath ? (() => {
-    const path = report.evidencePath
-    const name = path.split('/').pop() || path.split('/').pop()?.split('?')[0] || 'Unknown File'
-    const extension = name.split('.').pop()?.toLowerCase() || ''
-    const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].includes(extension)
-    const type = isImage ? 'Image' : 'Document'
-    const icon = isImage ? <ImageIcon className='text-blue-600' size={20} /> : <FileText className='text-blue-600' size={20} />
-    
-    return [{
-      type,
-      name,
-      url: path,
-      date: new Date(report.createdAt).toLocaleDateString(),
-      icon,
-      isImage
-    }]
-  })() : []
+  const evidenceItems = report && report.evidencePath 
+    ? report.evidencePath
+        .split(';')
+        .filter(path => path.trim() !== '')
+        .map((path) => {
+          const trimmedPath = path.trim()
+          const name = trimmedPath.split('/').pop()?.split('?')[0] || 'Unknown File'
+          const extension = name.split('.').pop()?.toLowerCase() || ''
+          const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']
+          const videoExts = ['mp4', 'mov', 'avi', 'webm', 'mkv']
+          const isImage = imageExts.includes(extension)
+          const isVideo = videoExts.includes(extension)
+          const isMedia = isImage || isVideo
+          const type = isImage ? 'Image' : isVideo ? 'Video' : 'Document'
+          const icon = isMedia 
+            ? <ImageIcon className='text-blue-600' size={20} /> 
+            : <FileText className='text-blue-600' size={20} />
+          
+          return {
+            type,
+            name,
+            url: trimmedPath,
+            date: new Date(report.createdAt).toLocaleDateString(),
+            icon,
+            isImage: isMedia // Repurposed to mean "viewable media"
+          }
+        })
+    : []
+
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Failed to fetch file')
+      const blob = await response.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(downloadUrl)
+      toast.success('Download started successfully')
+    } catch (error) {
+      console.error('Download failed:', error)
+      toast.error('Failed to download file')
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -250,18 +281,36 @@ const ReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
                     <div className='flex justify-end gap-2 pt-2'>
                       {item.isImage ? (
                         <>
-                          <a
-                            href={item.url}
-                            target='_blank'
-                            rel='noopener noreferrer'
-                            className='px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center space-x-1'
+                          <Button
+                            onClick={() => window.open(item.url, '_blank')}
+                            variant='outline'
+                            size='sm'
+                            className='px-3 py-1 text-xs flex items-center space-x-1'
                           >
-                            <Eye size={14} className='mr-2' />
+                            <Eye size={14} />
                             View
-                          </a>
+                          </Button>
+                          <Button
+                            onClick={() => handleDownload(item.url, item.name)}
+                            variant='outline'
+                            size='sm'
+                            className='px-3 py-1 text-xs flex items-center space-x-1'
+                          >
+                            <Download size={14} />
+                            <span>Download</span>
+                          </Button>
                         </>
                       ) : (
                         <>
+                          <Button
+                            onClick={() => handleDownload(item.url, item.name)}
+                            variant='outline'
+                            size='sm'
+                            className='px-3 py-1 text-xs flex items-center space-x-1'
+                          >
+                            <Download size={14} />
+                            <span>Download</span>
+                          </Button>
                         </>
                       )}
                     </div>
