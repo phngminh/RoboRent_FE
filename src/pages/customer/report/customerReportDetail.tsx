@@ -197,6 +197,7 @@ const CustomerReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
               </div>
             </div>
           </div>
+
           <div className='rounded-lg shadow-sm border border-gray-200'>
             <div className='p-6 pb-3 border-b border-gray-200'>
               <h2 className='text-2xl font-semibold text-gray-800'>Description</h2>
@@ -205,6 +206,15 @@ const CustomerReportDetail: React.FC<ReportDetailProps> = ({ onBack }) => {
               <p className='text-sm text-gray-700 leading-relaxed'>{report.description || 'No description provided.'}</p>
             </div>
           </div>
+
+          {report.paymentLink && (
+            <div className='rounded-lg shadow-sm border border-gray-200'>
+              <div className='p-6 pb-3 border-b border-gray-200'>
+                <h2 className='text-2xl font-semibold text-gray-800'>Payment Link</h2>
+                </div>
+                <div className='p-6'>{report.paymentLink}</div>
+            </div>
+          )}
         </div>
 
         <div className='space-y-6'>
