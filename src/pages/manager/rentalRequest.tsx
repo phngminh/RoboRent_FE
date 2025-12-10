@@ -2,7 +2,11 @@ import { Eye, Search } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { getAllRequests, type RentalRequestResponse } from '../../apis/rentalRequest.api'
 
-const RentalRequestsContent: React.FC = () => {
+interface RentalRequestsContentProps {
+  onView: (id: number) => void
+}
+
+const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView }) => {
   const [allRentals, setAllRentals] = useState<RentalRequestResponse[]>([])
   const [filteredRentals, setFilteredRentals] = useState<RentalRequestResponse[]>([])
   const [page, setPage] = useState(1)
@@ -95,10 +99,6 @@ const RentalRequestsContent: React.FC = () => {
 
   const handlePageSelect = (num: number) => {
     setPage(num)
-  }
-
-  const handleView = (rentalId: number) => {
-    console.log('Viewing rental request:', rentalId)
   }
 
   const paginatedRentals = filteredRentals.slice((page - 1) * perPage, page * perPage)
@@ -251,7 +251,7 @@ const RentalRequestsContent: React.FC = () => {
                       <td className='px-6 py-4 text-sm text-center'>
                         <div className='flex justify-center space-x-2'>
                           <button
-                            onClick={() => handleView(request.id)}
+                            onClick={() => onView(request.id)}
                             className='text-gray-600 hover:text-gray-800 flex items-center space-x-1'
                           >
                             <Eye size={14} />
