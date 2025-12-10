@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { X, CheckCircle, ChevronDown, ChevronUp, XCircle, Truck } from 'lucide-react'
 import type { PriceQuoteResponse } from '../../types/chat.types'
 import { QuoteStatus } from '../../types/chat.types'
+import { formatMoney } from '../../utils/format'
 
 interface CustomerQuoteDetailModalProps {
   quote: PriceQuoteResponse | null
@@ -158,7 +159,7 @@ export default function CustomerQuoteDetailModal({
                     </p>
                   </div>
                   <p className="text-xl font-bold text-purple-700">
-                    ${quote.deliveryFee.toLocaleString()}
+                    {formatMoney(quote.deliveryFee)}
                   </p>
                 </div>
               </div>
@@ -180,7 +181,7 @@ export default function CustomerQuoteDetailModal({
                         Delivery Fee (Auto-calculated)
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-purple-900">
-                        ${quote.deliveryFee?.toLocaleString() || '0.00'}
+                        {formatMoney(quote.deliveryFee || 0)}
                       </td>
                     </tr>
                   )}
@@ -189,19 +190,19 @@ export default function CustomerQuoteDetailModal({
                       Deposit <span className="text-sm text-gray-500">(Refundable)</span>
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ${quote.deposit?.toLocaleString() || '0.00'}
+                      {formatMoney(quote.deposit || 0)}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 text-gray-900">Completion Payment</td>
                     <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ${quote.complete?.toLocaleString() || '0.00'}
+                      {formatMoney(quote.complete || 0)}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 text-gray-900">Service & Support</td>
                     <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ${quote.service?.toLocaleString() || '0.00'}
+                      {formatMoney(quote.service || 0)}
                     </td>
                   </tr>
                 </tbody>
@@ -209,7 +210,7 @@ export default function CustomerQuoteDetailModal({
                   <tr className="bg-gray-100 border-t-2 border-gray-300">
                     <td className="px-4 py-4 text-lg font-bold text-gray-900">Total Amount</td>
                     <td className="px-4 py-4 text-right text-2xl font-bold text-blue-600">
-                      ${quote.total.toLocaleString()}
+                      {formatMoney(quote.total)}
                     </td>
                   </tr>
                 </tfoot>
@@ -264,7 +265,7 @@ export default function CustomerQuoteDetailModal({
                           <td className="px-4 py-2 text-gray-700 font-medium">Delivery Fee (Auto)</td>
                           {allQuotes.map((q) => (
                             <td key={q.id} className="px-4 py-2 text-right text-purple-700 font-semibold">
-                              ${q.deliveryFee?.toLocaleString() || '0'}
+                              {formatMoney(q.deliveryFee || 0)}
                             </td>
                           ))}
                         </tr>
@@ -272,7 +273,7 @@ export default function CustomerQuoteDetailModal({
                           <td className="px-4 py-2 text-gray-700">Deposit</td>
                           {allQuotes.map((q) => (
                             <td key={q.id} className="px-4 py-2 text-right text-gray-900">
-                              ${q.deposit?.toLocaleString() || '0'}
+                              {formatMoney(q.deposit || 0)}
                             </td>
                           ))}
                         </tr>
@@ -280,7 +281,7 @@ export default function CustomerQuoteDetailModal({
                           <td className="px-4 py-2 text-gray-700">Service & Support</td>
                           {allQuotes.map((q) => (
                             <td key={q.id} className="px-4 py-2 text-right text-gray-900">
-                              ${q.service?.toLocaleString() || '0'}
+                              {formatMoney(q.service || 0)}
                             </td>
                           ))}
                         </tr>
@@ -288,7 +289,7 @@ export default function CustomerQuoteDetailModal({
                           <td className="px-4 py-2 text-gray-700">Completion Payment</td>
                           {allQuotes.map((q) => (
                             <td key={q.id} className="px-4 py-2 text-right text-gray-900">
-                              ${q.complete?.toLocaleString() || '0'}
+                              {formatMoney(q.complete || 0)}
                             </td>
                           ))}
                         </tr>
@@ -296,7 +297,7 @@ export default function CustomerQuoteDetailModal({
                           <td className="px-4 py-3 text-gray-900">Total</td>
                           {allQuotes.map((q) => (
                             <td key={q.id} className={`px-4 py-3 text-right ${q.id === quote.id ? 'text-blue-600' : 'text-gray-900'}`}>
-                              ${q.total.toLocaleString()}
+                              {formatMoney(q.total)}
                             </td>
                           ))}
                         </tr>

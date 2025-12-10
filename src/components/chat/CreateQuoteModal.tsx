@@ -4,6 +4,7 @@ import { X, AlertCircle, Truck } from 'lucide-react'
 import { createPriceQuote, checkCanCreateMoreQuotes } from '../../apis/priceQuote.api'
 import type { CreatePriceQuoteRequest } from '../../types/chat.types'
 import { toast } from 'react-toastify'
+import { formatMoney } from '../../utils/format'
 
 interface CreateQuoteModalProps {
   isOpen: boolean
@@ -194,15 +195,15 @@ export default function CreateQuoteModal({
                   Deposit Amount
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                   <input
                     type="number"
                     step="0.01"
                     value={deposit}
                     onChange={(e) => setDeposit(e.target.value)}
                     placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Refundable security deposit for the rental.
@@ -215,15 +216,15 @@ export default function CreateQuoteModal({
                   Completion Fee
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                   <input
                     type="number"
                     step="0.01"
                     value={complete}
                     onChange={(e) => setComplete(e.target.value)}
                     placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Fee upon successful completion of the rental.
@@ -236,15 +237,15 @@ export default function CreateQuoteModal({
                   Service Fee
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                   <input
                     type="number"
                     step="0.01"
                     value={service}
                     onChange={(e) => setService(e.target.value)}
                     placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Charges for additional services.
@@ -260,7 +261,7 @@ export default function CreateQuoteModal({
             <div className="flex items-center justify-between">
               <span className="text-lg font-semibold text-gray-700">Total:</span>
               <span className="text-2xl font-bold text-gray-900">
-                ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatMoney(total)}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">

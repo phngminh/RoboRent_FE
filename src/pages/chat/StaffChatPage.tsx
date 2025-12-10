@@ -24,6 +24,7 @@ import UpdateQuoteModal from '../../components/chat/UpdateQuoteModal'
 import Header from '../../components/header'
 import { toast } from 'react-toastify'
 import { formatDistanceToNow } from 'date-fns'
+import { formatMoney } from '../../utils/format'
 import { getRentalByIdAsync } from '../../apis/rental.staff.api'
 
 // Interface for customer chat list
@@ -800,7 +801,7 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
                         <p className="text-sm font-medium text-gray-900">
                           Quote #{quote.quoteNumber}
                         </p>
-                        <p className="text-xs text-gray-600">${quote.total.toLocaleString()}</p>
+                        <p className="text-xs text-gray-600">{formatMoney(quote.total)}</p>
                       </div>
                       <span className={`text-xs px-2 py-1 rounded-full ${quote.status === QuoteStatus.PendingManager ? 'bg-yellow-100 text-yellow-700' :
                         quote.status === QuoteStatus.PendingCustomer ? 'bg-blue-100 text-blue-700' :

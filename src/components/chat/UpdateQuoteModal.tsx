@@ -5,6 +5,7 @@ import { getPriceQuoteById, updatePriceQuote } from '../../apis/priceQuote.api'
 import type { PriceQuoteResponse, CreatePriceQuoteRequest } from '../../types/chat.types'
 import { QuoteStatus } from '../../types/chat.types'
 import { toast } from 'react-toastify'
+import { formatMoney } from '../../utils/format'
 
 interface UpdateQuoteModalProps {
   quoteId: number
@@ -199,7 +200,7 @@ export default function UpdateQuoteModal({
                       </p>
                     </div>
                     <p className="text-xl font-bold text-purple-700">
-                      ${quote.deliveryFee.toLocaleString()}
+                      {formatMoney(quote.deliveryFee)}
                     </p>
                   </div>
                 </div>
@@ -212,12 +213,12 @@ export default function UpdateQuoteModal({
                     <p className="text-sm font-semibold text-blue-900">Original Quote Total</p>
                     {quote.deliveryFee && quote.deliveryFee > 0 && (
                       <p className="text-xs text-blue-600 mt-1">
-                        (includes delivery fee: ${quote.deliveryFee.toLocaleString()})
+                        (includes delivery fee: {formatMoney(quote.deliveryFee)})
                       </p>
                     )}
                   </div>
                   <p className="text-2xl font-bold text-blue-700">
-                    ${quote.total.toLocaleString()}
+                    {formatMoney(quote.total)}
                   </p>
                 </div>
               </div>
@@ -238,7 +239,7 @@ export default function UpdateQuoteModal({
                       <Truck className="w-4 h-4 text-purple-600 mr-2" />
                       <div className="flex-1">
                         <span className="text-sm text-purple-700 font-medium">
-                          ${deliveryFee.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          {formatMoney(deliveryFee)}
                         </span>
                         {quote.deliveryDistance && (
                           <p className="text-xs text-purple-600 mt-0.5">
@@ -259,18 +260,18 @@ export default function UpdateQuoteModal({
                     Deposit Amount
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                     <input
                       type="number"
                       step="0.01"
                       value={deposit}
                       onChange={(e) => setDeposit(e.target.value)}
                       placeholder="0.00"
-                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Original: ${quote.deposit?.toLocaleString() || '0.00'}
+                    Original: {formatMoney(quote.deposit || 0)}
                   </p>
                 </div>
 
@@ -280,18 +281,18 @@ export default function UpdateQuoteModal({
                     Completion Fee
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                     <input
                       type="number"
                       step="0.01"
                       value={complete}
                       onChange={(e) => setComplete(e.target.value)}
                       placeholder="0.00"
-                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Original: ${quote.complete?.toLocaleString() || '0.00'}
+                    Original: {formatMoney(quote.complete || 0)}
                   </p>
                 </div>
 
@@ -301,18 +302,18 @@ export default function UpdateQuoteModal({
                     Service Fee
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                     <input
                       type="number"
                       step="0.01"
                       value={service}
                       onChange={(e) => setService(e.target.value)}
                       placeholder="0.00"
-                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Original: ${quote.service?.toLocaleString() || '0.00'}
+                    Original: {formatMoney(quote.service || 0)}
                   </p>
                 </div>
               </div>
@@ -327,7 +328,7 @@ export default function UpdateQuoteModal({
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-700">Subtotal (your inputs):</span>
                   <span className="font-semibold text-gray-900">
-                    ${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    {formatMoney(subtotal)}
                   </span>
                 </div>
                 
@@ -339,7 +340,7 @@ export default function UpdateQuoteModal({
                       + Delivery Fee (auto):
                     </span>
                     <span className="font-semibold text-purple-700">
-                      ${deliveryFee.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {formatMoney(deliveryFee)}
                     </span>
                   </div>
                 )}
@@ -351,17 +352,17 @@ export default function UpdateQuoteModal({
                   <span className="text-xl font-bold text-gray-900">New Total:</span>
                   <div className="text-right">
                     <span className="text-3xl font-bold text-blue-600">
-                      ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {formatMoney(total)}
                     </span>
                     {total !== quote.total && (
                       <p className="text-sm font-medium mt-1">
                         {total > quote.total ? (
                           <span className="text-red-600">
-                            +${(total - quote.total).toLocaleString()} increase
+                            +{formatMoney(total - quote.total)} increase
                           </span>
                         ) : (
                           <span className="text-green-600">
-                            -${(quote.total - total).toLocaleString()} decrease
+                            -{formatMoney(quote.total - total)} decrease
                           </span>
                         )}
                       </p>

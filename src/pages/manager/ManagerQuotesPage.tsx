@@ -10,6 +10,7 @@ import { QuoteStatus } from '../../types/chat.types'
 import Header from '../../components/header'
 import QuoteApprovalModal from '../../components/manager/QuoteApprovalModal'
 import { toast } from 'react-toastify'
+import { formatMoney } from '../../utils/format'
 
 export default function ManagerQuotesPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -246,19 +247,19 @@ export default function ManagerQuotesPage() {
                   <div className="space-y-2 mb-4 text-sm">
                     <div className="flex justify-between text-gray-600">
                       <span>Delivery Fee (Auto)</span>
-                      <span className="font-medium">${quote.deliveryFee?.toLocaleString() ?? 0}</span>
+                      <span className="font-medium">{formatMoney(quote.deliveryFee ?? 0)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Deposit</span>
-                      <span className="font-medium">${quote.deposit?.toLocaleString() ?? 0}</span>
+                      <span className="font-medium">{formatMoney(quote.deposit ?? 0)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Completion</span>
-                      <span className="font-medium">${quote.complete?.toLocaleString() ?? 0}</span>
+                      <span className="font-medium">{formatMoney(quote.complete ?? 0)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Service</span>
-                      <span className="font-medium">${quote.service?.toLocaleString() ?? 0}</span>
+                      <span className="font-medium">{formatMoney(quote.service ?? 0)}</span>
                     </div>
                   </div>
 
@@ -266,7 +267,7 @@ export default function ManagerQuotesPage() {
                   <div className="flex justify-between items-center pt-4 border-t border-gray-200 mb-4">
                     <span className="text-lg font-bold text-gray-900">Total Amount</span>
                     <span className="text-2xl font-bold text-purple-600">
-                      ${quote.total.toLocaleString()}
+                      {formatMoney(quote.total)}
                     </span>
                   </div>
 

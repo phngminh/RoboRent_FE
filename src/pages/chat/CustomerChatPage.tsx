@@ -16,6 +16,7 @@ import { toast } from 'react-toastify'
 import { formatDistanceToNow } from 'date-fns'
 import Header from '../../components/header'
 import { getRentalByIdAsync } from '../../apis/rental.customer.api'
+import { formatMoney } from '../../utils/format'
 
 // Interface cho rental trong sidebar
 interface CustomerRental {
@@ -264,7 +265,7 @@ export default function CustomerChatPage() {
         }) => {
           if (!isSubscribed) return
           console.log('📢 New quote created:', data)
-          toast.info(`New quote #${data.QuoteNumber} received! Total: $${data.Total.toLocaleString()}`)
+          toast.info(`New quote #${data.QuoteNumber} received! Total: ${formatMoney(data.Total)}`)
           await loadQuotes()
         }
 

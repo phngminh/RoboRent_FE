@@ -13,6 +13,7 @@ import {
 import { toast } from 'react-toastify';
 import { paymentApi } from '../../apis/payment.api';
 import type { PaymentRecordResponse } from '../../types/payment.types';
+import { formatMoney } from '../../utils/format';
 
 // Component hiển thị Status Badge chuyên nghiệp (Hybrid: BE status first, then client-side check)
 const StatusBadge = ({ status, expired }: { status: string, expired: boolean }) => {
@@ -88,9 +89,6 @@ export default function TransactionsContent() {
   }, []);
 
   // Format Helpers
-  const formatMoney = (amount: number) => 
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-
   const formatDate = (dateStr: string) => 
     new Date(dateStr).toLocaleDateString('vi-VN', { 
       day: '2-digit', month: 'short', year: 'numeric',

@@ -2,6 +2,7 @@
 import { X, CheckCircle, AlertCircle, RefreshCw, Truck } from 'lucide-react'
 import type { PriceQuoteResponse } from '../../types/chat.types'
 import { QuoteStatus } from '../../types/chat.types'
+import { formatMoney } from '../../utils/format'
 
 interface StaffQuoteDetailModalProps {
   quote: PriceQuoteResponse | null
@@ -216,7 +217,7 @@ export default function StaffQuoteDetailModal({
                     </p>
                   </div>
                   <p className="text-xl font-bold text-purple-700">
-                    ${quote.deliveryFee.toLocaleString()}
+                    {formatMoney(quote.deliveryFee)}
                   </p>
                 </div>
               </div>
@@ -238,7 +239,7 @@ export default function StaffQuoteDetailModal({
                         Delivery Fee (Auto-calculated)
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-purple-900">
-                        ${quote.deliveryFee?.toLocaleString() || '0.00'}
+                        {formatMoney(quote.deliveryFee || 0)}
                       </td>
                     </tr>
                   )}
@@ -247,19 +248,19 @@ export default function StaffQuoteDetailModal({
                       Deposit <span className="text-sm text-gray-500">(Refundable)</span>
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ${quote.deposit?.toLocaleString() || '0.00'}
+                      {formatMoney(quote.deposit || 0)}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 text-gray-900">Completion Payment</td>
                     <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ${quote.complete?.toLocaleString() || '0.00'}
+                      {formatMoney(quote.complete || 0)}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 text-gray-900">Service & Support</td>
                     <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ${quote.service?.toLocaleString() || '0.00'}
+                      {formatMoney(quote.service || 0)}
                     </td>
                   </tr>
                 </tbody>
@@ -267,7 +268,7 @@ export default function StaffQuoteDetailModal({
                   <tr className="bg-gray-100 border-t-2 border-gray-300">
                     <td className="px-4 py-4 text-lg font-bold text-gray-900">Total Amount</td>
                     <td className="px-4 py-4 text-right text-2xl font-bold text-blue-600">
-                      ${quote.total.toLocaleString()}
+                      {formatMoney(quote.total)}
                     </td>
                   </tr>
                 </tfoot>

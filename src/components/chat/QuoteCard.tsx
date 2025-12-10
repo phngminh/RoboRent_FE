@@ -2,6 +2,7 @@
 import { ExternalLink, Truck } from 'lucide-react' // ✅ ADD Truck
 import type { PriceQuoteResponse } from '../../types/chat.types'
 import { QuoteStatus } from '../../types/chat.types'
+import { formatMoney } from '../../utils/format'
 
 interface QuoteCardProps {
   quote: PriceQuoteResponse
@@ -104,20 +105,20 @@ export default function QuoteCard({ quote, onViewDetails, isNew = false }: Quote
               <Truck className="w-3 h-3" />
               Delivery Fee (Auto)
             </span>
-            <span className="font-semibold">${quote.deliveryFee?.toLocaleString() || '0.00'}</span>
+            <span className="font-semibold">{formatMoney(quote.deliveryFee || 0)}</span>
           </div>
         )}
         <div className="flex justify-between text-gray-600">
           <span>Deposit</span>
-          <span>${quote.deposit?.toLocaleString() || '0.00'}</span>
+          <span>{formatMoney(quote.deposit || 0)}</span>
         </div>
         <div className="flex justify-between text-gray-600">
           <span>Complete</span>
-          <span>${quote.complete?.toLocaleString() || '0.00'}</span>
+          <span>{formatMoney(quote.complete || 0)}</span>
         </div>
         <div className="flex justify-between text-gray-600">
           <span>Service</span>
-          <span>${quote.service?.toLocaleString() || '0.00'}</span>
+          <span>{formatMoney(quote.service || 0)}</span>
         </div>
       </div>
 
@@ -125,7 +126,7 @@ export default function QuoteCard({ quote, onViewDetails, isNew = false }: Quote
       <div className="flex justify-between items-center pt-3 border-t border-gray-200 mb-3">
         <span className="font-semibold text-gray-900">Total Amount</span>
         <span className="text-xl font-bold text-blue-600">
-          ${quote.total.toLocaleString()}
+          {formatMoney(quote.total)}
         </span>
       </div>
 
