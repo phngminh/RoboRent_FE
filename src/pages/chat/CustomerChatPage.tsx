@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Send, Calendar, MapPin, Package, CheckCircle2, Search, ChevronLeft, ChevronRight, Circle, XCircle, Loader2, Truck, Video, FileText, CreditCard, PartyPopper, Bot } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { signalRService } from '../../utils/signalr'
-import { getChatMessages, sendMessage, getMyChatRooms } from '../../apis/chat.api'
+import { getChatMessages, sendMessage, getMyChatRooms, markRentalAsRead } from '../../apis/chat.api'
 import { getQuotesByRentalId, customerAction, getPriceQuoteById } from '../../apis/priceQuote.api'
 import type { ChatMessageResponse, RentalQuotesResponse, PriceQuoteResponse } from '../../types/chat.types'
 import { MessageType, DemoStatus, QuoteStatus } from '../../types/chat.types'
@@ -101,7 +101,7 @@ export default function CustomerChatPage() {
     loadRentalInfo()
   }, [rentalId])
 
-  // Load messages
+  // Load messages and mark as read
   useEffect(() => {
     if (!rentalId) return
 
@@ -109,6 +109,21 @@ export default function CustomerChatPage() {
       try {
         const response = await getChatMessages(parseInt(rentalId), 1, 50)
         setMessages(response.messages)
+
+        // Mark messages as read after loading
+        try {
+          await markRentalAsRead(parseInt(rentalId))
+
+          // Immediately update the unread count in sidebar to 0
+          setCustomerRentals(prev => prev.map(rental =>
+            rental.rentalId === parseInt(rentalId)
+              ? { ...rental, unread: 0 }
+              : rental
+          ))
+        } catch (error) {
+          console.error('Failed to mark messages as read:', error)
+          // Don't show error to user, this is not critical
+        }
       } catch (error) {
         console.error('Failed to load messages:', error)
         toast.error('Failed to load chat messages')

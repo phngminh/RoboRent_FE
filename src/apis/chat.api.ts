@@ -65,3 +65,8 @@ export const getMyChatRooms = async (
   })
   return response.data
 }
+
+export const markRentalAsRead = async (rentalId: number): Promise<{ message: string }> => {
+  const response = await http.post(`${API_URL}/Chat/mark-rental-read/${rentalId}`)
+  return response.data
+}
