@@ -332,6 +332,24 @@ export default function CustomerChatPage() {
     }
   }
 
+  const handleQuickReply = async (reply: string) => {
+    if (!rentalId || isSending) return
+
+    setIsSending(true)
+    try {
+      await sendMessage({
+        rentalId: parseInt(rentalId),
+        messageType: MessageType.Text,
+        content: reply
+      })
+    } catch (error) {
+      console.error('Failed to send quick reply:', error)
+      toast.error('Failed to send message')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
   const handleAcceptQuote = async (quoteId: number) => {
     try {
       const result = await customerAction(quoteId, 'approve')
@@ -400,134 +418,134 @@ export default function CustomerChatPage() {
     const steps: ProgressStep[] = []
 
     // Step 1: Robot Scheduling
-    const scheduleStatus: StepStatus = 
+    const scheduleStatus: StepStatus =
       ['Scheduled', 'PendingDemo', 'AcceptedDemo', 'DeniedDemo', 'PendingPriceQuote', 'AcceptedPriceQuote', 'RejectedPriceQuote', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
         ? 'completed'
         : status === 'Received'
-        ? 'in-progress'
-        : 'pending'
-    
+          ? 'in-progress'
+          : 'pending'
+
     steps.push({
       id: 'schedule',
       label: 'Robot Scheduling',
       status: scheduleStatus,
       icon: <Bot className="w-5 h-5" />,
-      substatus: 
+      substatus:
         scheduleStatus === 'completed' ? 'Robots scheduled ✓' :
-        scheduleStatus === 'in-progress' ? 'Staff is scheduling robots...' :
-        'Waiting for staff to schedule robots'
+          scheduleStatus === 'in-progress' ? 'Staff is scheduling robots...' :
+            'Waiting for staff to schedule robots'
     })
 
     // Step 2: Demo Review
-    const demoStatus: StepStatus = 
+    const demoStatus: StepStatus =
       ['AcceptedDemo', 'PendingPriceQuote', 'AcceptedPriceQuote', 'RejectedPriceQuote', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
         ? 'completed'
         : status === 'PendingDemo'
-        ? 'in-progress'
-        : status === 'DeniedDemo'
-        ? 'failed'
-        : 'pending'
-    
+          ? 'in-progress'
+          : status === 'DeniedDemo'
+            ? 'failed'
+            : 'pending'
+
     steps.push({
       id: 'demo',
       label: 'Demo Review',
       status: demoStatus,
       icon: <Video className="w-5 h-5" />,
-      substatus: 
+      substatus:
         demoStatus === 'completed' ? 'Demo approved ✓' :
-        demoStatus === 'in-progress' ? 'Review demo video...' :
-        demoStatus === 'failed' ? 'Demo rejected - awaiting new demo' :
-        'Waiting for staff to send demo'
+          demoStatus === 'in-progress' ? 'Review demo video...' :
+            demoStatus === 'failed' ? 'Demo rejected - awaiting new demo' :
+              'Waiting for staff to send demo'
     })
 
     // Step 3: Price Quote
-    const quoteStatus: StepStatus = 
+    const quoteStatus: StepStatus =
       ['AcceptedPriceQuote', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
         ? 'completed'
         : (status === 'PendingPriceQuote' || fullQuotes.some(q => q.status === 'PendingCustomer'))
-        ? 'in-progress'
-        : 'pending'
-    
+          ? 'in-progress'
+          : 'pending'
+
     steps.push({
       id: 'quote',
       label: 'Price Quote',
       status: quoteStatus,
       icon: <FileText className="w-5 h-5" />,
-      substatus: 
+      substatus:
         quoteStatus === 'completed' ? 'Quote approved ✓' :
-        quoteStatus === 'in-progress' ? `Reviewing quote #${quotesData?.totalQuotes || 1}` :
-        'Waiting for price quote'
+          quoteStatus === 'in-progress' ? `Reviewing quote #${quotesData?.totalQuotes || 1}` :
+            'Waiting for price quote'
     })
 
     // Step 4: Contract Signing
-    const contractStatus: StepStatus = 
+    const contractStatus: StepStatus =
       ['PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
         ? 'completed'
         : status === 'PendingContract'
-        ? 'in-progress'
-        : 'pending'
-    
+          ? 'in-progress'
+          : 'pending'
+
     steps.push({
       id: 'contract',
       label: 'Contract Signing',
       status: contractStatus,
       icon: <FileText className="w-5 h-5" />,
-      substatus: 
+      substatus:
         contractStatus === 'completed' ? 'Contract signed ✓' :
-        contractStatus === 'in-progress' ? 'Review and sign contract' :
-        'Waiting for contract'
+          contractStatus === 'in-progress' ? 'Review and sign contract' :
+            'Waiting for contract'
     })
 
     // Step 5: Deposit Payment
-    const depositStatus: StepStatus = 
+    const depositStatus: StepStatus =
       ['DeliveryScheduled', 'Completed'].includes(status)
         ? 'completed'
         : status === 'PendingDeposit'
-        ? 'in-progress'
-        : 'pending'
-    
+          ? 'in-progress'
+          : 'pending'
+
     steps.push({
       id: 'deposit',
       label: 'Deposit Payment',
       status: depositStatus,
       icon: <CreditCard className="w-5 h-5" />,
-      substatus: 
+      substatus:
         depositStatus === 'completed' ? 'Deposit paid ✓' :
-        depositStatus === 'in-progress' ? 'Pay deposit to confirm' :
-        'Waiting for deposit payment'
+          depositStatus === 'in-progress' ? 'Pay deposit to confirm' :
+            'Waiting for deposit payment'
     })
 
     // Step 6: Delivery Scheduled
-    const deliveryStatus: StepStatus = 
+    const deliveryStatus: StepStatus =
       status === 'Completed'
         ? 'completed'
         : status === 'DeliveryScheduled'
-        ? 'in-progress'
-        : 'pending'
-    
+          ? 'in-progress'
+          : 'pending'
+
     steps.push({
       id: 'delivery',
       label: 'Delivery Scheduled',
       status: deliveryStatus,
       icon: <Truck className="w-5 h-5" />,
-      substatus: 
+      substatus:
         deliveryStatus === 'completed' ? 'Robots delivered ✓' :
-        deliveryStatus === 'in-progress' ? 'Delivery scheduled' :
-        'Waiting for delivery schedule'
+          deliveryStatus === 'in-progress' ? 'Delivery scheduled' :
+            'Waiting for delivery schedule'
     })
 
     // Step 7: Event Completed
-    const completedStatus: StepStatus = 
+    const completedStatus: StepStatus =
       status === 'Completed' ? 'completed' : 'pending'
-    
+
     steps.push({
       id: 'completed',
       label: 'Event Completed',
       status: completedStatus,
       icon: <PartyPopper className="w-5 h-5" />,
-      substatus: 
+      substatus:
         completedStatus === 'completed' ? 'Event completed successfully! ✓' :
-        'Awaiting event day'
+          'Awaiting event day'
     })
 
     return steps
@@ -685,8 +703,9 @@ export default function CustomerChatPage() {
               {quickReplies.map((reply) => (
                 <button
                   key={reply}
-                  onClick={() => setInputMessage(reply)}
-                  className="px-4 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full text-sm hover:bg-orange-100 transition-colors"
+                  onClick={() => handleQuickReply(reply)}
+                  disabled={isSending}
+                  className="px-4 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full text-sm hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {reply}
                 </button>
@@ -790,10 +809,9 @@ export default function CustomerChatPage() {
 
               <div className="space-y-3">
                 {fullQuotes.map((quote) => {
-                  // Check if quote is new (created after last viewed time)
-                  const isNew = lastViewedQuoteTime
-                    ? new Date(quote.createdAt) > lastViewedQuoteTime
-                    : false
+                  // The latest quote (highest quoteNumber) is always new
+                  const maxQuoteNumber = Math.max(...fullQuotes.map(q => q.quoteNumber))
+                  const isNew = quote.quoteNumber === maxQuoteNumber
 
                   return (
                     <QuoteCard
@@ -816,7 +834,7 @@ export default function CustomerChatPage() {
             {/* Progress Timeline */}
             <div className="p-6 bg-gradient-to-br from-white to-gray-50 border-t border-gray-200">
               <h2 className="text-lg font-bold text-gray-900 mb-6">Progress Timeline</h2>
-              
+
               {(rentalInfo?.status === 'Canceled' || rentalInfo?.status === 'ForceCancelled') ? (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
                   <p className="text-red-700 font-medium flex items-center gap-2">
@@ -828,7 +846,7 @@ export default function CustomerChatPage() {
                 <div className="relative space-y-0">
                   {/* Vertical gradient line */}
                   <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-green-300 via-blue-300 to-gray-200" />
-                  
+
                   {getProgressSteps().map((step, index) => {
                     const isLast = index === getProgressSteps().length - 1
                     const statusColors = {
@@ -857,9 +875,9 @@ export default function CustomerChatPage() {
                         icon: 'text-gray-400'
                       }
                     }
-                    
+
                     const colors = statusColors[step.status]
-                    
+
                     return (
                       <div key={step.id} className={`relative flex items-start gap-3 pb-6 ${isLast ? 'pb-0' : ''}`}>
                         {/* Icon circle */}
@@ -874,7 +892,7 @@ export default function CustomerChatPage() {
                             <Circle className="w-3 h-3" />
                           )}
                         </div>
-                        
+
                         {/* Step content */}
                         <div className={`flex-1 ${step.status === 'in-progress' ? 'transform scale-105' : ''} transition-all duration-300`}>
                           <div className={`flex items-center gap-2 mb-1 ${colors.text}`}>

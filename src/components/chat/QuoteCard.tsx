@@ -6,7 +6,7 @@ import { QuoteStatus } from '../../types/chat.types'
 interface QuoteCardProps {
   quote: PriceQuoteResponse
   onViewDetails?: () => void
-  isNew?: boolean 
+  isNew?: boolean
 }
 
 export default function QuoteCard({ quote, onViewDetails, isNew = false }: QuoteCardProps) {
@@ -48,10 +48,28 @@ export default function QuoteCard({ quote, onViewDetails, isNew = false }: Quote
     }
   }
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case QuoteStatus.PendingManager:
+        return 'Awaiting Manager Approval'
+      case QuoteStatus.RejectedManager:
+        return 'Needs Revision'
+      case QuoteStatus.PendingCustomer:
+        return 'Awaiting Your Review'
+      case QuoteStatus.RejectedCustomer:
+        return 'Rejected'
+      case QuoteStatus.Approved:
+        return 'Approved'
+      case QuoteStatus.Expired:
+        return 'Expired'
+      default:
+        return status
+    }
+  }
+
   return (
-    <div className={`bg-white rounded-xl border-2 p-4 hover:shadow-md transition-shadow relative ${
-      isNew ? 'border-orange-400 shadow-lg' : 'border-gray-200'
-    }`}>
+    <div className={`bg-white rounded-xl border-2 p-4 hover:shadow-md transition-shadow relative ${isNew ? 'border-orange-400 shadow-lg' : 'border-gray-200'
+      }`}>
       {/* NEW Badge */}
       {isNew && (
         <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
@@ -66,13 +84,13 @@ export default function QuoteCard({ quote, onViewDetails, isNew = false }: Quote
             Quote #{quote.quoteNumber}
           </h3>
           <span className={`text-xs px-2 py-1 rounded-full border ${getStatusColor(quote.status)}`}>
-            {getStatusIcon(quote.status)} {quote.status}
+            {getStatusIcon(quote.status)} {getStatusText(quote.status)}
           </span>
         </div>
         <span className="text-xs text-gray-500">
-          {new Date(quote.createdAt).toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric' 
+          {new Date(quote.createdAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric'
           })}
         </span>
       </div>

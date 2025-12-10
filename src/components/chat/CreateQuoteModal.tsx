@@ -13,14 +13,13 @@ interface CreateQuoteModalProps {
   onSuccess: () => void
 }
 
-export default function CreateQuoteModal({ 
-  isOpen, 
-  rentalId, 
+export default function CreateQuoteModal({
+  isOpen,
+  rentalId,
   currentQuoteCount,
-  onClose, 
-  onSuccess 
+  onClose,
+  onSuccess
 }: CreateQuoteModalProps) {
-  const [distance, setDistance] = useState<string>('')
   const [deposit, setDeposit] = useState<string>('')
   const [complete, setComplete] = useState<string>('')
   const [service, setService] = useState<string>('')
@@ -31,10 +30,9 @@ export default function CreateQuoteModal({
   const depositNum = parseFloat(deposit) || 0
   const completeNum = parseFloat(complete) || 0
   const serviceNum = parseFloat(service) || 0
-  
+
   // Total = deposit + complete + service (DeliveryFee will be auto-calculated by backend)
   const total = depositNum + completeNum + serviceNum
-  const distanceNum = parseFloat(distance)
 
   const quoteNumber = currentQuoteCount + 1
   const quotesRemaining = 3 - currentQuoteCount
@@ -82,20 +80,18 @@ export default function CreateQuoteModal({
         deposit: depositNum,
         complete: completeNum,
         service: serviceNum,
-        staffDescription: staffDescription.trim(),
-        deliveryDistance: distanceNum
+        staffDescription: staffDescription.trim()
       }
 
       await createPriceQuote(request)
       toast.success(`Quote #${quoteNumber} created successfully`)
-      
+
       // Reset form
       setDeposit('')
       setComplete('')
       setService('')
-      setDistance('')
       setStaffDescription('')
-      
+
       onSuccess()
       onClose()
     } catch (error: any) {
@@ -149,7 +145,7 @@ export default function CreateQuoteModal({
                   {quotesRemaining === 1 ? 'Last quote remaining' : 'Maximum quotes reached'}
                 </p>
                 <p className="text-xs text-yellow-700 mt-1">
-                  {quotesRemaining === 1 
+                  {quotesRemaining === 1
                     ? 'This is your final opportunity to revise pricing for this rental.'
                     : 'You cannot create more quotes for this rental.'
                   }
@@ -172,7 +168,7 @@ export default function CreateQuoteModal({
           {/* Cost Breakdown */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
-            
+
             <div className="grid grid-cols-2 gap-4">
               {/* Delivery Fee (Auto) */}
               <div>
@@ -192,71 +188,71 @@ export default function CreateQuoteModal({
                 </p>
               </div>
 
-    {/* Deposit */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Deposit Amount
-      </label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-        <input
-          type="number"
-          step="0.01"
-          value={deposit}
-          onChange={(e) => setDeposit(e.target.value)}
-          placeholder="0.00"
-          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <p className="text-xs text-gray-500 mt-1">
-        Refundable security deposit for the rental.
-      </p>
-    </div>
+              {/* Deposit */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Deposit Amount
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={deposit}
+                    onChange={(e) => setDeposit(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Refundable security deposit for the rental.
+                </p>
+              </div>
 
-    {/* Completion Fee */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Completion Fee
-      </label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-        <input
-          type="number"
-          step="0.01"
-          value={complete}
-          onChange={(e) => setComplete(e.target.value)}
-          placeholder="0.00"
-          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <p className="text-xs text-gray-500 mt-1">
-        Fee upon successful completion of the rental.
-      </p>
-    </div>
+              {/* Completion Fee */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Completion Fee
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={complete}
+                    onChange={(e) => setComplete(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Fee upon successful completion of the rental.
+                </p>
+              </div>
 
-    {/* Service Fee */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Service Fee
-      </label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-        <input
-          type="number"
-          step="0.01"
-          value={service}
-          onChange={(e) => setService(e.target.value)}
-          placeholder="0.00"
-          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <p className="text-xs text-gray-500 mt-1">
-        Charges for additional services.
-      </p>
-    </div>
+              {/* Service Fee */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Service Fee
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={service}
+                    onChange={(e) => setService(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Charges for additional services.
+                </p>
+              </div>
 
-  </div>
-</div>
+            </div>
+          </div>
 
 
           {/* Total (DeliveryFee will be added by backend) */}

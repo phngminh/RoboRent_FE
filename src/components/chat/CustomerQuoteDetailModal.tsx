@@ -13,10 +13,10 @@ interface CustomerQuoteDetailModalProps {
   onAcceptQuote?: (quoteId: number) => void
 }
 
-export default function CustomerQuoteDetailModal({ 
-  quote, 
+export default function CustomerQuoteDetailModal({
+  quote,
   allQuotes = [],
-  isOpen, 
+  isOpen,
   onClose,
   onRejectQuote,
   onAcceptQuote
@@ -79,6 +79,25 @@ export default function CustomerQuoteDetailModal({
     }
   }
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case QuoteStatus.PendingManager:
+        return 'Awaiting Manager Approval'
+      case QuoteStatus.RejectedManager:
+        return 'Needs Revision'
+      case QuoteStatus.PendingCustomer:
+        return 'Awaiting Your Review'
+      case QuoteStatus.RejectedCustomer:
+        return 'Rejected'
+      case QuoteStatus.Approved:
+        return 'Approved'
+      case QuoteStatus.Expired:
+        return 'Expired'
+      default:
+        return status
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
@@ -89,9 +108,9 @@ export default function CustomerQuoteDetailModal({
               Quote #{quote.quoteNumber} Details
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Created on {new Date(quote.createdAt || '').toLocaleDateString('en-US', { 
-                month: 'long', 
-                day: 'numeric', 
+              Created on {new Date(quote.createdAt || '').toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
                 year: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
@@ -124,7 +143,7 @@ export default function CustomerQuoteDetailModal({
           {/* Cost Breakdown */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
-            
+
             {/* Delivery Fee Info Banner */}
             {quote.deliveryFee && quote.deliveryFee > 0 && (
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
@@ -133,7 +152,7 @@ export default function CustomerQuoteDetailModal({
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-purple-900">Auto-Calculated Delivery Fee</p>
                     <p className="text-xs text-purple-700 mt-1">
-                      {quote.deliveryDistance 
+                      {quote.deliveryDistance
                         ? `${quote.deliveryDistance} km distance (round-trip)`
                         : 'HCM flat rate'}
                     </p>
@@ -144,7 +163,7 @@ export default function CustomerQuoteDetailModal({
                 </div>
               </div>
             )}
-            
+
             <div className="bg-gray-50 rounded-lg overflow-hidden">
               <table className="w-full">
                 <thead>
@@ -250,14 +269,6 @@ export default function CustomerQuoteDetailModal({
                           ))}
                         </tr>
                         <tr>
-                          <td className="px-4 py-2 text-gray-700">Delivery & Setup (Manual)</td>
-                          {allQuotes.map((q) => (
-                            <td key={q.id} className="px-4 py-2 text-right text-gray-900">
-                              ${q.delivery?.toLocaleString() || '0'}
-                            </td>
-                          ))}
-                        </tr>
-                        <tr>
                           <td className="px-4 py-2 text-gray-700">Deposit</td>
                           {allQuotes.map((q) => (
                             <td key={q.id} className="px-4 py-2 text-right text-gray-900">
@@ -301,7 +312,7 @@ export default function CustomerQuoteDetailModal({
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Quote Status</h3>
             <div className={`inline-block px-4 py-2 rounded-lg font-medium ${getStatusBadge(quote.status || '')}`}>
-              {quote.status}
+              {getStatusText(quote.status || '')}
             </div>
           </div>
         </div>

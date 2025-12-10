@@ -742,6 +742,30 @@ useEffect(() => {
                     </div>
                   )}
                 </div>
+
+                {/* Send Contract Button */}
+                <div className="relative group">
+                  <button
+                    disabled={isSendContractDisabled}
+                    onClick={onViewContract}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors font-medium ${
+                      isSendContractDisabled
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                    }`}
+                  >
+                    <FileText size={18} />
+                    Send Contract
+                  </button>
+
+                  {/* Tooltip */}
+                  {isSendContractDisabled && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                      {sendContractDisabledReason}
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
