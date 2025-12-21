@@ -6,6 +6,7 @@ import { googleLogin } from '../apis/auth.api'
 import { getMyChatRooms } from '../apis/chat.api'
 import { getQuotesByRentalId } from '../apis/priceQuote.api'
 import { QuoteStatus } from '../types/chat.types'
+import NotificationCenter from './NotificationCenter'
 import logo from '../assets/logo1.png'
 import path from '../constants/path'
 
@@ -99,7 +100,7 @@ const Header = () => {
     }
 
     countUnread()
-    
+
     const interval = setInterval(countUnread, 30000)
     return () => clearInterval(interval)
   }, [user?.id, user?.role])
@@ -127,11 +128,10 @@ const Header = () => {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 w-full transition-colors duration-300 ${
-          isHeaderWhite
+        className={`fixed top-0 left-0 right-0 z-50 w-full transition-colors duration-300 ${isHeaderWhite
             ? 'bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-100'
             : 'bg-transparent'
-        }`}
+          }`}
       >
         <div className='w-full px-4 sm:px-6 lg:px-8 font-extrabold font-orbitron'>
           <div className='grid grid-cols-3 items-center h-16'>
@@ -139,17 +139,15 @@ const Header = () => {
               <img
                 src={logo}
                 alt='logo'
-                className={`w-8 h-7 mr-3 mb-1 transition-all duration-200 ${
-                  isHeaderWhite ? 'filter drop-shadow-[0_0_2px_black]' : ''
-                }`}
+                className={`w-8 h-7 mr-3 mb-1 transition-all duration-200 ${isHeaderWhite ? 'filter drop-shadow-[0_0_2px_black]' : ''
+                  }`}
               />
-              <Link 
-                to={path.home} 
-                className={`font-orbitron text-2xl tracking-widest transition-colors duration-300 ${
-                  isHeaderWhite
+              <Link
+                to={path.home}
+                className={`font-orbitron text-2xl tracking-widest transition-colors duration-300 ${isHeaderWhite
                     ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent'
                     : 'text-white'
-                }`}
+                  }`}
               >
                 ROBORENT
               </Link>
@@ -164,11 +162,10 @@ const Header = () => {
                       e.preventDefault()
                       handleNavClick('home')
                     }}
-                    className={`transition-colors duration-200 relative pb-1 ${
-                      isHeaderWhite
+                    className={`transition-colors duration-200 relative pb-1 ${isHeaderWhite
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    }`}
+                      }`}
                   >
                     HOME
                   </a>
@@ -178,11 +175,10 @@ const Header = () => {
                       e.preventDefault()
                       handleNavClick('our-products')
                     }}
-                    className={`transition-colors duration-200 relative pb-1 ${
-                      isHeaderWhite
+                    className={`transition-colors duration-200 relative pb-1 ${isHeaderWhite
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    }`}
+                      }`}
                   >
                     SERVICES
                   </a>
@@ -192,11 +188,10 @@ const Header = () => {
                       e.preventDefault()
                       handleNavClick('about-us')
                     }}
-                    className={`transition-colors duration-200 relative pb-1 ${
-                      isHeaderWhite
+                    className={`transition-colors duration-200 relative pb-1 ${isHeaderWhite
                         ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
                         : 'text-white hover:text-gray-200 after:bg-white'
-                    }`}
+                      }`}
                   >
                     ABOUT US
                   </a>
@@ -214,15 +209,8 @@ const Header = () => {
               <div className='hidden md:flex items-center space-x-4'>
                 {isAuthenticated ? (
                   <div className='flex items-center space-x-4'>
-                    <button className='relative p-2 hover:bg-gray-100/10 rounded-full transition-colors'>
-                      <Bell size={21} className={textColor} />
-                      {unreadCount > 0 && (
-                        <span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center'>
-                          {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                      )}
-                    </button>
-                    <Link 
+                    <NotificationCenter textColor={textColor} />
+                    <Link
                       to={roleRedirectMap[user?.role]}
                       className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'
                     >
@@ -271,9 +259,8 @@ const Header = () => {
                     e.preventDefault()
                     handleNavClick('home')
                   }}
-                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${
-                    currentSection === 'home' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
-                  }`}
+                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${currentSection === 'home' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                    }`}
                 >
                   Home
                 </a>
@@ -283,21 +270,19 @@ const Header = () => {
                     e.preventDefault()
                     handleNavClick('our-products')
                   }}
-                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${
-                    currentSection === 'our-products' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
-                  }`}
+                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${currentSection === 'our-products' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                    }`}
                 >
                   Products
                 </a>
                 <a
-                  href='#about-us' 
+                  href='#about-us'
                   onClick={(e) => {
                     e.preventDefault()
                     handleNavClick('about-us')
                   }}
-                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${
-                    currentSection === 'about-us' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
-                  }`}
+                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${currentSection === 'about-us' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                    }`}
                 >
                   About Us
                 </a>
@@ -321,7 +306,7 @@ const Header = () => {
               <h2 className='text-4xl font-orbitron font-bold text-gray-700 mb-10 animate-in slide-in-from-left duration-500'>
                 Login or signup to get started
               </h2>
-              
+
               <button
                 onClick={googleLoginWithClose}
                 className='w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all text-lg mb-2 animate-in slide-in-from-left duration-500 delay-100'

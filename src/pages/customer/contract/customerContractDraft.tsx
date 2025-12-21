@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react'
 import { customerRejects, customerRequestChange, customerSigns, getDraftsByRentalId, sendVerificationCode, verifyCode, type ContractDraftResponse } from '../../../apis/contractDraft.api'
 import { useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
+import { signalRService } from '../../../utils/signalr'
 
 interface CustomerContractDraftProps {
   onBack: () => void
@@ -38,7 +39,7 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       setLoading(true)
       const draftData = await getDraftsByRentalId(rentalId)
       const pendingDraft = draftData
-        .find(d => d.status === 'PendingCustomerSignature' 
+        .find(d => d.status === 'PendingCustomerSignature'
           || d.status === 'ChangeRequested'
           || d.status === 'Modified'
           || d.status === 'Active'
@@ -62,6 +63,29 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
     } else {
       setError('Invalid draft ID')
       setLoading(false)
+    }
+  }, [rentalId])
+
+  // 🎯 SignalR: Auto-refresh when contract status changes
+  useEffect(() => {
+    const handleContractPendingSignature = (data: {
+      ContractId: number
+      RentalId: number
+      Message: string
+    }) => {
+      // Only refresh if this is for the current rental
+      if (data.RentalId === rentalId) {
+        toast.info(`📝 ${data.Message}`)
+        fetchDraft(rentalId)
+      }
+    }
+
+    signalRService.connect().then(() => {
+      signalRService.onContractPendingCustomerSignature(handleContractPendingSignature)
+    })
+
+    return () => {
+      signalRService.offContractPendingCustomerSignature()
     }
   }, [rentalId])
 
@@ -102,11 +126,11 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
     if (value.length > 1) {
       value = value[0]
     }
-   
+
     const newOtp = [...otp]
     newOtp[index] = value
     setOtp(newOtp)
-   
+
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus()
     }
@@ -278,25 +302,25 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       </div>
 
       <div className='flex justify-end gap-3 mr-36'>
-        <Button 
-          onClick={() => setRequestOpen(true)} 
+        <Button
+          onClick={() => setRequestOpen(true)}
           disabled={draft.status !== 'PendingCustomerSignature'}
           className='bg-gray-100 border border-gray-400 text-black hover:bg-gray-200 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
           Request Changes
         </Button>
-        <Button 
-          onClick={() => setRejectOpen(true)} 
+        <Button
+          onClick={() => setRejectOpen(true)}
           disabled={draft.status !== 'PendingCustomerSignature'}
           className='bg-red-500 text-white hover:bg-red-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
           Reject
         </Button>
-        <Button 
+        <Button
           onClick={() => {
             setOtpStep('request')
             setApproveOpen(true)
-          }} 
+          }}
           disabled={draft.status !== 'PendingCustomerSignature'}
           className='bg-indigo-600 hover:bg-indigo-700 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
@@ -304,8 +328,8 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
         </Button>
       </div>
 
-      <Dialog 
-        open={requestOpen} 
+      <Dialog
+        open={requestOpen}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setRequestOpen(false)
@@ -337,8 +361,8 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
         </DialogContent>
       </Dialog>
 
-      <Dialog 
-        open={approveOpen} 
+      <Dialog
+        open={approveOpen}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setApproveOpen(false)
@@ -408,8 +432,8 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
         </DialogContent>
       </Dialog>
 
-      <Dialog 
-        open={rejectOpen} 
+      <Dialog
+        open={rejectOpen}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setRejectOpen(false)

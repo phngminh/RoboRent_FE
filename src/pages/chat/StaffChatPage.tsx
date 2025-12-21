@@ -38,6 +38,7 @@ interface CustomerChat {
   lastMessage: string
   timestamp: string
   unread: number
+  lastMessageTime?: string  // For sorting - ISO date string
 }
 
 interface StaffChatPageProps {
@@ -203,9 +204,6 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
       try {
         const response = await getMyChatRooms(1, 50)
 
-        console.log("=== DEBUG: getMyChatRooms RESPONSE ===")
-        console.log(JSON.stringify(response, null, 2))
-
         const mappedChats: CustomerChat[] = response.rooms.map(room => ({
           id: room.id,
           rentalId: room.rentalId,
@@ -223,17 +221,7 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
 
         // Set rental status
         const selectedRentalId = parseInt(rentalId || '0')
-
-        console.log("=== DEBUG: Selected rentalId ===", selectedRentalId)
-
         const currentChat = response.rooms.find(r => r.rentalId === selectedRentalId)
-
-        console.log("=== DEBUG: currentChat FOUND ===")
-        console.log(currentChat)
-
-        console.log("=== DEBUG: currentChat.rentalStatus ===")
-        console.log(currentChat?.rentalStatus)
-
         if (currentChat?.rentalStatus) {
           setRentalStatus(currentChat.rentalStatus)
         }
@@ -247,7 +235,7 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
     }
 
     loadChats()
-  }, [user?.id, rentalId])
+  }, [user?.accountId, rentalId])
 
 
   // Load messages and mark as read
@@ -309,13 +297,25 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
         await signalRService.connect()
         await signalRService.joinRentalChat(parseInt(rentalId))
 
-        const handleReceiveMessage = (message: ChatMessageResponse) => {
+        const handleReceiveMessage = async (message: ChatMessageResponse) => {
           if (!isSubscribed) return
           setMessages(prev => {
             if (prev.some(m => m.id === message.id)) return prev
             return [...prev, message]
           })
           scrollToBottom()
+
+          // 🎯 Auto-mark as read since user is in the chat room
+          try {
+            await markRentalAsRead(parseInt(rentalId))
+            setCustomerChats(prev => prev.map(chat =>
+              chat.rentalId === parseInt(rentalId)
+                ? { ...chat, unread: 0 }
+                : chat
+            ))
+          } catch (error) {
+            console.error('Failed to auto-mark as read:', error)
+          }
         }
 
         const handleDemoStatusChanged = (messageId: number, status: string) => {
@@ -332,15 +332,91 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
           Total: number
         }) => {
           if (!isSubscribed) return
-          console.log('📢 Quote status changed:', data)
           if (rentalId) {
             await fetchQuotes(parseInt(rentalId))
           }
         }
 
+        // 🎯 NEW: Handle quote rejected by customer
+        const handleQuoteRejected = (data: {
+          QuoteId: number
+          QuoteNumber: number
+          Reason: string
+        }) => {
+          if (!isSubscribed) return
+          toast.warning(`Customer đã từ chối báo giá #${data.QuoteNumber}. Lý do: ${data.Reason}`)
+          if (rentalId) {
+            fetchQuotes(parseInt(rentalId))
+          }
+        }
+
+        // 🎯 NEW: Handle contract activated (customer signed)
+        const handleContractActivated = (data: {
+          ContractId: number
+          RentalId: number
+          Message: string
+        }) => {
+          if (!isSubscribed) return
+          toast.success(`🎉 ${data.Message}`)
+        }
+
+        // 🎯 NEW: Handle contract change requested by customer
+        const handleContractChangeRequested = (data: {
+          ContractId: number
+          RentalId: number
+          Message: string
+          ChangeRequest: string
+        }) => {
+          if (!isSubscribed) return
+          toast.info(`Customer yêu cầu sửa hợp đồng: ${data.ChangeRequest}`)
+        }
+
+        // 🎯 NEW: Facebook-like sidebar update when message comes to a different room
+        // NOTE: SignalR auto-converts PascalCase to camelCase
+        const handleNewMessageInRoom = (data: {
+          rentalId: number
+          senderId: number
+          senderName: string
+          preview: string
+          timestamp: string
+        }) => {
+          if (!isSubscribed) return
+
+          // Update sidebar: increase unread count, update last message, and SORT to top
+          setCustomerChats(prev => {
+            const updated = prev.map(chat =>
+              chat.rentalId === data.rentalId
+                ? {
+                  ...chat,
+                  unread: chat.rentalId !== parseInt(rentalId || '0') ? chat.unread + 1 : 0,
+                  lastMessage: data.preview,
+                  timestamp: 'just now',
+                  lastMessageTime: new Date().toISOString()
+                }
+                : chat
+            )
+            // Sort by lastMessageTime descending (newest first)
+            return updated.sort((a, b) => {
+              const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0
+              const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0
+              return timeB - timeA
+            })
+          })
+        }
+
+        // Empty handlers to prevent console warnings
+        const handleUserJoined = (_connectionId: string) => { }
+        const handleUserLeft = (_connectionId: string) => { }
+
+        signalRService.onUserJoined(handleUserJoined)
+        signalRService.onUserLeft(handleUserLeft)
         signalRService.onReceiveMessage(handleReceiveMessage)
         signalRService.onDemoStatusChanged(handleDemoStatusChanged)
         signalRService.onQuoteStatusChanged(handleQuoteStatusChanged)
+        signalRService.onQuoteRejected(handleQuoteRejected)
+        signalRService.onContractActivated(handleContractActivated)
+        signalRService.onContractChangeRequested(handleContractChangeRequested)
+        signalRService.onNewMessageInRoom(handleNewMessageInRoom)
 
       } catch (error) {
         console.error('SignalR setup failed:', error)
@@ -353,12 +429,18 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
       isSubscribed = false
       if (rentalId) {
         signalRService.leaveRentalChat(parseInt(rentalId))
+        signalRService.offUserJoined()
+        signalRService.offUserLeft()
         signalRService.offReceiveMessage()
         signalRService.offDemoStatusChanged()
         signalRService.offQuoteStatusChanged()
+        signalRService.offQuoteRejected()
+        signalRService.offContractActivated()
+        signalRService.offContractChangeRequested()
+        signalRService.offNewMessageInRoom()
       }
     }
-  }, [rentalId])
+  }, [rentalId, user?.accountId])
 
   useEffect(() => {
     scrollToBottom()
@@ -378,6 +460,26 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
         content: messageContent
       })
       setInputMessage('')
+
+      // 🎯 Update sender's own sidebar (NewMessageInRoom only goes to recipient)
+      setCustomerChats(prev => {
+        const updated = prev.map(chat =>
+          chat.rentalId === parseInt(rentalId)
+            ? {
+              ...chat,
+              lastMessage: messageContent.length > 50 ? messageContent.substring(0, 50) + '...' : messageContent,
+              timestamp: 'just now',
+              lastMessageTime: new Date().toISOString()
+            }
+            : chat
+        )
+        // Sort by lastMessageTime descending (newest first)
+        return updated.sort((a, b) => {
+          const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0
+          const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0
+          return timeB - timeA
+        })
+      })
     } catch (error: any) {
       console.error('Failed to send message:', error)
       toast.error(error.response?.data?.error || 'Failed to send message')

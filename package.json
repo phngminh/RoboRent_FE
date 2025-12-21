@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@microsoft/signalr": "^9.0.6",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-label": "^2.1.8",
@@ -48,6 +47,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "@microsoft/signalr": "^10.0.0",
     "@types/aos": "^3.0.7",
     "@types/node": "^24.8.1",
     "@types/react": "^19.1.10",

@@ -1,5 +1,5 @@
 // src/pages/chat/CustomerChatPage.tsx
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Send, Calendar, MapPin, Package, CheckCircle2, Search, ChevronLeft, ChevronRight, Circle, XCircle, Loader2, Truck, Video, FileText, CreditCard, PartyPopper, Bot } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
@@ -28,9 +28,10 @@ interface CustomerRental {
   lastMessage: string
   timestamp: string
   unread: number
+  lastMessageTime?: string  // For sorting - ISO date string
 }
 
-export default function CustomerChatPage() {
+const CustomerChatPage: React.FC = () => {
   const { rentalId } = useParams<{ rentalId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -218,7 +219,7 @@ export default function CustomerChatPage() {
         await signalRService.connect()
         await signalRService.joinRentalChat(parseInt(rentalId))
 
-        const handleReceiveMessage = (message: ChatMessageResponse) => {
+        const handleReceiveMessage = async (message: ChatMessageResponse) => {
           if (!isSubscribed) return
 
           setMessages(prev => {
@@ -230,6 +231,18 @@ export default function CustomerChatPage() {
           })
 
           scrollToBottom()
+
+          // 🎯 Auto-mark as read since user is in the chat room
+          try {
+            await markRentalAsRead(parseInt(rentalId))
+            setCustomerRentals(prev => prev.map(rental =>
+              rental.rentalId === parseInt(rentalId)
+                ? { ...rental, unread: 0 }
+                : rental
+            ))
+          } catch (error) {
+            console.error('Failed to auto-mark as read:', error)
+          }
         }
 
         const handleDemoStatusChanged = (messageId: number, status: string) => {
@@ -242,8 +255,6 @@ export default function CustomerChatPage() {
 
         const handleQuoteAccepted = async (quoteId: number) => {
           if (!isSubscribed) return
-
-          console.log('📢 Quote accepted event received:', quoteId)
           await loadQuotes()
         }
 
@@ -254,7 +265,6 @@ export default function CustomerChatPage() {
           Total: number
         }) => {
           if (!isSubscribed) return
-          console.log('📢 Quote status changed:', data)
           await loadQuotes()
         }
 
@@ -264,44 +274,70 @@ export default function CustomerChatPage() {
           Total: number
         }) => {
           if (!isSubscribed) return
-          console.log('📢 New quote created:', data)
           toast.info(`New quote #${data.QuoteNumber} received! Total: ${formatMoney(data.Total)}`)
           await loadQuotes()
         }
 
-        const handleSidebarUpdate = async () => {
-          if (!isSubscribed || !user?.accountId) return
-          try {
-            const response = await getMyChatRooms(1, 50)
-            const mappedRentals: CustomerRental[] = response.rooms.map(room => ({
-              id: room.id,
-              rentalId: room.rentalId,
-              packageName: room.packageName || 'Unknown Package',
-              eventDate: room.eventDate || 'TBD',
-              status: room.status || 'Unknown',
-              lastMessage: room.lastMessage || 'No messages',
-              timestamp: room.lastMessageTime
-                ? formatDistanceToNow(new Date(room.lastMessageTime), { addSuffix: true })
-                : 'No messages',
-              unread: room.unreadCount
-            }))
-            setCustomerRentals(mappedRentals)
-          } catch (error) {
-            console.error('Failed to reload rentals:', error)
-          }
+        // 🎯 NEW: Handle contract pending customer signature (Manager signed)
+        const handleContractPendingSignature = (data: {
+          ContractId: number
+          RentalId: number
+          Message: string
+        }) => {
+          if (!isSubscribed) return
+          toast.info(`📝 ${data.Message}`)
         }
 
-        const originalReceiveMessage = handleReceiveMessage
-        const wrappedReceiveMessage = (message: ChatMessageResponse) => {
-          originalReceiveMessage(message)
-          handleSidebarUpdate()
+        // 🎯 NEW: Facebook-like sidebar update when message comes to a different room
+        // NOTE: SignalR auto-converts PascalCase to camelCase
+        const handleNewMessageInRoom = (data: {
+          rentalId: number
+          senderId: number
+          senderName: string
+          preview: string
+          timestamp: string
+        }) => {
+          if (!isSubscribed) return
+
+          // Update sidebar: increase unread count, update last message, and SORT to top
+          setCustomerRentals(prev => {
+            const matchingRental = prev.find(r => r.rentalId === data.rentalId)
+            if (!matchingRental) return prev
+
+            const updated = prev.map(rental =>
+              rental.rentalId === data.rentalId
+                ? {
+                  ...rental,
+                  unread: rental.rentalId !== parseInt(rentalId || '0') ? rental.unread + 1 : 0,
+                  lastMessage: data.preview,
+                  timestamp: 'just now',
+                  lastMessageTime: new Date().toISOString()
+                }
+                : rental
+            )
+
+            // Sort by lastMessageTime descending (newest first)
+            return updated.sort((a, b) => {
+              const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0
+              const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0
+              return timeB - timeA
+            })
+          })
         }
 
-        signalRService.onReceiveMessage(wrappedReceiveMessage)
+        // Empty handlers to prevent console warnings
+        const handleUserJoined = (_connectionId: string) => { }
+        const handleUserLeft = (_connectionId: string) => { }
+
+        signalRService.onUserJoined(handleUserJoined)
+        signalRService.onUserLeft(handleUserLeft)
+        signalRService.onReceiveMessage(handleReceiveMessage)
         signalRService.onDemoStatusChanged(handleDemoStatusChanged)
         signalRService.onQuoteAccepted(handleQuoteAccepted)
         signalRService.onQuoteStatusChanged(handleQuoteStatusChanged)
         signalRService.onQuoteCreated(handleQuoteCreated)
+        signalRService.onContractPendingCustomerSignature(handleContractPendingSignature)
+        signalRService.onNewMessageInRoom(handleNewMessageInRoom)
 
       } catch (error) {
         console.error('SignalR setup failed:', error)
@@ -315,11 +351,15 @@ export default function CustomerChatPage() {
 
       if (rentalId) {
         signalRService.leaveRentalChat(parseInt(rentalId))
+        signalRService.offUserJoined()
+        signalRService.offUserLeft()
         signalRService.offReceiveMessage()
         signalRService.offDemoStatusChanged()
         signalRService.offQuoteAccepted()
         signalRService.offQuoteStatusChanged()
         signalRService.offQuoteCreated()
+        signalRService.offContractPendingCustomerSignature()
+        signalRService.offNewMessageInRoom()
       }
     }
   }, [rentalId, user?.accountId])
@@ -340,6 +380,26 @@ export default function CustomerChatPage() {
         content
       })
       setInputMessage('')
+
+      // 🎯 Update sender's own sidebar (NewMessageInRoom only goes to recipient)
+      setCustomerRentals(prev => {
+        const updated = prev.map(rental =>
+          rental.rentalId === parseInt(rentalId)
+            ? {
+              ...rental,
+              lastMessage: content.length > 50 ? content.substring(0, 50) + '...' : content,
+              timestamp: 'just now',
+              lastMessageTime: new Date().toISOString()
+            }
+            : rental
+        )
+        // Sort by lastMessageTime descending (newest first)
+        return updated.sort((a, b) => {
+          const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0
+          const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0
+          return timeB - timeA
+        })
+      })
     } catch (error) {
       console.error('Failed to send message:', error)
       toast.error('Failed to send message')
@@ -946,3 +1006,5 @@ export default function CustomerChatPage() {
     </div>
   )
 }
+
+export default CustomerChatPage
