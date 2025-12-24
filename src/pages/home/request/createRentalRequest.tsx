@@ -207,7 +207,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
     }
 
     (async () => {
-      const res = await getActivityTypeByEAIdAsync(Number(selectedActivityId))
+      const res = await getActivityTypeByEAIdAsync()
       setActivityTypes(res)
     })()
   }, [selectedActivityId])

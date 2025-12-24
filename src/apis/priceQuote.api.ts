@@ -3,6 +3,7 @@ import http from '../utils/http'
 import type {
   PriceQuoteResponse,
   CreatePriceQuoteRequest,
+  UpdatePriceQuoteRequest,
   RentalQuotesResponse,
   ManagerQuoteListItemResponse
 } from '../types/chat.types'
@@ -39,10 +40,10 @@ export const acceptQuote = async (quoteId: number): Promise<{
   return response.data
 }
 
-// Update Quote (Staff resubmit after Manager reject)
+// Update Quote (Staff resubmit after Manager reject) - Phase 2 fields only
 export const updatePriceQuote = async (
-  quoteId: number, 
-  data: Partial<CreatePriceQuoteRequest>
+  quoteId: number,
+  data: UpdatePriceQuoteRequest
 ): Promise<PriceQuoteResponse> => {
   const response = await http.put(`${API_URL}/PriceQuotes/${quoteId}`, data)
   return response.data

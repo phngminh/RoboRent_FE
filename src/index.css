@@ -76,3 +76,149 @@
     min-height: 100vh;
   }
 }
+
+/* ============================================
+   Premium UI Animations - Quote Modals
+   ============================================ */
+
+/* Shimmer effect for buttons and cards */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.2) 50%, 
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Glow pulse for status indicators */
+@keyframes glow-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.3),
+                0 0 30px rgba(99, 102, 241, 0.1);
+  }
+  50% { 
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.5),
+                0 0 50px rgba(99, 102, 241, 0.2);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Status-based glow animations */
+@keyframes glow-pending {
+  0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
+  50% { box-shadow: 0 0 35px rgba(251, 191, 36, 0.5); }
+}
+
+@keyframes glow-success {
+  0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+  50% { box-shadow: 0 0 35px rgba(34, 197, 94, 0.5); }
+}
+
+.animate-glow-pending {
+  animation: glow-pending 2s ease-in-out infinite;
+}
+
+.animate-glow-success {
+  animation: glow-success 2s ease-in-out infinite;
+}
+
+/* Gradient border animation */
+@keyframes gradient-rotate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.gradient-border {
+  background: linear-gradient(
+    90deg, 
+    #6366f1, #8b5cf6, #a855f7, #6366f1
+  );
+  background-size: 300% 300%;
+  animation: gradient-rotate 4s ease infinite;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-dark {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Premium input focus effect */
+@keyframes input-glow {
+  0%, 100% { 
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3),
+                0 0 20px rgba(139, 92, 246, 0.1);
+  }
+  50% { 
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.4),
+                0 0 30px rgba(139, 92, 246, 0.2);
+  }
+}
+
+.input-premium:focus {
+  animation: input-glow 1.5s ease-in-out infinite;
+  outline: none;
+  border-color: #8b5cf6;
+}
+
+/* Float animation for icons */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Slide up fade in */
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up-fade 0.4s ease-out forwards;
+}
+
+/* Stagger delay utilities */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }

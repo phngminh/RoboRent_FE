@@ -903,7 +903,7 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
                         <p className="text-sm font-medium text-gray-900">
                           Quote #{quote.quoteNumber}
                         </p>
-                        <p className="text-xs text-gray-600">{formatMoney(quote.total)}</p>
+                        <p className="text-xs text-gray-600">{formatMoney(quote.grandTotal)}</p>
                       </div>
                       <span className={`text-xs px-2 py-1 rounded-full ${quote.status === QuoteStatus.PendingManager ? 'bg-yellow-100 text-yellow-700' :
                         quote.status === QuoteStatus.PendingCustomer ? 'bg-blue-100 text-blue-700' :
@@ -947,6 +947,7 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
           isOpen={showCreateQuoteModal}
           rentalId={parseInt(rentalId)}
           currentQuoteCount={quotesData?.totalQuotes || 0}
+          rentalInfo={rentalInfo}
           onClose={() => setShowCreateQuoteModal(false)}
           onSuccess={() => {
             fetchQuotes(parseInt(rentalId))
