@@ -173,10 +173,10 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
 
 
   // Create Quote button
-  const isCreateQuoteDisabled = !hasDemoAccepted || quotesData?.canCreateMore === false
+  const isCreateQuoteDisabled = rentalStatus !== 'Received' || quotesData?.canCreateMore === false
   const createQuoteDisabledReason =
-    !hasDemoAccepted
-      ? 'Customer must accept a demo first'
+    rentalStatus !== 'Received'
+      ? 'Rental status must be "Received" to create quote'
       : 'Maximum 3 quotes reached'
 
   // Send Contract button
