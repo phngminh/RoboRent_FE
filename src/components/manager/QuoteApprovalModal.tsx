@@ -115,91 +115,91 @@ export default function QuoteApprovalModal({
                 <div className="flex items-center gap-2 text-sm text-purple-800">
                   <Calendar className="w-4 h-4 flex-shrink-0" />
                   <span>
-                    {rentalInfo?.eventDate 
+                    {rentalInfo?.eventDate
                       ? new Date(rentalInfo.eventDate).toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })
                       : 'Event Date TBD'}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Cost Breakdown */}
+            {/* Cost Breakdown - Two Phase Pricing */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
-              
-              {/* Delivery Fee Info Banner */}
-              {quote.deliveryFee && quote.deliveryFee > 0 && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <Truck className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-purple-900">Auto-Calculated Delivery Fee</p>
-                      <p className="text-xs text-purple-700 mt-1">
-                        {quote.deliveryDistance 
-                          ? `${quote.deliveryDistance} km distance (round-trip)`
-                          : 'HCM flat rate'}
-                      </p>
-                    </div>
-                    <p className="text-xl font-bold text-purple-700">
-                      {formatMoney(quote.deliveryFee)}
-                    </p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Chi tiết báo giá</h3>
+
+              {/* === PHASE 1: DEPOSIT (LOCKED) === */}
+              <div className="bg-gradient-to-r from-blue-50 to-violet-50 rounded-lg p-4 mb-4 border border-blue-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-blue-600 text-xl">💰</span>
+                  <span className="font-bold text-blue-800">PHASE 1: Đặt cọc trước</span>
+                  <span className="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full">🔒 LOCKED</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Phí thuê robot</span>
+                    <span className="font-medium">{formatMoney(quote.rentalFee)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Phí nhân viên kỹ thuật</span>
+                    <span className="font-medium">{formatMoney(quote.staffFee)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Tiền cọc thiệt hại</span>
+                    <span className="font-medium">{formatMoney(quote.damageDeposit)}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-blue-200">
+                    <span className="font-bold text-blue-800">Tổng đặt cọc</span>
+                    <span className="font-bold text-blue-800 text-lg">{formatMoney(quote.totalDeposit)}</span>
                   </div>
                 </div>
-              )}
-              
-              <div className="bg-gray-50 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">Item</th>
-                      <th className="text-right px-4 py-3 text-sm font-semibold text-gray-700">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {/* Delivery Fee (Auto) */}
-                    {quote.deliveryFee && quote.deliveryFee > 0 && (
-                      <tr className="bg-purple-50">
-                        <td className="px-4 py-3 text-purple-900 font-medium">
-                          Delivery Fee (Auto-calculated)
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold text-purple-900">
-                          {formatMoney(quote.deliveryFee || 0)}
-                        </td>
-                      </tr>
-                    )}
-                    <tr>
-                      <td className="px-4 py-3 text-gray-900">Deposit (Refundable)</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                        {formatMoney(quote.deposit || 0)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-gray-900">Completion Payment</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                        {formatMoney(quote.complete || 0)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-gray-900">Service & Support</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                        {formatMoney(quote.service || 0)}
-                      </td>
-                    </tr>
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-gray-100 border-t-2 border-gray-300">
-                      <td className="px-4 py-4 text-lg font-bold text-gray-900">Total Amount</td>
-                      <td className="px-4 py-4 text-right text-2xl font-bold text-purple-600">
-                        {formatMoney(quote.total)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+              </div>
+
+              {/* === PHASE 2: PAYMENT (ADJUSTABLE) === */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-4 border border-blue-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-blue-600 text-xl">💳</span>
+                  <span className="font-bold text-blue-800">PHASE 2: Thanh toán sau sự kiện</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Còn lại (70%)</span>
+                    <span className="font-medium">{formatMoney(0.7 * (quote.rentalFee + quote.staffFee))}</span>
+                  </div>
+                  {quote.deliveryFee && quote.deliveryFee > 0 && (
+                    <div className="flex justify-between text-sm text-purple-600">
+                      <span className="flex items-center gap-1">
+                        <Truck className="w-3 h-3" /> Phí giao hàng
+                        {quote.deliveryDistance && <span className="text-xs">({quote.deliveryDistance}km)</span>}
+                      </span>
+                      <span className="font-medium">{formatMoney(quote.deliveryFee)}</span>
+                    </div>
+                  )}
+                  {quote.customizationFee > 0 && (
+                    <div className="flex justify-between text-sm text-purple-600">
+                      <span>✨ Phí tùy chỉnh</span>
+                      <span className="font-medium">{formatMoney(quote.customizationFee)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t border-blue-200">
+                    <span className="font-bold text-blue-800">Tổng thanh toán</span>
+                    <span className="font-bold text-blue-800 text-lg">{formatMoney(quote.totalPayment)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* === GRAND TOTAL === */}
+              <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-white text-lg">🎯 TỔNG GIÁ TRỊ</span>
+                  <span className="font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                    {formatMoney(quote.grandTotal)}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -312,11 +312,10 @@ export default function QuoteApprovalModal({
                 <button
                   onClick={handleSubmit}
                   disabled={isSubmitting || (action === 'reject' && !feedback.trim())}
-                  className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    action === 'approve'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-red-600 hover:bg-red-700'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${action === 'approve'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-red-600 hover:bg-red-700'
+                    }`}
                 >
                   {isSubmitting ? (
                     <>

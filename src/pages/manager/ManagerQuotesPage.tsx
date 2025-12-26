@@ -68,12 +68,12 @@ export default function ManagerQuotesPage() {
   }, [])
 
   const filteredQuotes = quotes.filter(quote => {
-    const matchesSearch = 
+    const matchesSearch =
       quote.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       quote.rentalId.toString().includes(searchQuery) ||
       quote.packageName.toLowerCase().includes(searchQuery.toLowerCase())
 
-    const matchesFilter = 
+    const matchesFilter =
       filterStatus === 'all' ||
       (filterStatus === 'pending' && quote.status === QuoteStatus.PendingManager) ||
       (filterStatus === 'reviewed' && quote.status !== QuoteStatus.PendingManager)
@@ -163,31 +163,28 @@ export default function ManagerQuotesPage() {
             <div className="flex gap-2 bg-white border border-gray-300 rounded-lg p-1">
               <button
                 onClick={() => setFilterStatus('all')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  filterStatus === 'all'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterStatus === 'all'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 All ({quotes.length})
               </button>
               <button
                 onClick={() => setFilterStatus('pending')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  filterStatus === 'pending'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterStatus === 'pending'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 Pending ({pendingCount})
               </button>
               <button
                 onClick={() => setFilterStatus('reviewed')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  filterStatus === 'reviewed'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterStatus === 'reviewed'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 Reviewed ({reviewedCount})
               </button>
@@ -243,31 +240,25 @@ export default function ManagerQuotesPage() {
                     </div>
                   </div>
 
-                  {/* Price Breakdown */}
+                  {/* Price Breakdown - Two Phase */}
                   <div className="space-y-2 mb-4 text-sm">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Delivery Fee (Auto)</span>
-                      <span className="font-medium">{formatMoney(quote.deliveryFee ?? 0)}</span>
+                    {/* Phase 1: Deposit */}
+                    <div className="flex justify-between text-blue-600">
+                      <span>💰 Tổng đặt cọc</span>
+                      <span className="font-medium">{formatMoney(quote.totalDeposit)}</span>
                     </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Deposit</span>
-                      <span className="font-medium">{formatMoney(quote.deposit ?? 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Completion</span>
-                      <span className="font-medium">{formatMoney(quote.complete ?? 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Service</span>
-                      <span className="font-medium">{formatMoney(quote.service ?? 0)}</span>
+                    {/* Phase 2: Payment */}
+                    <div className="flex justify-between text-blue-600">
+                      <span>💳 Tổng thanh toán</span>
+                      <span className="font-medium">{formatMoney(quote.totalPayment)}</span>
                     </div>
                   </div>
 
-                  {/* Total */}
+                  {/* Grand Total */}
                   <div className="flex justify-between items-center pt-4 border-t border-gray-200 mb-4">
-                    <span className="text-lg font-bold text-gray-900">Total Amount</span>
-                    <span className="text-2xl font-bold text-purple-600">
-                      {formatMoney(quote.total)}
+                    <span className="text-lg font-bold text-gray-900">🎯 Tổng giá trị</span>
+                    <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                      {formatMoney(quote.grandTotal)}
                     </span>
                   </div>
 
