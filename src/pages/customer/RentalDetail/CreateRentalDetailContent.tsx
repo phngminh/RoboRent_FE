@@ -15,6 +15,12 @@ import { RobotAbilityCardForm } from "../../../components/robot-config/RobotAbil
 import type { RobotAbility } from "../../../components/robot-config/AbilityField";
 import { commitPendingImagesToCloudinary } from "../../../components/robot-config/AbilityField";
 
+// ✅ JSON Ability Forms (file đang nằm ở: components/robot-config/RobotAbilityJsonForms.tsx)
+import {
+  renderJsonAbilityForm,
+  type AbilityKey,
+} from "../../../components/robot-config/RobotAbilityJsonForms";
+
 interface CreateRentalDetailContentProps {
   onBack: (rentalId: number) => void;
   onSave: () => void;
@@ -24,15 +30,16 @@ type AbilityValueMap = Record<string, any>;
 
 type DetailRow = {
   key: string;
-  id?: number;
+  id?: number; // RentalDetailId
   roboTypeId: number;
-
-  // ✅ show đúng theo API getRentalDetailsByRentalIdAsync
   robotTypeName?: string;
-
   status?: string;
   isDeleted?: boolean;
+
   configValues: AbilityValueMap;
+
+  // ✅ snapshot giá trị ban đầu (từ DB) để so sánh change
+  initialConfigValues?: AbilityValueMap;
 };
 
 type AbilityValueResponse = {
@@ -45,7 +52,14 @@ type AbilityValueResponse = {
   isUpdated?: boolean;
 };
 
-// ---------- helpers ----------
+// ✅ NEW: response type of API /robotypes/by-ids
+type RoboTypeInfo = {
+  id: number;
+  typeName?: string | null;
+};
+
+/* -------------------------- helpers / utils -------------------------- */
+
 const safeJsonParse = (text?: string | null) => {
   if (!text) return null;
   try {
@@ -53,6 +67,106 @@ const safeJsonParse = (text?: string | null) => {
   } catch {
     return null;
   }
+};
+
+const deepClone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
+
+const buildDetailIdMap = (data: any[]): Record<number, number> => {
+  const map: Record<number, number> = {};
+  (data || []).forEach((d) => {
+    const detailId = Number(d?.id ?? 0);
+    const roboTypeId = Number(d?.roboTypeId ?? 0);
+    if (roboTypeId > 0 && detailId > 0) map[roboTypeId] = detailId;
+  });
+  return map;
+};
+
+const isJsonAbility = (a: RobotAbility) => {
+  const dt = (a.dataType || "").toLowerCase();
+  const ui = (a.uiControl || "").toLowerCase();
+  return dt === "json" || ui === "jsoneditor";
+};
+
+const deepEqual = (a: any, b: any) => {
+  if (a === b) return true;
+
+  // handle null/undefined
+  if (a == null || b == null) return a == b;
+
+  // array
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  // object
+  if (typeof a === "object" && typeof b === "object") {
+    const ak = Object.keys(a);
+    const bk = Object.keys(b);
+    if (ak.length !== bk.length) return false;
+    for (const k of ak) {
+      if (!deepEqual(a[k], b[k])) return false;
+    }
+    return true;
+  }
+
+  return false;
+};
+
+// normalize value for compare by ability type
+const normalizeForCompare = (ability: RobotAbility, v: any) => {
+  const dt = (ability.dataType || "").toLowerCase();
+  const ui = (ability.uiControl || "").toLowerCase();
+
+  // treat empty string & null as same
+  if (v === "") v = null;
+
+  // multiselect: compare as sorted array (order-insensitive)
+  if (dt === "enum[]" || ui === "multiselect") {
+    const arr = Array.isArray(v) ? v : [];
+    return [...arr].map(String).sort();
+  }
+
+  // number: normalize to number if possible
+  if (dt === "number" || dt === "int" || dt === "integer") {
+    if (v == null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : String(v);
+  }
+
+  // bool
+  if (dt === "bool" || ui === "switch") return !!v;
+
+  // json: compare by stable JSON string (to avoid key order issues)
+  if (dt === "json" || ui === "jsoneditor") {
+    if (v == null) return null;
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return String(v);
+    }
+  }
+
+  // default string compare
+  if (v == null) return null;
+  return String(v).trim();
+};
+
+const isAbilityChanged = (ability: RobotAbility, current: any, initial: any) => {
+  const a = normalizeForCompare(ability, current);
+  const b = normalizeForCompare(ability, initial);
+  return !deepEqual(a, b);
+};
+
+const isEmptyValue = (v: any) => {
+  if (v === null || v === undefined) return true;
+  if (typeof v === "string") return v.trim() === "";
+  if (Array.isArray(v)) return v.length === 0;
+  if (typeof v === "object") return Object.keys(v).length === 0;
+  return false;
 };
 
 const initDefaults = (abilities: RobotAbility[], current?: AbilityValueMap) => {
@@ -68,7 +182,7 @@ const initDefaults = (abilities: RobotAbility[], current?: AbilityValueMap) => {
 
       if (dt === "bool" || ui === "switch") next[a.key] = false;
       else if (dt === "enum[]" || ui === "multiselect") next[a.key] = [];
-      else if (dt === "json" || ui === "jsoneditor") next[a.key] = "";
+      else if (dt === "json" || ui === "jsoneditor") next[a.key] = null; // ✅ JSON form will set object/array
       else next[a.key] = "";
     });
 
@@ -82,17 +196,17 @@ const parseStoredAbilityValue = (ability: RobotAbility, av?: AbilityValueRespons
   const ui = (ability.uiControl || "").toLowerCase();
 
   if (av.valueJson != null && av.valueJson !== "") {
+    const parsed = safeJsonParse(av.valueJson);
+
     if (dt === "enum[]" || ui === "multiselect") {
-      const parsed = safeJsonParse(av.valueJson);
       return Array.isArray(parsed) ? parsed : [];
     }
 
     if (dt === "json" || ui === "jsoneditor") {
-      const parsed = safeJsonParse(av.valueJson);
-      return parsed != null ? JSON.stringify(parsed, null, 2) : av.valueJson;
+      // ✅ return object/array directly for JSON forms
+      return parsed ?? null;
     }
 
-    const parsed = safeJsonParse(av.valueJson);
     return parsed ?? av.valueJson;
   }
 
@@ -134,16 +248,28 @@ const toAbilityValuePayload = (ability: RobotAbility, v: any) => {
   const dt = (ability.dataType || "").toLowerCase();
   const ui = (ability.uiControl || "").toLowerCase();
 
+  // ✅ JSON editor / json datatype: accept object/array directly
   if (dt === "json" || ui === "jsoneditor") {
-    const rawText = typeof v === "string" ? v.trim() : v == null ? "" : String(v).trim();
-    if (!rawText) return { valueText: null as string | null, valueJson: null as string | null };
-
-    try {
-      const parsed = JSON.parse(rawText);
-      return { valueText: null, valueJson: JSON.stringify(parsed) };
-    } catch {
-      return { valueText: null, valueJson: rawText };
+    if (v === null || v === undefined || v === "") {
+      return { valueText: null as string | null, valueJson: null as string | null };
     }
+
+    // legacy: if string, try parse
+    if (typeof v === "string") {
+      const rawText = v.trim();
+      if (!rawText) return { valueText: null, valueJson: null };
+
+      try {
+        const parsed = JSON.parse(rawText);
+        return { valueText: null, valueJson: JSON.stringify(parsed) };
+      } catch {
+        // keep raw string if cannot parse
+        return { valueText: null, valueJson: rawText };
+      }
+    }
+
+    // ✅ object/array
+    return { valueText: null, valueJson: JSON.stringify(v) };
   }
 
   if (dt === "enum[]" || ui === "multiselect") {
@@ -164,10 +290,60 @@ const toAbilityValuePayload = (ability: RobotAbility, v: any) => {
   return { valueText: String(v), valueJson: null };
 };
 
-const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
-  onBack,
-  onSave,
-}) => {
+/* -------------------------- JSON Ability UI -------------------------- */
+
+function JsonAbilitySection({
+  abilities,
+  values,
+  onChange,
+  errors,
+}: {
+  abilities: RobotAbility[];
+  values: AbilityValueMap;
+  onChange: (fieldKey: string, v: any) => void;
+  errors?: Record<string, string>;
+}) {
+  const jsonAbilities = (abilities || []).filter((a) => a.isActive !== false).filter(isJsonAbility);
+  if (!jsonAbilities.length) return null;
+
+  return (
+    <div className="space-y-4">
+      {jsonAbilities.map((a) => {
+        const key = a.key as AbilityKey;
+        const err = errors?.[a.key];
+
+        return (
+          <div key={a.id} className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-gray-900">
+                  {a.label} {a.isRequired ? <span className="text-red-500">*</span> : null}
+                </div>
+                {a.description ? (
+                  <div className="mt-1 text-xs text-gray-500">{a.description}</div>
+                ) : null}
+              </div>
+
+              {err ? (
+                <div className="text-xs font-semibold text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">
+                  {err}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-3">
+              {renderJsonAbilityForm(key, values?.[a.key], (v) => onChange(a.key, v))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* -------------------------- main component -------------------------- */
+
+const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({ onBack, onSave }) => {
   const { rentalId: rentalIdString } = useParams<{ rentalId: string }>();
   const rentalId = rentalIdString ? parseInt(rentalIdString, 10) : 0;
 
@@ -193,6 +369,9 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
 
   // remember if rental details already exist => use updateRentalDetailsAsync
   const [hasExistingDetails, setHasExistingDetails] = useState(false);
+
+  // ✅ map roboTypeId -> RentalDetailId (id)
+  const [detailIdByRoboType, setDetailIdByRoboType] = useState<Record<number, number>>({});
 
   const cardTitle = (row: DetailRow, idxWithinType: number) => {
     const nameFromRow = row.robotTypeName;
@@ -242,11 +421,7 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
           if (!a.isRequired) return;
 
           const v = r.configValues?.[a.key];
-          const empty =
-            v === null ||
-            v === undefined ||
-            v === "" ||
-            (Array.isArray(v) && v.length === 0);
+          const empty = isEmptyValue(v);
 
           if (empty) {
             perRowErr[r.key] ??= {};
@@ -272,6 +447,7 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
     try {
       setSavingDraft(true);
 
+      // 1) commit images nhưng ĐỪNG overwrite initialConfigValues trước
       const rowsCommitted: DetailRow[] = [];
       for (const r of rows) {
         const abilities = abilitiesByType[r.roboTypeId] || [];
@@ -282,46 +458,104 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
         rowsCommitted.push({
           ...r,
           status: "Draft",
-          configValues: committedValues,
+          configValues: committedValues, // current mới
+          // initialConfigValues GIỮ NGUYÊN để so sánh change
         });
       }
 
-      setRows(rowsCommitted);
+      // ✅ 1.5) If updating: refetch latest RentalDetails and build id map
+      let freshIdMap = detailIdByRoboType;
 
-      const payload = rowsCommitted.map((r) => {
+      if (hasExistingDetails) {
+        const latest = await getRentalDetailsByRentalIdAsync(rentalId);
+        if (latest?.success) {
+          freshIdMap = buildDetailIdMap(latest.data || []);
+          setDetailIdByRoboType(freshIdMap);
+        }
+      }
+
+      // ✅ 1.6) Ensure each row has correct RentalDetailId (id)
+      const rowsFixed: DetailRow[] = rowsCommitted.map((r) => {
+        const fromState = Number(r.id ?? 0);
+        const fromMap = Number(freshIdMap[r.roboTypeId] ?? 0);
+        const finalId = fromState > 0 ? fromState : fromMap;
+        return { ...r, id: finalId };
+      });
+
+      // ✅ 1.7) Block update if any id is missing
+      if (hasExistingDetails) {
+        const missing = rowsFixed.filter((r) => !r.id || Number(r.id) <= 0);
+        if (missing.length) {
+          setErrors([
+            `Update failed: missing RentalDetailId for roboTypeId: ${missing
+              .map((m) => m.roboTypeId)
+              .join(", ")}. Please refresh page or re-open this rental.`,
+          ]);
+          return;
+        }
+      }
+
+      // 2) build payload: so sánh current vs initial (baseline cũ)
+      const payload = rowsFixed.map((r) => {
         const abilities = (abilitiesByType[r.roboTypeId] || []).filter((a) => a.isActive !== false);
 
         const item: any = {
-          id: r.id, // important when update
+          id: Number(r.id ?? 0), // ✅ must be correct in update mode
           isDeleted: !!r.isDeleted,
           status: "Draft",
           rentalId,
           roboTypeId: r.roboTypeId,
           isLocked: false,
-          createRobotAbilityValueRequests: abilities.map((a) => {
-            const v = r.configValues?.[a.key];
-            const { valueText, valueJson } = toAbilityValuePayload(a, v);
-
-            return {
-              robotAbilityId: a.id,
-              valueText,
-              valueJson,
-              isUpdated: true,
-            };
-          }),
         };
+
+        const abilityRequests = abilities.map((a) => {
+          const currentV = r.configValues?.[a.key]; // committed
+          const initialV = r.initialConfigValues?.[a.key]; // baseline cũ
+          const changed = hasExistingDetails ? isAbilityChanged(a, currentV, initialV) : false;
+
+          const { valueText, valueJson } = toAbilityValuePayload(a, currentV);
+
+          return {
+            robotAbilityId: a.id,
+            rentalDetailId: r.id,
+            valueText,
+            valueJson,
+            isUpdated: changed, // ✅ chỉ true khi changed
+          };
+        });
+
+        if (hasExistingDetails) item.updateRobotAbilityValueRequests = abilityRequests;
+        else item.createRobotAbilityValueRequests = abilityRequests;
 
         return item;
       });
 
-      // ✅ if existed => UPDATE else CREATE
-      if (hasExistingDetails) {
-        await updateRentalDetailsAsync(rentalId, payload);
-      } else {
+      // 3) gọi API
+      if (hasExistingDetails) await updateRentalDetailsAsync(rentalId, payload);
+      else {
         await createRentalDetailsBulkAsync(payload);
         setHasExistingDetails(true);
+
+        // ✅ after create, fetch again to get real IDs
+        const latest = await getRentalDetailsByRentalIdAsync(rentalId);
+        if (latest?.success) {
+          const newMap = buildDetailIdMap(latest.data || []);
+          setDetailIdByRoboType(newMap);
+          // also patch rows with newly created ids
+          const patched = rowsFixed.map((r) => ({
+            ...r,
+            id: Number(newMap[r.roboTypeId] ?? r.id ?? 0),
+          }));
+          // 4) reset baseline after OK
+          setRows(patched.map((r) => ({ ...r, initialConfigValues: deepClone(r.configValues) })));
+          setDraftSaved(true);
+          onSave();
+          return;
+        }
       }
 
+      // 4) chỉ sau khi API OK mới “reset baseline”
+      setRows(rowsFixed.map((r) => ({ ...r, initialConfigValues: deepClone(r.configValues) })));
       setDraftSaved(true);
       onSave();
     } catch (err: any) {
@@ -359,12 +593,32 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
   useEffect(() => {
     let mounted = true;
 
+    // ✅ helper load roboTypeNames by ids using new API
+    const loadRoboTypeNamesByIds = async (ids: number[]) => {
+      const uniqueIds = Array.from(new Set((ids || []).filter((x) => typeof x === "number" && x > 0)));
+      if (!uniqueIds.length) return;
+
+      try {
+        const infos = (await getRoboTypesByIdsAsync(uniqueIds)) as RoboTypeInfo[];
+
+        const dict: Record<number, string> = {};
+        infos.forEach((x) => {
+          dict[x.id] = (x.typeName ?? "").trim() || `Robot Type ${x.id}`;
+        });
+
+        if (mounted) setRoboTypeNames(dict);
+      } catch (err) {
+        console.warn("Failed to load robo type names", err);
+      }
+    };
+
     (async () => {
       setLoading(true);
       setErrors([]);
       setFieldErrorsByRow({});
       setDraftSaved(false);
       setHasExistingDetails(false);
+      setDetailIdByRoboType({});
 
       try {
         const mapping = await getRobotTypesOfActivityAsync(activityTypeId);
@@ -379,10 +633,14 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
         const existing = await getRentalDetailsByRentalIdAsync(rentalId);
         if (!mounted) return;
 
+        // ✅ CASE A: already have rental details
         if (existing.success && existing.data.length > 0) {
           setHasExistingDetails(true);
 
-          const loadedRows: DetailRow[] = existing.data.map((d: any) => {
+          const idMap = buildDetailIdMap(existing.data || []);
+          setDetailIdByRoboType(idMap);
+
+          const loadedRows: DetailRow[] = (existing.data || []).map((d: any) => {
             const abilities = abilitiesDict[d.roboTypeId] || [];
 
             const rawFromResponses = buildConfigValuesFromAbilityResponses(
@@ -390,72 +648,60 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
               (d.robotAbilityValueResponses || []) as AbilityValueResponse[]
             );
 
+            const normalized = initDefaults(abilities, rawFromResponses);
+
             return {
               key: `${d.id}-${Math.random().toString(36).slice(2)}`,
-              id: d.id,
-              roboTypeId: d.roboTypeId,
-
-              // ✅ đúng field từ API getRentalDetailsByRentalIdAsync
+              id: Number(d.id ?? 0),
+              roboTypeId: Number(d.roboTypeId ?? 0),
               robotTypeName: d.robotTypeName,
-
               status: d.status ?? "Draft",
               isDeleted: d.isDeleted ?? false,
-              configValues: initDefaults(abilities, rawFromResponses),
+
+              configValues: normalized,
+
+              // ✅ snapshot (để detect change)
+              initialConfigValues: deepClone(normalized),
             };
           });
 
           setRows(loadedRows);
           setSelectedRowKey((prev) => prev || loadedRows[0]?.key || "");
 
-          const uniqueIds = Array.from(new Set(existing.data.map((d: any) => d.roboTypeId)));
-          if (uniqueIds.length) {
-            try {
-              const infos = await getRoboTypesByIdsAsync(uniqueIds);
-              const dict: Record<number, string> = {};
-
-              // giữ fallback cũ nhưng an toàn hơn
-              infos.forEach((x: any) => (dict[x.id] = x.name ?? x.typeName ?? x.typeNameName));
-              setRoboTypeNames(dict);
-            } catch {}
-          }
+          await loadRoboTypeNamesByIds(existing.data.map((d: any) => d.roboTypeId));
 
           setDraftSaved(true);
           setLoading(false);
           return;
         }
 
-        const newRows: DetailRow[] = [];
-        mapping.forEach((m: any) => {
-          const count = Math.max(1, m.amount ?? 1);
+        // ✅ CASE B: no existing details
+        const uniqueMapping = Array.from(
+          new Map<number, any>((mapping || []).map((m: any) => [m.roboTypeId, m])).values()
+        );
+
+        const newRows: DetailRow[] = uniqueMapping.map((m: any) => {
           const abilities = abilitiesDict[m.roboTypeId] || [];
 
-          for (let i = 0; i < count; i++) {
-            newRows.push({
-              key: `${m.roboTypeId}-${i}-${Math.random().toString(36).slice(2)}`,
-              roboTypeId: m.roboTypeId,
+          return {
+            key: `${m.roboTypeId}-${Math.random().toString(36).slice(2)}`,
+            roboTypeId: m.roboTypeId,
 
-              // mapping API này có thể là roboTypeName hoặc robotTypeName => dùng fallback
-              robotTypeName: m.robotTypeName ?? m.roboTypeName,
+            robotTypeName: m.robotTypeName ?? m.roboTypeName,
 
-              status: "Draft",
-              isDeleted: false,
-              configValues: initDefaults(abilities),
-            });
-          }
+            status: "Draft",
+            isDeleted: false,
+            configValues: initDefaults(abilities),
+
+            // baseline empty
+            initialConfigValues: deepClone(initDefaults(abilities)),
+          };
         });
 
         setRows(newRows);
         setSelectedRowKey((prev) => prev || newRows[0]?.key || "");
 
-        const uniqueIds = Array.from(new Set(mapping.map((m: any) => m.roboTypeId)));
-        if (uniqueIds.length) {
-          try {
-            const infos = await getRoboTypesByIdsAsync(uniqueIds);
-            const dict: Record<number, string> = {};
-            infos.forEach((x: any) => (dict[x.id] = x.name ?? x.typeName ?? x.typeNameName));
-            setRoboTypeNames(dict);
-          } catch {}
-        }
+        await loadRoboTypeNamesByIds(uniqueMapping.map((m: any) => m.roboTypeId));
       } catch (e: any) {
         setErrors([e?.message || "Failed to load rental details."]);
       } finally {
@@ -468,20 +714,16 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
     };
   }, [rentalId, activityTypeId]);
 
-  const selectedRow = useMemo(
-    () => rows.find((r) => r.key === selectedRowKey),
-    [rows, selectedRowKey]
-  );
+  const selectedRow = useMemo(() => rows.find((r) => r.key === selectedRowKey), [rows, selectedRowKey]);
 
   const groupedAbilities = useMemo(() => {
     if (!selectedRow) return null;
-    const abilities = (abilitiesByType[selectedRow.roboTypeId] || []).filter(
-      (a) => a.isActive !== false
-    );
+    const abilities = (abilitiesByType[selectedRow.roboTypeId] || []).filter((a) => a.isActive !== false);
     return splitAbilitiesIntoUiSections(abilities);
   }, [selectedRow, abilitiesByType]);
 
-  // ---------- UI ----------
+  /* ------------------------------- UI ------------------------------- */
+
   return (
     <div className="w-full">
       {/* Errors */}
@@ -496,9 +738,7 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
       )}
 
       {(loading || savingDraft) && (
-        <div className="mt-3 text-sm text-gray-500">
-          {savingDraft ? "Saving draft (uploading images)..." : "Loading..."}
-        </div>
+        <div className="mt-3 text-sm text-gray-500">{savingDraft ? "Saving draft (uploading images)..." : "Loading..."}</div>
       )}
 
       {!loading && rows.length === 0 && (
@@ -537,9 +777,7 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
                   className={[
                     "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium",
                     "bg-blue-600 text-white shadow-sm",
-                    loading || savingDraft || rows.length === 0
-                      ? "opacity-60 cursor-not-allowed"
-                      : "hover:bg-blue-700",
+                    loading || savingDraft || rows.length === 0 ? "opacity-60 cursor-not-allowed" : "hover:bg-blue-700",
                   ].join(" ")}
                   title={
                     hasExistingDetails
@@ -579,10 +817,7 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
               {rows.map((r) => {
                 const idx = indexWithinTypeByKey(r.key) + 1;
 
-                const name =
-                  r.robotTypeName ||
-                  roboTypeNames[r.roboTypeId] ||
-                  `Robot Type ${r.roboTypeId}`;
+                const name = r.robotTypeName || roboTypeNames[r.roboTypeId] || `Robot Type ${r.roboTypeId}`;
 
                 const active = r.key === selectedRowKey;
 
@@ -638,66 +873,61 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({
                 other: [],
               };
 
+              const renderSection = (abilities: RobotAbility[]) => {
+                const normal = (abilities || [])
+                  .filter((a) => a.isActive !== false)
+                  .filter((a) => !isJsonAbility(a));
+                const hasNormal = normal.length > 0;
+                const hasJson = (abilities || []).some((a) => a.isActive !== false && isJsonAbility(a));
+
+                if (!hasNormal && !hasJson) return <EmptySection />;
+
+                return (
+                  <div className="space-y-4">
+                    {hasNormal ? (
+                      <RobotAbilityCardForm
+                        abilities={normal}
+                        values={selectedRow.configValues}
+                        errors={rowErr}
+                        onChange={(fieldKey, v) => handleConfigChange(selectedRow.key, fieldKey, v)}
+                      />
+                    ) : null}
+
+                    {hasJson ? (
+                      <JsonAbilitySection
+                        abilities={abilities}
+                        values={selectedRow.configValues}
+                        errors={rowErr}
+                        onChange={(fieldKey, v) => handleConfigChange(selectedRow.key, fieldKey, v)}
+                      />
+                    ) : null}
+                  </div>
+                );
+              };
+
               return (
                 <>
                   <ConfigCard
                     title="Branding & UI Configuration"
                     subtitle="Brand name, logo URL, theme assets (colors/banner/background)."
                   >
-                    {sections.branding.length ? (
-                      <RobotAbilityCardForm
-                        abilities={sections.branding}
-                        values={selectedRow.configValues}
-                        errors={rowErr}
-                        onChange={(fieldKey, v) => handleConfigChange(selectedRow.key, fieldKey, v)}
-                      />
-                    ) : (
-                      <EmptySection />
-                    )}
+                    {renderSection(sections.branding)}
                   </ConfigCard>
 
                   <ConfigCard
                     title="Welcome Screen Configuration"
                     subtitle="Welcome text, intro content, optional greeting script."
                   >
-                    {sections.welcome.length ? (
-                      <RobotAbilityCardForm
-                        abilities={sections.welcome}
-                        values={selectedRow.configValues}
-                        errors={rowErr}
-                        onChange={(fieldKey, v) => handleConfigChange(selectedRow.key, fieldKey, v)}
-                      />
-                    ) : (
-                      <EmptySection />
-                    )}
+                    {renderSection(sections.welcome)}
                   </ConfigCard>
 
-                  <ConfigCard
-                    title="Call-to-CTA & QR"
-                    subtitle="CTA URL / QR content and call-to-action text."
-                  >
-                    {sections.cta.length ? (
-                      <RobotAbilityCardForm
-                        abilities={sections.cta}
-                        values={selectedRow.configValues}
-                        errors={rowErr}
-                        onChange={(fieldKey, v) => handleConfigChange(selectedRow.key, fieldKey, v)}
-                      />
-                    ) : (
-                      <EmptySection />
-                    )}
+                  <ConfigCard title="Call-to-CTA & QR" subtitle="CTA URL / QR content and call-to-action text.">
+                    {renderSection(sections.cta)}
 
                     {sections.other.length > 0 && (
                       <div className="mt-4 pt-4 border-t">
-                        <div className="text-xs font-semibold text-gray-700 mb-2">
-                          Other Configuration
-                        </div>
-                        <RobotAbilityCardForm
-                          abilities={sections.other}
-                          values={selectedRow.configValues}
-                          errors={rowErr}
-                          onChange={(fieldKey, v) => handleConfigChange(selectedRow.key, fieldKey, v)}
-                        />
+                        <div className="text-xs font-semibold text-gray-700 mb-2">Other Configuration</div>
+                        {renderSection(sections.other)}
                       </div>
                     )}
                   </ConfigCard>

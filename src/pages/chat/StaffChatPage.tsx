@@ -26,6 +26,10 @@ import { toast } from 'react-toastify'
 import { formatDistanceToNow } from 'date-fns'
 import { formatMoney } from '../../utils/format'
 import { getRentalByIdAsync } from '../../apis/rental.staff.api'
+import { getRentalDetailsByRentalIdAsync } from '../../apis/rentaldetail.api'
+import { Eye } from "lucide-react"
+import RentalDetailModal from '../../components/staff/RentalDetailModal'
+
 
 // Interface for customer chat list
 interface CustomerChat {
@@ -46,6 +50,34 @@ interface StaffChatPageProps {
 }
 
 const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
+  const [showRentalDetailModal, setShowRentalDetailModal] = useState(false)
+type ApiResponse<T> = { success: boolean; data: T }
+
+type RentalDetailResponse = {
+  id: number
+  isDeleted: boolean
+  status: string
+  rentalId: number
+  roboTypeId: number
+  robotAbilityId: number | null
+  script: string
+  branding: string
+  scenario: string
+  robotTypeName: string
+  robotTypeDescription: string
+  robotAbilityValueResponses: Array<{
+    id: number
+    rentalDetailId: number
+    robotAbilityId: number
+    valueText: string | null
+    valueJson: string | null
+    updatedAt: string
+    isUpdated: boolean
+  }>
+}
+
+const [rentalDetails, setRentalDetails] = useState<RentalDetailResponse[]>([])
+  const [isLoadingRentalDetails, setIsLoadingRentalDetails] = useState(false)
   const { rentalId } = useParams<{ rentalId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -92,6 +124,21 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
 
     loadRentalInfo()
   }, [rentalId])
+
+const loadRentalDetails = async () => {
+  if (!rentalId) return
+  setIsLoadingRentalDetails(true)
+  try {
+    const res = await getRentalDetailsByRentalIdAsync(parseInt(rentalId)) as ApiResponse<RentalDetailResponse[]>
+    setRentalDetails(res.data) // ✅ FIX
+  } catch (e) {
+    console.error("Failed to load rental details:", e)
+    toast.error("Failed to load rental details")
+  } finally {
+    setIsLoadingRentalDetails(false)
+  }
+}
+
 
   // ✅ Persist sidebar states to localStorage
   useEffect(() => {
@@ -641,7 +688,17 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
                   </p>
                 </div>
               </div>
-
+  <button
+    onClick={async () => {
+      await loadRentalDetails()
+      setShowRentalDetailModal(true)
+    }}
+    className="px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium flex items-center gap-2"
+    title="View rental detail"
+  >
+    <Eye className="w-4 h-4 text-gray-700" />
+    View Details
+  </button>
               <button
                 onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -971,6 +1028,15 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
           }}
         />
       )}
+
+      <RentalDetailModal
+  isOpen={showRentalDetailModal}
+  onClose={() => setShowRentalDetailModal(false)}
+  rentalInfo={rentalInfo}
+  rentalDetails={rentalDetails}
+  isLoading={isLoadingRentalDetails}
+/>
+
     </div>
   )
 }
