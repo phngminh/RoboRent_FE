@@ -11,7 +11,8 @@ import {
     markAllNotificationsAsRead,
     markNotificationAsRead,
     deleteNotification,
-    deleteAllNotifications
+    deleteAllNotifications,
+    type NotificationResponse as ApiNotificationResponse
 } from '../apis/notification.api'
 import { signalRService } from '../utils/signalr'
 import { toast } from 'react-toastify'
@@ -179,8 +180,8 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
         window.location.href = url
     }
 
-    const getIconComponent = (type: NotificationType) => {
-        const config = getNotificationConfig(type)
+    const getIconComponent = (type: number) => {
+        const config = getNotificationConfig(type as NotificationType)
         const iconMap: Record<string, React.ReactNode> = {
             'inbox': <Inbox className="w-4 h-4" />,
             'check-circle': <CheckCircle className="w-4 h-4" />,

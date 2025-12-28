@@ -1,60 +1,63 @@
 // Notification types matching BE NotificationType enum
 // See: RoboRent_BE.Model.Enums.NotificationType
+// Using const object because erasableSyntaxOnly is enabled in tsconfig
 
-export enum NotificationType {
+export const NotificationType = {
     // Phase 1: Request
-    NewRequest = 0,
-    RequestReceived = 1,
-    RequestUpdate = 2,
-    RequestCancelled = 3,
+    NewRequest: 0,
+    RequestReceived: 1,
+    RequestUpdate: 2,
+    RequestCancelled: 3,
 
     // Phase 2: Quote
-    QuotePendingApproval = 4,
-    QuoteApproved = 5,
-    QuoteRejected = 6,
-    QuoteAccepted = 7,
-    QuoteRejectedByCustomer = 8,
+    QuotePendingApproval: 4,
+    QuoteApproved: 5,
+    QuoteRejected: 6,
+    QuoteAccepted: 7,
+    QuoteRejectedByCustomer: 8,
 
     // Phase 3: Schedule
-    ScheduleCreated = 9,
-    ScheduleUpdated = 10,
-    ScheduleCancelled = 11,
+    ScheduleCreated: 9,
+    ScheduleUpdated: 10,
+    ScheduleCancelled: 11,
 
     // Phase 4: Demo
-    DemoCreated = 12,
-    DemoAccepted = 13,
-    DemoRejected = 14,
+    DemoCreated: 12,
+    DemoAccepted: 13,
+    DemoRejected: 14,
 
     // Phase 5: Contract
-    ContractPendingApproval = 15,
-    ContractManagerSigned = 16,
-    ContractManagerRejected = 17,
-    ContractCustomerSigned = 18,
-    ContractChangeRequested = 19,
+    ContractPendingApproval: 15,
+    ContractManagerSigned: 16,
+    ContractManagerRejected: 17,
+    ContractCustomerSigned: 18,
+    ContractChangeRequested: 19,
 
     // Phase 6: Delivery
-    DeliveryCreated = 20,
-    DeliveryAssigned = 21,
-    DeliveryStatusUpdate = 22,
+    DeliveryCreated: 20,
+    DeliveryAssigned: 21,
+    DeliveryStatusUpdate: 22,
 
     // Phase 7: Contract Report
-    ReportCreated = 23,
-    ReportResolved = 24,
-    ReportRejected = 25,
+    ReportCreated: 23,
+    ReportResolved: 24,
+    ReportRejected: 25,
 
     // Phase 8: Payment
-    PaymentLinkCreated = 26,
-    PaymentSuccess = 27,
-    PaymentFailed = 28,
+    PaymentLinkCreated: 26,
+    PaymentSuccess: 27,
+    PaymentFailed: 28,
 
     // General
-    SystemNotification = 29
-}
+    SystemNotification: 29
+} as const;
+
+export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 
 // Notification response from API
 export interface NotificationResponse {
     id: number
-    type: NotificationType
+    type: number // Can be compared with NotificationType values
     typeName: string
     content: string
     rentalId?: number
@@ -67,7 +70,7 @@ export interface NotificationResponse {
 // SignalR NewNotification event payload
 export interface NewNotificationEvent {
     Id: number
-    Type: NotificationType
+    Type: number // Can be compared with NotificationType values
     TypeName: string
     Content: string
     RentalId?: number
