@@ -172,17 +172,49 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
       : 'A demo is already pending customer review'
 
 
-  // Create Quote button
-  const isCreateQuoteDisabled = rentalStatus !== 'Received' || quotesData?.canCreateMore === false
+  // Create Quote button - allow when status is Received or RejectedPriceQuote (matching BE validation)
+  const allowedQuoteStatuses = ['Received', 'RejectedPriceQuote']
+  const isCreateQuoteDisabled = !allowedQuoteStatuses.includes(rentalStatus) || quotesData?.canCreateMore === false
   const createQuoteDisabledReason =
-    rentalStatus !== 'Received'
-      ? 'Rental status must be "Received" to create quote'
-      : 'Maximum 3 quotes reached'
+    !allowedQuoteStatuses.includes(rentalStatus)
+      ? `Rental status must be "Received" or "RejectedPriceQuote" to create quote (current: ${rentalStatus})`
+      : 'Maximum 3 quotes reached or active quote exists'
 
-  // Send Contract button
-  const hasApprovedQuote = quotesData?.quotes.some(q => q.status === QuoteStatus.Approved)
-  const isSendContractDisabled = !hasApprovedQuote
-  const sendContractDisabledReason = 'Customer must approve a quote first'
+  // Send Contract button - only after demo accepted
+  const isSendContractDisabled = rentalStatus !== 'AcceptedDemo'
+  const sendContractDisabledReason =
+    rentalStatus === 'AcceptedPriceQuote'
+      ? 'Cần xếp lịch (Schedule) trước khi gửi Contract'
+      : rentalStatus === 'Scheduled' || rentalStatus === 'PendingDemo' || rentalStatus === 'DeniedDemo'
+        ? 'Cần customer chấp nhận Demo trước'
+        : `Rental status phải là "AcceptedDemo" (hiện tại: ${rentalStatus})`
+
+  // Status guidance for staff
+  const getStatusGuidance = () => {
+    switch (rentalStatus) {
+      case 'Received':
+      case 'PendingPriceQuote':
+      case 'RejectedPriceQuote':
+        return { icon: '💰', message: 'Tạo báo giá cho khách hàng', color: 'blue' }
+      case 'AcceptedPriceQuote':
+        return { icon: '📅', message: 'Quote approved! Bước tiếp:', linkText: 'Xếp lịch', linkUrl: '/staff/robot-group', color: 'green' }
+      case 'Scheduled':
+        return { icon: '🎬', message: 'Đã xếp lịch! Bước tiếp: Gửi video Demo', color: 'purple' }
+      case 'PendingDemo':
+        return { icon: '⏳', message: 'Demo đang chờ khách duyệt...', color: 'yellow' }
+      case 'DeniedDemo':
+        return { icon: '🔄', message: 'Khách từ chối demo. Gửi demo mới!', color: 'orange' }
+      case 'AcceptedDemo':
+        return { icon: '📝', message: 'Demo accepted! Bước tiếp: Tạo và gửi hợp đồng', color: 'indigo' }
+      case 'PendingContract':
+        return { icon: '✍️', message: 'Hợp đồng đang chờ ký...', color: 'violet' }
+      case 'PendingDeposit':
+        return { icon: '💳', message: 'Chờ khách đóng tiền cọc...', color: 'emerald' }
+      default:
+        return null
+    }
+  }
+  const statusGuidance = getStatusGuidance()
 
   // Filter chats based on search
   const filteredChats = customerChats.filter(chat =>
@@ -674,6 +706,34 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Status Guidance Banner */}
+          {statusGuidance && (
+            <div className={`px-6 py-2 flex items-center gap-2 text-sm border-b border-gray-100 ${statusGuidance.color === 'blue' ? 'bg-blue-50 text-blue-700' :
+              statusGuidance.color === 'green' ? 'bg-green-50 text-green-700' :
+                statusGuidance.color === 'purple' ? 'bg-purple-50 text-purple-700' :
+                  statusGuidance.color === 'yellow' ? 'bg-yellow-50 text-yellow-700' :
+                    statusGuidance.color === 'orange' ? 'bg-orange-50 text-orange-700' :
+                      statusGuidance.color === 'indigo' ? 'bg-indigo-50 text-indigo-700' :
+                        statusGuidance.color === 'violet' ? 'bg-violet-50 text-violet-700' :
+                          statusGuidance.color === 'emerald' ? 'bg-emerald-50 text-emerald-700' :
+                            'bg-gray-50 text-gray-700'
+              }`}>
+              <span className="text-lg">{statusGuidance.icon}</span>
+              <span className="font-medium">
+                {statusGuidance.message}
+                {statusGuidance.linkText && statusGuidance.linkUrl && (
+                  <span
+                    onClick={() => navigate(statusGuidance.linkUrl!)}
+                    className="ml-1 underline cursor-pointer hover:opacity-80"
+                  >
+                    {statusGuidance.linkText}
+                  </span>
+                )}
+              </span>
+              <span className="ml-auto text-xs opacity-70">Status: {rentalStatus}</span>
+            </div>
+          )}
+
           {/* Action Buttons - ✅ All visible, disabled when not available */}
           <div className="border-t border-gray-100 px-6 py-3 bg-gray-50">
             <div className="flex gap-2">
@@ -767,6 +827,17 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
             {/* Rental Info */}
             <div className="p-6 bg-white border-b border-gray-200">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Rental Information</h2>
+
+              {/* Schedule Button - ONLY show when AcceptedPriceQuote */}
+              {rentalStatus === 'AcceptedPriceQuote' && (
+                <button
+                  onClick={() => navigate('/staff/robot-group')}
+                  className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                >
+                  <Calendar size={18} />
+                  Go to Schedule
+                </button>
+              )}
 
               {!rentalInfo ? (
                 <p className="text-gray-500 text-sm">Loading...</p>
@@ -948,6 +1019,14 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
           rentalId={parseInt(rentalId)}
           currentQuoteCount={quotesData?.totalQuotes || 0}
           rentalInfo={rentalInfo}
+          rejectedQuotes={quotesData?.quotes
+            .filter(q => q.status === QuoteStatus.RejectedCustomer)
+            .map(q => ({
+              quoteNumber: q.quoteNumber,
+              customerReason: q.customerReason,
+              status: q.status
+            })) || []
+          }
           onClose={() => setShowCreateQuoteModal(false)}
           onSuccess={() => {
             fetchQuotes(parseInt(rentalId))
