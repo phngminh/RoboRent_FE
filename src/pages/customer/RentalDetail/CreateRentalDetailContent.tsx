@@ -13,13 +13,7 @@ import { customerSendRentalAsync } from "../../../apis/rental.customer.api";
 
 import { RobotAbilityCardForm } from "../../../components/robot-config/RobotAbilityCardForm";
 import type { RobotAbility } from "../../../components/robot-config/AbilityField";
-import { commitPendingImagesToCloudinary } from "../../../components/robot-config/AbilityField";
-
-// ✅ JSON Ability Forms (file đang nằm ở: components/robot-config/RobotAbilityJsonForms.tsx)
-import {
-  renderJsonAbilityForm,
-  type AbilityKey,
-} from "../../../components/robot-config/RobotAbilityJsonForms";
+import { commitPendingImagesToCloudinary, AbilityField } from "../../../components/robot-config/AbilityField";
 
 interface CreateRentalDetailContentProps {
   onBack: (rentalId: number) => void;
@@ -309,31 +303,16 @@ function JsonAbilitySection({
   return (
     <div className="space-y-4">
       {jsonAbilities.map((a) => {
-        const key = a.key as AbilityKey;
         const err = errors?.[a.key];
 
         return (
           <div key={a.id} className="rounded-2xl border border-gray-200 bg-white p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-gray-900">
-                  {a.label} {a.isRequired ? <span className="text-red-500">*</span> : null}
-                </div>
-                {a.description ? (
-                  <div className="mt-1 text-xs text-gray-500">{a.description}</div>
-                ) : null}
-              </div>
-
-              {err ? (
-                <div className="text-xs font-semibold text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">
-                  {err}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-3">
-              {renderJsonAbilityForm(key, values?.[a.key], (v) => onChange(a.key, v))}
-            </div>
+            <AbilityField
+              ability={a}
+              value={values?.[a.key]}
+              error={err}
+              onChange={(v) => onChange(a.key, v)}
+            />
           </div>
         );
       })}
