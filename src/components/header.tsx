@@ -25,9 +25,10 @@ const Header = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const [currentSection, setCurrentSection] = useState('home')
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [, setUnreadCount] = useState(0)
 
   const isTransparentHeaderPage = location.pathname === path.home || location.pathname === path.create_request
+  const isDashboardPage = Object.values(roleRedirectMap).some(basePath => location.pathname.startsWith(basePath))
 
   const handleLogout = () => {
     logout()
@@ -105,8 +106,35 @@ const Header = () => {
     return () => clearInterval(interval)
   }, [user?.id, user?.role])
 
-  const isHeaderBlack = !isTransparentHeaderPage || isScrolled || isMenuOpen
-  const textColor = isHeaderBlack ? 'text-emerald-400' : 'text-white'
+  const isHeaderBlack = !isTransparentHeaderPage && !isDashboardPage || isScrolled || isMenuOpen
+  const headerBg = isDashboardPage 
+    ? 'bg-white shadow-sm border-b border-gray-200' 
+    : isHeaderBlack
+    ? 'bg-black/75 backdrop-blur-sm shadow-sm border-b border-emerald-800'
+    : 'bg-transparent'
+  const textColor = isDashboardPage 
+    ? 'text-emerald-500' 
+    : isHeaderBlack 
+    ? 'text-emerald-400' 
+    : 'text-white'
+  const logoShadow = isDashboardPage 
+    ? 'filter drop-shadow-[0_0_2px_#374151]' 
+    : isHeaderBlack 
+    ? 'filter drop-shadow-[0_0_2px_#10b981]' 
+    : 'filter drop-shadow-[0_0_2px_#ffffff]'
+  const logoTextColor = isDashboardPage 
+    ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent animate-pulse' 
+    : isHeaderBlack 
+    ? 'bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse' 
+    : 'text-white'
+
+  const navTextColor = isDashboardPage 
+    ? 'text-emerald-400 hover:text-emerald-600 after:bg-emerald-400' 
+    : isHeaderBlack 
+    ? 'text-emerald-400 hover:text-emerald-600 after:bg-emerald-400' 
+    : 'text-white hover:text-gray-200 after:bg-white'
+
+  const nameColor = 'bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent'
 
   const scrollToSection = (sectionId: string) => {
     setIsMenuOpen(false)
@@ -125,13 +153,43 @@ const Header = () => {
     setIsMenuOpen(false)
   }
 
+  const displayName = user?.name || user?.userName
+  const capitalizedRole = user?.role.charAt(0).toUpperCase() + user?.role.slice(1)
+  const linkText = `Welcome, ${capitalizedRole} ${displayName}`
+
+  const userDisplay = isDashboardPage ? (
+    <span
+      className={`text-lg transition-colors duration-200 ${textColor} whitespace-nowrap`}
+      title={linkText}
+    >
+      Welcome, {capitalizedRole}{' '}
+      <span className={nameColor}>{displayName}</span>
+    </span>
+  ) : (
+    <Link
+      to={roleRedirectMap[user?.role]}
+      className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'
+    >
+      <div className='h-8 w-8 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent flex items-center justify-center'>
+        <img
+          src={user?.picture}
+          alt='User Avatar'
+          className='h-7 w-7 rounded-full object-cover'
+        />
+      </div>
+      <span
+        className={`text-lg transition-colors duration-200 ${textColor} max-w-[150px] truncate block`}
+        title={displayName}
+      >
+        {displayName}
+      </span>
+    </Link>
+  )
+
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 w-full transition-colors duration-300 ${isHeaderBlack
-            ? 'bg-black/75 backdrop-blur-sm shadow-sm border-b border-emerald-800'
-            : 'bg-transparent'
-          }`}
+        className={`fixed top-0 left-0 right-0 z-50 w-full transition-colors duration-300 ${headerBg}`}
       >
         <div className='w-full px-4 sm:px-6 lg:px-8 font-extrabold font-orbitron'>
           <div className='grid grid-cols-3 items-center h-16'>
@@ -139,15 +197,11 @@ const Header = () => {
               <img
                 src={logo}
                 alt='logo'
-                className={`w-8 h-7 mr-3 mb-1 transition-all duration-200 ${isHeaderBlack ? 'filter drop-shadow-[0_0_2px_#10b981]' : 'filter drop-shadow-[0_0_2px_#ffffff]'
-                  }`}
+                className={`w-8 h-7 mr-3 mb-1 transition-all duration-200 ${logoShadow}`}
               />
               <Link
                 to={path.home}
-                className={`font-orbitron text-2xl tracking-widest transition-colors ${isHeaderBlack
-                  ? 'bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse'
-                  : 'text-white'
-                }`}
+                className={`font-orbitron text-2xl tracking-widest transition-colors ${logoTextColor}`}
               >
                 ROBORENT
               </Link>
@@ -162,10 +216,7 @@ const Header = () => {
                       e.preventDefault()
                       handleNavClick('home')
                     }}
-                    className={`transition-colors duration-200 relative pb-1 ${isHeaderBlack
-                        ? 'text-emerald-400 hover:text-emerald-200 after:bg-emerald-400'
-                        : 'text-white hover:text-gray-200 after:bg-white'
-                      }`}
+                    className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
                     HOME
                   </a>
@@ -175,10 +226,7 @@ const Header = () => {
                       e.preventDefault()
                       handleNavClick('our-products')
                     }}
-                    className={`transition-colors duration-200 relative pb-1 ${isHeaderBlack
-                        ? 'text-emerald-400 hover:text-emerald-200 after:bg-emerald-400'
-                        : 'text-white hover:text-gray-200 after:bg-white'
-                      }`}
+                    className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
                     SERVICES
                   </a>
@@ -188,10 +236,7 @@ const Header = () => {
                       e.preventDefault()
                       handleNavClick('about-us')
                     }}
-                    className={`transition-colors duration-200 relative pb-1 ${isHeaderBlack
-                        ? 'text-emerald-400 hover:text-emerald-200 after:bg-emerald-400'
-                        : 'text-white hover:text-gray-200 after:bg-white'
-                      }`}
+                    className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
                     ABOUT US
                   </a>
@@ -210,33 +255,23 @@ const Header = () => {
                 {isAuthenticated ? (
                   <div className='flex items-center space-x-4'>
                     <NotificationCenter textColor={textColor} />
-                    <Link
-                      to={roleRedirectMap[user?.role]}
-                      className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'
-                    >
-                      <div className='h-8 w-8 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent flex items-center justify-center'>
-                        <img
-                          src={user?.picture}
-                          alt='User Avatar'
-                          className='h-7 w-7 rounded-full object-cover'
-                        />
+                    {isDashboardPage ? (
+                      <div className='flex items-center space-x-2 flex-nowrap'>
+                        {userDisplay}
                       </div>
-                      <span
-                        className={`text-lg transition-colors duration-200 ${textColor} max-w-[150px] truncate block`}
-                        title={user?.name || user?.userName}
-                      >
-                        {user?.userName}
-                      </span>
-                    </Link>
-
-                    <button
-                      onClick={handleLogout}
-                      className={`flex items-center space-x-1 transition-colors duration-200 ${textColor} hover:text-emerald-100`}
-                      title='Logout'
-                    >
-                      <LogOut size={18} />
-                      <span className='text-lg'>Logout</span>
-                    </button>
+                    ) : (
+                      <div className='flex items-center space-x-4'>
+                        {userDisplay}
+                        <button
+                          onClick={handleLogout}
+                          className={`flex items-center space-x-1 transition-colors duration-200 ${textColor} hover:text-emerald-600`}
+                          title='Logout'
+                        >
+                          <LogOut size={18} />
+                          <span className='text-lg'>Logout</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <button
@@ -259,7 +294,7 @@ const Header = () => {
                     e.preventDefault()
                     handleNavClick('home')
                   }}
-                  className={`block px-3 py-2 text-emerald-400 hover:text-emerald-200 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'home' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
+                  className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'home' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}
                 >
                   Home
@@ -270,7 +305,7 @@ const Header = () => {
                     e.preventDefault()
                     handleNavClick('our-products')
                   }}
-                  className={`block px-3 py-2 text-emerald-400 hover:text-emerald-200 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'our-products' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
+                  className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'our-products' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}
                 >
                   Products
@@ -281,7 +316,7 @@ const Header = () => {
                     e.preventDefault()
                     handleNavClick('about-us')
                   }}
-                  className={`block px-3 py-2 text-emerald-400 hover:text-emerald-200 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'about-us' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
+                  className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'about-us' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}
                 >
                   About Us
