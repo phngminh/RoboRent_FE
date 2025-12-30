@@ -29,6 +29,7 @@ const Header = () => {
 
   const isTransparentHeaderPage = location.pathname === path.home || location.pathname === path.create_request
   const isDashboardPage = Object.values(roleRedirectMap).some(basePath => location.pathname.startsWith(basePath))
+  const showNav = !isDashboardPage
 
   const handleLogout = () => {
     logout()
@@ -57,17 +58,25 @@ const Header = () => {
   }, [])
 
   useEffect(() => {
-    if (!isTransparentHeaderPage) return
+    if (isTransparentHeaderPage) {
+      const handleHashChange = () => {
+        const hash = window.location.hash.slice(1)
+        setCurrentSection(hash || 'home')
+      }
 
-    const handleHashChange = () => {
-      const hash = window.location.hash.slice(1)
-      setCurrentSection(hash || 'home')
+      handleHashChange()
+      window.addEventListener('hashchange', handleHashChange)
+      return () => window.removeEventListener('hashchange', handleHashChange)
+    } else if (showNav) {
+      if (location.pathname === path.products) {
+        setCurrentSection('our-products')
+      } else if (location.pathname === path.aboutUs) {
+        setCurrentSection('about-us')
+      } else {
+        setCurrentSection('home')
+      }
     }
-
-    handleHashChange()
-    window.addEventListener('hashchange', handleHashChange)
-    return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [isTransparentHeaderPage])
+  }, [location.pathname, isTransparentHeaderPage, showNav])
 
   useEffect(() => {
     if (!user?.id) return
@@ -208,13 +217,17 @@ const Header = () => {
             </div>
 
             <div className='flex justify-center'>
-              {isTransparentHeaderPage && (
+              {showNav && (
                 <nav className='hidden md:flex justify-center space-x-8 tracking-wide text-lg'>
                   <a
                     href='#home'
                     onClick={(e) => {
                       e.preventDefault()
-                      handleNavClick('home')
+                      if (location.pathname === path.home) {
+                        scrollToSection('home')
+                      } else {
+                        navigate(path.home)
+                      }
                     }}
                     className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
@@ -224,7 +237,11 @@ const Header = () => {
                     href='#our-products'
                     onClick={(e) => {
                       e.preventDefault()
-                      handleNavClick('our-products')
+                      if (location.pathname === path.home) {
+                        scrollToSection('our-products')
+                      } else {
+                        navigate(path.products)
+                      }
                     }}
                     className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
@@ -234,7 +251,11 @@ const Header = () => {
                     href='#about-us'
                     onClick={(e) => {
                       e.preventDefault()
-                      handleNavClick('about-us')
+                      if (location.pathname === path.home) {
+                        scrollToSection('about-us')
+                      } else {
+                        navigate(path.aboutUs)
+                      }
                     }}
                     className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
@@ -285,14 +306,19 @@ const Header = () => {
             </div>
           </div>
 
-          {isMenuOpen && (
+          {isMenuOpen && showNav && (
             <div className='md:hidden absolute top-16 left-0 right-0 bg-black/95 shadow-lg animate-in slide-in-from-top-2 duration-200'>
               <nav className='px-4 py-4 space-y-2'>
                 <a
                   href='#home'
                   onClick={(e) => {
                     e.preventDefault()
-                    handleNavClick('home')
+                    if (location.pathname === path.home) {
+                      scrollToSection('home')
+                    } else {
+                      navigate(path.home)
+                    }
+                    setIsMenuOpen(false)
                   }}
                   className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'home' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}
@@ -303,7 +329,12 @@ const Header = () => {
                   href='#our-products'
                   onClick={(e) => {
                     e.preventDefault()
-                    handleNavClick('our-products')
+                    if (location.pathname === path.home) {
+                      scrollToSection('our-products')
+                    } else {
+                      navigate(path.products)
+                    }
+                    setIsMenuOpen(false)
                   }}
                   className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'our-products' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}
@@ -314,7 +345,12 @@ const Header = () => {
                   href='#about-us'
                   onClick={(e) => {
                     e.preventDefault()
-                    handleNavClick('about-us')
+                    if (location.pathname === path.home) {
+                      scrollToSection('about-us')
+                    } else {
+                      navigate(path.aboutUs)
+                    }
+                    setIsMenuOpen(false)
                   }}
                   className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'about-us' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}

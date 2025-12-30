@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Bell, X, MessageCircle, FileText, DollarSign, Video, Inbox } from 'lucide-react'
 import { getMyChatRooms, getChatMessages, markRentalAsRead } from '../apis/chat.api'
 import { signalRService } from '../utils/signalr'
@@ -18,6 +19,8 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
     const [roomIds, setRoomIds] = useState<number[]>([])
     const dropdownRef = useRef<HTMLDivElement>(null)
     const { user } = useAuth()
+    const location = useLocation()
+    const isHomepage = location.pathname === '/'
 
     // Load notifications when dropdown opens
     useEffect(() => {
@@ -185,15 +188,15 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
     const getNotificationConfig = (type: MessageType): { icon: React.ReactNode; bg: string; label: string } => {
         switch (type) {
             case MessageType.Demo:
-                return { icon: <Video className="w-4 h-4" />, bg: 'bg-rose-500', label: 'Demo' }
+                return { icon: <Video className='w-4 h-4' />, bg: 'bg-rose-500', label: 'Demo' }
             case MessageType.PriceQuoteNotification:
-                return { icon: <DollarSign className="w-4 h-4" />, bg: 'bg-emerald-500', label: 'Quote' }
+                return { icon: <DollarSign className='w-4 h-4' />, bg: 'bg-emerald-500', label: 'Quote' }
             case MessageType.ContractNotification:
-                return { icon: <FileText className="w-4 h-4" />, bg: 'bg-blue-500', label: 'Contract' }
+                return { icon: <FileText className='w-4 h-4' />, bg: 'bg-blue-500', label: 'Contract' }
             case MessageType.SystemNotification:
-                return { icon: <Bell className="w-4 h-4" />, bg: 'bg-amber-500', label: 'System' }
+                return { icon: <Bell className='w-4 h-4' />, bg: 'bg-amber-500', label: 'System' }
             default:
-                return { icon: <MessageCircle className="w-4 h-4" />, bg: 'bg-slate-500', label: 'Message' }
+                return { icon: <MessageCircle className='w-4 h-4' />, bg: 'bg-slate-500', label: 'Message' }
         }
     }
 
@@ -223,16 +226,21 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
     }
 
     return (
-        <div className="relative font-sans" ref={dropdownRef}>
+        <div className='relative font-sans' ref={dropdownRef}>
             {/* Bell Button */}
             <button
                 onClick={handleBellClick}
-                className={`relative p-2 rounded-lg transition-all duration-200 ${isOpen ? 'bg-slate-100' : 'hover:bg-slate-100/50'
-                    }`}
+                className={`relative p-2 rounded-lg transition-all duration-200 ${
+                    isOpen 
+                        ? (isHomepage ? 'bg-gray-800' : 'bg-slate-100') 
+                        : (isHomepage ? 'hover:bg-gray-800/50' : 'hover:bg-slate-100/50')
+                }`}
             >
-                <Bell size={20} className={`${isOpen ? 'text-slate-700' : textColor}`} />
+                <Bell size={20} className={`${isOpen ? (isHomepage ? 'text-gray-200' : 'text-slate-700') : textColor}`} />
                 {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
+                    <span className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 ${
+                        isHomepage ? 'bg-emerald-500' : 'bg-red-500'
+                    } text-white text-[10px] font-semibold rounded-full flex items-center justify-center`}>
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
@@ -240,62 +248,100 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
 
             {/* Dropdown */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-[360px] bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+                <div className={`absolute right-0 mt-2 w-[360px] rounded-xl ${
+                    isHomepage ? 'shadow-2xl border-gray-700' : 'shadow-xl border-slate-200'
+                } z-50 overflow-hidden ${
+                    isHomepage 
+                        ? 'bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900' 
+                        : 'bg-white'
+                }`}>
                     {/* Header */}
-                    <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                        <h3 className="font-semibold text-slate-800 text-sm">Notifications</h3>
+                    <div className={`px-4 py-3 ${
+                        isHomepage ? 'border-gray-700' : 'border-slate-100'
+                    } flex items-center justify-between`}>
+                        <h3 className={`font-semibold ${
+                            isHomepage ? 'text-gray-200' : 'text-slate-800'
+                        } text-sm`}>Notifications</h3>
                         <button
                             onClick={() => setIsOpen(false)}
-                            className="p-1 hover:bg-slate-100 rounded-md transition-colors"
+                            className={`p-1 rounded-md transition-colors ${
+                                isHomepage ? 'text-gray-400 hover:bg-gray-700' : 'text-slate-400 hover:bg-slate-100'
+                            }`}
                         >
-                            <X className="w-4 h-4 text-slate-400" />
+                            <X className='w-4 h-4' />
                         </button>
                     </div>
 
                     {/* Notifications List */}
-                    <div className="max-h-[380px] overflow-y-auto">
+                    <div className='max-h-[380px] overflow-y-auto'>
                         {loading ? (
-                            <div className="py-12 text-center">
-                                <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-600 rounded-full animate-spin mx-auto" />
-                                <p className="mt-3 text-xs text-slate-400">Loading...</p>
+                            <div className='py-12 text-center'>
+                                <div className={`w-6 h-6 border-2 ${
+                                    isHomepage ? 'border-gray-600 border-t-gray-300' : 'border-slate-200 border-t-slate-600'
+                                } rounded-full animate-spin mx-auto`} />
+                                <p className={`mt-3 text-xs ${
+                                    isHomepage ? 'text-gray-400' : 'text-slate-400'
+                                }`}>Loading...</p>
                             </div>
                         ) : notifications.length === 0 ? (
-                            <div className="py-12 text-center px-4">
-                                <Inbox className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                                <p className="font-medium text-slate-600 text-sm">No notifications</p>
-                                <p className="text-xs text-slate-400 mt-1">You're all caught up!</p>
+                            <div className='py-12 text-center px-4'>
+                                <Inbox className={`w-10 h-10 ${
+                                    isHomepage ? 'text-gray-600' : 'text-slate-300'
+                                } mx-auto mb-3`} />
+                                <p className={`font-medium text-sm ${
+                                    isHomepage ? 'text-gray-300' : 'text-slate-600'
+                                }`}>No notifications</p>
+                                <p className={`text-xs mt-1 ${
+                                    isHomepage ? 'text-gray-500' : 'text-slate-400'
+                                }`}>You're all caught up!</p>
                             </div>
                         ) : (
-                            <div className="py-1">
+                            <div className='py-1'>
                                 {notifications.map((notification) => {
                                     const config = getNotificationConfig(notification.messageType)
                                     return (
                                         <div
                                             key={notification.id}
-                                            className={`px-4 py-3 cursor-pointer transition-colors border-l-2 ${!notification.isRead
-                                                ? 'bg-blue-50/50 border-l-blue-500 hover:bg-blue-50'
-                                                : 'border-l-transparent hover:bg-slate-50'
-                                                }`}
+                                            className={`px-4 py-3 cursor-pointer transition-colors border-l-2 ${
+                                                !notification.isRead
+                                                    ? `${
+                                                        isHomepage 
+                                                            ? 'bg-emerald-900/20 border-l-emerald-500 hover:bg-emerald-900/10' 
+                                                            : 'bg-blue-50/50 border-l-blue-500 hover:bg-blue-50'
+                                                      }`
+                                                    : `${
+                                                        isHomepage 
+                                                            ? 'border-l-transparent hover:bg-gray-800/50' 
+                                                            : 'border-l-transparent hover:bg-slate-50'
+                                                      }`
+                                            }`}
                                             onClick={() => handleNotificationClick(notification)}
                                         >
-                                            <div className="flex items-start gap-3">
+                                            <div className='flex items-start gap-3'>
                                                 {/* Icon */}
                                                 <div className={`flex-shrink-0 w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center text-white`}>
                                                     {config.icon}
                                                 </div>
 
                                                 {/* Content */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                                                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+                                                <div className='flex-1 min-w-0'>
+                                                    <div className='flex items-center justify-between gap-2 mb-0.5'>
+                                                        <span className={`text-[10px] font-semibold uppercase tracking-wide ${
+                                                            isHomepage ? 'text-gray-400' : 'text-slate-500'
+                                                        }`}>
                                                             {config.label}
                                                         </span>
-                                                        <span className="text-[10px] text-slate-400">
+                                                        <span className={`text-[10px] ${
+                                                            isHomepage ? 'text-gray-500' : 'text-slate-400'
+                                                        }`}>
                                                             {formatTime(notification.createdAt)}
                                                         </span>
                                                     </div>
-                                                    <p className={`text-sm leading-snug line-clamp-2 ${!notification.isRead ? 'font-medium text-slate-800' : 'text-slate-600'
-                                                        }`}>
+                                                    <p className={`text-sm leading-snug line-clamp-2 ${
+                                                        !notification.isRead 
+                                                            ? (isHomepage ? 'font-medium text-gray-200' : 'font-medium text-slate-800')
+                                                            : (isHomepage ? 'text-gray-300' : 'text-slate-600')
+                                                    }`}>
                                                         {notification.content}
                                                     </p>
                                                 </div>

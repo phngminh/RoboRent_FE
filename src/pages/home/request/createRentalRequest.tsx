@@ -226,13 +226,14 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
   return (
     <Layout>
-      <div className="max-w-5xl mx-auto my-8 bg-gradient-to-br from-white to-gray-50 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 w-full min-h-screen">
+      <div className="fixed inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 -z-10" />
+      <div className="max-w-5xl mx-auto my-20 relative z-10 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 w-full min-h-screen bg-white">
         <h2 className="text-3xl font-bold text-center mb-8 text-gray-800 bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
           Create Your Rental Request
         </h2>
 
         <div className="space-y-8">
-          <div className="p-8 border border-gray-200 rounded-2xl bg-white shadow-sm space-y-6">
+          <div className="p-8 border border-purple-300 rounded-2xl bg-white shadow-sm space-y-6">
             <div className="flex items-center gap-3">
               <CalendarDays className="text-purple-600" size={24} />
               <h3 className="font-bold text-xl text-gray-800">Event Information</h3>
@@ -300,7 +301,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
             </div>
           </div>
 
-          <div className="p-8 border border-gray-200 rounded-2xl bg-white shadow-sm space-y-6">
+          <div className="p-8 border border-purple-300 rounded-2xl bg-white shadow-sm space-y-6">
             <div className="flex items-center gap-3">
               <Home className="text-purple-600" size={24} />
               <h3 className="font-bold text-xl text-gray-800">Contact Information</h3>
@@ -333,7 +334,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <div className="p-8 border border-gray-200 rounded-2xl bg-white shadow-sm space-y-6">
+            <div className="p-8 border border-purple-300 rounded-2xl bg-white shadow-sm space-y-6">
               <div className="flex items-center gap-3">
                 <MapPin className="text-purple-600" size={24} />
                 <h3 className="font-bold text-xl text-gray-800">Event Location</h3>
@@ -392,7 +393,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
               </div>
             </div>
 
-            <div className="p-8 border border-gray-200 rounded-2xl bg-white shadow-sm space-y-6">
+            <div className="p-8 border border-purple-300 rounded-2xl bg-white shadow-sm space-y-6">
               <div className="flex items-center gap-3">
                 <Clock className="text-purple-600" size={24} />
                 <h3 className="font-bold text-xl text-gray-800">Event Time</h3>
