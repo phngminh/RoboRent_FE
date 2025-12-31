@@ -25,7 +25,7 @@ import Header from '../../components/header'
 import { toast } from 'react-toastify'
 import { formatDistanceToNow } from 'date-fns'
 import { formatMoney } from '../../utils/format'
-import { getRentalByIdAsync } from '../../apis/rental.staff.api'
+import { getRentalByIdAsync, getUpdatedStatusAsync, rejectActiveQuotesForRentalAsync } from '../../apis/rental.staff.api'
 import { getRentalDetailsByRentalIdAsync } from '../../apis/rentaldetail.api'
 import { Eye } from "lucide-react"
 import RentalDetailModal from '../../components/staff/RentalDetailModal'
@@ -366,6 +366,44 @@ const loadRentalDetails = async () => {
   useEffect(() => {
     if (!rentalId) return
     fetchQuotes(parseInt(rentalId))
+  }, [rentalId])
+
+  // Check updated status and auto reject quotes if needed
+  useEffect(() => {
+    if (!rentalId) return
+
+    const checkAndRejectQuotes = async () => {
+      try {
+        const response = await getUpdatedStatusAsync(parseInt(rentalId))
+        
+        if (response.success && response.data) {
+          const { rentalIsUpdated, rentalDetailIsUpdated } = response.data
+          
+          if (rentalIsUpdated === true || rentalDetailIsUpdated === true) {
+            // Auto reject active quotes
+            try {
+              await rejectActiveQuotesForRentalAsync(parseInt(rentalId))
+              
+              // Refresh quotes list
+              await fetchQuotes(parseInt(rentalId))
+              
+              // Show notification
+              toast.info("Rental information has been updated. Quotes have been rejected for update.", {
+                autoClose: 5000
+              })
+            } catch (error) {
+              console.error("Failed to reject active quotes:", error)
+              toast.error("Failed to reject quotes after rental update")
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check updated status:", error)
+        // Don't show error to user, this is not critical
+      }
+    }
+
+    checkAndRejectQuotes()
   }, [rentalId])
 
   // SignalR setup
