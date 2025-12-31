@@ -24,12 +24,10 @@ export default function UpdateQuoteModal({
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Form fields - Only Phase 2 adjustable fields
-  const [deliveryFee, setDeliveryFee] = useState<string>('')
+  // Form fields - Only customization fee is adjustable
   const [customizationFee, setCustomizationFee] = useState<string>('')
   const [staffDescription, setStaffDescription] = useState<string>('')
 
-  const deliveryFeeNum = parseFloat(deliveryFee) || 0
   const customizationFeeNum = parseFloat(customizationFee) || 0
 
   // Load quote details
@@ -53,7 +51,6 @@ export default function UpdateQuoteModal({
       setQuote(data)
 
       // Pre-fill form with current values
-      setDeliveryFee(data.deliveryFee?.toString() || '0')
       setCustomizationFee(data.customizationFee?.toString() || '0')
       setStaffDescription(data.staffDescription || '')
     } catch (error) {
@@ -68,9 +65,9 @@ export default function UpdateQuoteModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validation
-    if (deliveryFeeNum < 0 || customizationFeeNum < 0) {
-      toast.error('Các khoản phí phải >= 0')
+    // Validation - customizationFee must be >= 1000
+    if (customizationFeeNum < 1000) {
+      toast.error('Phí tùy chỉnh phải >= 1,000 VND')
       return
     }
 
@@ -82,7 +79,6 @@ export default function UpdateQuoteModal({
     // Check if anything changed
     if (quote) {
       const noChanges =
-        deliveryFeeNum === (quote.deliveryFee || 0) &&
         customizationFeeNum === quote.customizationFee &&
         staffDescription.trim() === (quote.staffDescription || '')
 
@@ -96,7 +92,6 @@ export default function UpdateQuoteModal({
 
     try {
       const request: UpdatePriceQuoteRequest = {
-        deliveryFee: deliveryFeeNum,
         customizationFee: customizationFeeNum,
         staffDescription: staffDescription.trim()
       }
@@ -120,9 +115,9 @@ export default function UpdateQuoteModal({
     }
   }
 
-  // Calculate new totals preview
+  // Calculate new totals preview (deliveryFee stays from original quote)
   const newTotalPayment = quote
-    ? 0.7 * (quote.rentalFee + quote.staffFee) + deliveryFeeNum + customizationFeeNum
+    ? 0.7 * (quote.rentalFee + quote.staffFee) + (quote.deliveryFee || 0) + customizationFeeNum
     : 0
   const newGrandTotal = quote ? quote.totalDeposit + newTotalPayment : 0
 
@@ -269,29 +264,13 @@ export default function UpdateQuoteModal({
                         <span className="font-medium">{formatMoney(0.7 * (quote.rentalFee + quote.staffFee))}</span>
                       </div>
 
-                      {/* Delivery Fee - Editable */}
-                      <div>
-                        <label className="block text-sm font-bold text-violet-800 mb-2">
-                          <span className="flex items-center gap-2">
-                            <Truck className="w-4 h-4" />
-                            Phí giao hàng
-                            <span className="text-xs font-normal text-violet-600 bg-violet-100 px-2 py-0.5 rounded">
-                              Gốc: {formatMoney(quote.deliveryFee || 0)}
-                            </span>
-                          </span>
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            step="1000"
-                            min="0"
-                            value={deliveryFee}
-                            onChange={(e) => setDeliveryFee(e.target.value)}
-                            placeholder="0"
-                            className="w-full pl-4 pr-16 py-3 text-lg border-2 border-violet-300 rounded-xl focus:border-violet-500 bg-white input-premium transition-all duration-200"
-                          />
-                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-violet-600 font-bold">VND</span>
-                        </div>
+                      {/* Delivery Fee - Read Only (auto-calculated) */}
+                      <div className="flex justify-between text-sm text-slate-600 py-2 border-b border-violet-100">
+                        <span className="flex items-center gap-2">
+                          <Truck className="w-4 h-4" />
+                          Phí giao hàng (cố định)
+                        </span>
+                        <span className="font-medium">{formatMoney(quote.deliveryFee || 0)}</span>
                       </div>
 
                       {/* Customization Fee - Editable */}
@@ -309,7 +288,7 @@ export default function UpdateQuoteModal({
                           <input
                             type="number"
                             step="1000"
-                            min="0"
+                            min="1000"
                             value={customizationFee}
                             onChange={(e) => setCustomizationFee(e.target.value)}
                             placeholder="0"

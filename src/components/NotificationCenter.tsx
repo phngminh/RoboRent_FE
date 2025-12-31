@@ -1,10 +1,28 @@
 import { useState, useEffect, useRef } from 'react'
-import { Bell, X, MessageCircle, FileText, DollarSign, Video, Inbox } from 'lucide-react'
-import { getMyChatRooms, getChatMessages, markRentalAsRead } from '../apis/chat.api'
+import {
+    Bell, X, Inbox, Trash2, Loader2,
+    CheckCircle, XCircle, Edit, Clock, ThumbsUp, ThumbsDown,
+    CalendarPlus, CalendarCheck, CalendarX, Video, VideoOff, FileText, FileCheck,
+    FileX, Truck, Package, AlertTriangle, CreditCard, BadgeCheck, AlertCircle
+} from 'lucide-react'
+import {
+    getMyNotifications,
+    getUnreadNotificationCount,
+    markAllNotificationsAsRead,
+    markNotificationAsRead,
+    deleteNotification,
+    deleteAllNotifications,
+    type NotificationResponse as ApiNotificationResponse
+} from '../apis/notification.api'
 import { signalRService } from '../utils/signalr'
-import { MessageType, type ChatMessageResponse } from '../types/chat.types'
 import { toast } from 'react-toastify'
 import { useAuth } from '../contexts/AuthContext'
+import {
+    NotificationType,
+    getNotificationConfig,
+    getNotificationNavUrl
+} from '../types/notification.types'
+import type { NotificationResponse, NewNotificationEvent } from '../types/notification.types'
 
 interface NotificationCenterProps {
     textColor?: string
@@ -12,10 +30,12 @@ interface NotificationCenterProps {
 
 export default function NotificationCenter({ textColor = 'text-gray-700' }: NotificationCenterProps) {
     const [isOpen, setIsOpen] = useState(false)
-    const [notifications, setNotifications] = useState<ChatMessageResponse[]>([])
+    const [notifications, setNotifications] = useState<NotificationResponse[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
     const [loading, setLoading] = useState(false)
-    const [roomIds, setRoomIds] = useState<number[]>([])
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(false)
+    const [page, setPage] = useState(1)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const { user } = useAuth()
 
@@ -28,67 +48,27 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
 
     // Listen for new notifications via SignalR
     useEffect(() => {
-        const handleNewMessage = (message: ChatMessageResponse) => {
-            // Only count notifications from others
-            if (message.messageType !== MessageType.Text && !message.isRead && message.senderId !== user?.id) {
-                setNotifications(prev => [message, ...prev])
-                setUnreadCount(prev => prev + 1)
-
-                if (message.messageType === MessageType.ContractNotification) {
-                    toast.info(message.content, { autoClose: 5000 })
-                }
+        const handleNewNotification = (data: NewNotificationEvent) => {
+            const newNotification: NotificationResponse = {
+                id: data.Id,
+                type: data.Type,
+                typeName: data.TypeName,
+                content: data.Content,
+                rentalId: data.RentalId,
+                relatedEntityId: data.RelatedEntityId,
+                isRead: false,
+                createdAt: data.CreatedAt
             }
-        }
 
-        // 🎯 NEW: Handle quote events
-        const handleQuoteCreated = (data: { QuoteId: number; QuoteNumber: number; Total: number }) => {
+            setNotifications(prev => [newNotification, ...prev])
             setUnreadCount(prev => prev + 1)
-            toast.info(`💰 Báo giá mới #${data.QuoteNumber} đã được tạo!`, { autoClose: 5000 })
+            toast.info(`🔔 ${data.Content}`, { autoClose: 5000 })
         }
 
-        const handleQuoteStatusChanged = (data: { QuoteId: number; Status: string; QuoteNumber: number }) => {
-            setUnreadCount(prev => prev + 1)
-            const statusText = data.Status === 'Approved' ? 'đã được duyệt ✅' : 'đã bị từ chối ❌'
-            toast.info(`Báo giá #${data.QuoteNumber} ${statusText}`, { autoClose: 5000 })
-        }
-
-        const handleQuoteRejected = (data: { QuoteId: number; QuoteNumber: number; Reason: string }) => {
-            setUnreadCount(prev => prev + 1)
-            toast.warning(`Customer từ chối báo giá #${data.QuoteNumber}`, { autoClose: 5000 })
-        }
-
-        // 🎯 NEW: Handle contract events
-        const handleContractPendingSignature = (data: { ContractId: number; Message: string }) => {
-            setUnreadCount(prev => prev + 1)
-            toast.info(`📝 ${data.Message}`, { autoClose: 5000 })
-        }
-
-        const handleContractActivated = (data: { ContractId: number; Message: string }) => {
-            setUnreadCount(prev => prev + 1)
-            toast.success(`🎉 ${data.Message}`, { autoClose: 5000 })
-        }
-
-        const handleContractChangeRequested = (data: { ContractId: number; ChangeRequest: string }) => {
-            setUnreadCount(prev => prev + 1)
-            toast.info(`📋 Yêu cầu sửa hợp đồng: ${data.ChangeRequest}`, { autoClose: 5000 })
-        }
-
-        signalRService.onReceiveMessage(handleNewMessage)
-        signalRService.onQuoteCreated(handleQuoteCreated)
-        signalRService.onQuoteStatusChanged(handleQuoteStatusChanged)
-        signalRService.onQuoteRejected(handleQuoteRejected)
-        signalRService.onContractPendingCustomerSignature(handleContractPendingSignature)
-        signalRService.onContractActivated(handleContractActivated)
-        signalRService.onContractChangeRequested(handleContractChangeRequested)
+        signalRService.onNewNotification(handleNewNotification)
 
         return () => {
-            signalRService.offReceiveMessage()
-            signalRService.offQuoteCreated()
-            signalRService.offQuoteStatusChanged()
-            signalRService.offQuoteRejected()
-            signalRService.offContractPendingCustomerSignature()
-            signalRService.offContractActivated()
-            signalRService.offContractChangeRequested()
+            signalRService.offNewNotification()
         }
     }, [user?.id])
 
@@ -116,22 +96,7 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
 
     const loadUnreadCount = async () => {
         try {
-            const response = await getMyChatRooms(1, 50)
-            let count = 0
-            const ids: number[] = []
-
-            for (const room of response.rooms) {
-                ids.push(room.rentalId)
-                const messages = await getChatMessages(room.rentalId, 1, 20)
-                const unreadNotifications = messages.messages.filter(m =>
-                    m.messageType !== MessageType.Text &&
-                    !m.isRead &&
-                    m.senderId !== user?.id  // 🎯 Don't count own messages!
-                )
-                count += unreadNotifications.length
-            }
-
-            setRoomIds(ids)
+            const count = await getUnreadNotificationCount()
             setUnreadCount(count)
         } catch (error) {
             console.error('Failed to load unread count:', error)
@@ -140,24 +105,11 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
 
     const loadNotifications = async () => {
         setLoading(true)
+        setPage(1)
         try {
-            const response = await getMyChatRooms(1, 50)
-            const allNotifications: ChatMessageResponse[] = []
-
-            for (const room of response.rooms) {
-                const messages = await getChatMessages(room.rentalId, 1, 20)
-                const roomNotifications = messages.messages.filter(m =>
-                    m.messageType !== MessageType.Text &&
-                    m.senderId !== user?.id  // 🎯 CRITICAL: Don't show own messages!
-                )
-                allNotifications.push(...roomNotifications)
-            }
-
-            allNotifications.sort((a, b) =>
-                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            )
-
-            setNotifications(allNotifications.slice(0, 20))
+            const result = await getMyNotifications(1, 20)
+            setNotifications(result.data)
+            setHasMore(result.hasMore)
         } catch (error) {
             console.error('Failed to load notifications:', error)
             toast.error('Failed to load notifications')
@@ -166,34 +118,102 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
         }
     }
 
+    const handleLoadMore = async () => {
+        if (loadingMore || !hasMore) return
+        setLoadingMore(true)
+        try {
+            const nextPage = page + 1
+            const result = await getMyNotifications(nextPage, 20)
+            setNotifications(prev => [...prev, ...result.data])
+            setHasMore(result.hasMore)
+            setPage(nextPage)
+        } catch (error) {
+            console.error('Failed to load more notifications:', error)
+        } finally {
+            setLoadingMore(false)
+        }
+    }
+
     const markAllAsRead = async () => {
         try {
-            // Mark all rooms as read
-            await Promise.all(roomIds.map(id => markRentalAsRead(id)))
-            // Update local state
+            await markAllNotificationsAsRead()
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
         } catch (error) {
             console.error('Failed to mark as read:', error)
         }
     }
 
-    const handleNotificationClick = (notification: ChatMessageResponse) => {
-        const rolePrefix = user?.role?.toLowerCase() || 'customer'
-        window.location.href = `/${rolePrefix}/chat/${notification.chatRoomId}`
+    const handleDelete = async (e: React.MouseEvent, id: number) => {
+        e.stopPropagation()
+        try {
+            await deleteNotification(id)
+            setNotifications(prev => prev.filter(n => n.id !== id))
+        } catch (error) {
+            console.error('Failed to delete notification:', error)
+        }
     }
 
-    const getNotificationConfig = (type: MessageType): { icon: React.ReactNode; bg: string; label: string } => {
-        switch (type) {
-            case MessageType.Demo:
-                return { icon: <Video className="w-4 h-4" />, bg: 'bg-rose-500', label: 'Demo' }
-            case MessageType.PriceQuoteNotification:
-                return { icon: <DollarSign className="w-4 h-4" />, bg: 'bg-emerald-500', label: 'Quote' }
-            case MessageType.ContractNotification:
-                return { icon: <FileText className="w-4 h-4" />, bg: 'bg-blue-500', label: 'Contract' }
-            case MessageType.SystemNotification:
-                return { icon: <Bell className="w-4 h-4" />, bg: 'bg-amber-500', label: 'System' }
-            default:
-                return { icon: <MessageCircle className="w-4 h-4" />, bg: 'bg-slate-500', label: 'Message' }
+    const handleDeleteAll = async () => {
+        try {
+            await deleteAllNotifications()
+            setNotifications([])
+            setHasMore(false)
+        } catch (error) {
+            console.error('Failed to delete all notifications:', error)
+        }
+    }
+
+    const handleNotificationClick = async (notification: NotificationResponse) => {
+        if (!notification.isRead) {
+            try {
+                await markNotificationAsRead(notification.id)
+                setNotifications(prev =>
+                    prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
+                )
+            } catch (error) {
+                console.error('Failed to mark notification as read:', error)
+            }
+        }
+
+        const role = user?.role || 'customer'
+        const url = getNotificationNavUrl(notification, role)
+        window.location.href = url
+    }
+
+    const getIconComponent = (type: number) => {
+        const config = getNotificationConfig(type as NotificationType)
+        const iconMap: Record<string, React.ReactNode> = {
+            'inbox': <Inbox className="w-4 h-4" />,
+            'check-circle': <CheckCircle className="w-4 h-4" />,
+            'x-circle': <XCircle className="w-4 h-4" />,
+            'edit': <Edit className="w-4 h-4" />,
+            'clock': <Clock className="w-4 h-4" />,
+            'check': <CheckCircle className="w-4 h-4" />,
+            'x': <XCircle className="w-4 h-4" />,
+            'thumbs-up': <ThumbsUp className="w-4 h-4" />,
+            'thumbs-down': <ThumbsDown className="w-4 h-4" />,
+            'calendar-plus': <CalendarPlus className="w-4 h-4" />,
+            'calendar-check': <CalendarCheck className="w-4 h-4" />,
+            'calendar-x': <CalendarX className="w-4 h-4" />,
+            'video': <Video className="w-4 h-4" />,
+            'video-off': <VideoOff className="w-4 h-4" />,
+            'file-text': <FileText className="w-4 h-4" />,
+            'file-check': <FileCheck className="w-4 h-4" />,
+            'file-x': <FileX className="w-4 h-4" />,
+            'file-signature': <FileText className="w-4 h-4" />,
+            'file-edit': <Edit className="w-4 h-4" />,
+            'truck': <Truck className="w-4 h-4" />,
+            'package': <Package className="w-4 h-4" />,
+            'alert-triangle': <AlertTriangle className="w-4 h-4" />,
+            'credit-card': <CreditCard className="w-4 h-4" />,
+            'badge-check': <BadgeCheck className="w-4 h-4" />,
+            'alert-circle': <AlertCircle className="w-4 h-4" />,
+            'bell': <Bell className="w-4 h-4" />
+        }
+        return {
+            icon: iconMap[config.icon] || <Bell className="w-4 h-4" />,
+            bgColor: config.bgColor,
+            label: config.label
         }
     }
 
@@ -203,13 +223,13 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
         const diffMs = now.getTime() - date.getTime()
         const diffMins = Math.floor(diffMs / 60000)
 
-        if (diffMins < 1) return 'Just now'
-        if (diffMins < 60) return `${diffMins}m`
+        if (diffMins < 1) return 'Vừa xong'
+        if (diffMins < 60) return `${diffMins} phút`
         const diffHours = Math.floor(diffMins / 60)
-        if (diffHours < 24) return `${diffHours}h`
+        if (diffHours < 24) return `${diffHours} giờ`
         const diffDays = Math.floor(diffHours / 24)
-        if (diffDays < 7) return `${diffDays}d`
-        return date.toLocaleDateString()
+        if (diffDays < 7) return `${diffDays} ngày`
+        return date.toLocaleDateString('vi-VN')
     }
 
     const handleBellClick = async () => {
@@ -243,13 +263,24 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
                 <div className="absolute right-0 mt-2 w-[360px] bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
                     {/* Header */}
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                        <h3 className="font-semibold text-slate-800 text-sm">Notifications</h3>
-                        <button
-                            onClick={() => setIsOpen(false)}
-                            className="p-1 hover:bg-slate-100 rounded-md transition-colors"
-                        >
-                            <X className="w-4 h-4 text-slate-400" />
-                        </button>
+                        <h3 className="font-semibold text-slate-800 text-sm">Thông báo</h3>
+                        <div className="flex items-center gap-1">
+                            {notifications.length > 0 && (
+                                <button
+                                    onClick={handleDeleteAll}
+                                    className="p-1.5 hover:bg-red-50 rounded-md transition-colors text-slate-400 hover:text-red-500"
+                                    title="Xóa tất cả"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"
+                            >
+                                <X className="w-4 h-4 text-slate-400" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Notifications List */}
@@ -257,22 +288,22 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
                         {loading ? (
                             <div className="py-12 text-center">
                                 <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-600 rounded-full animate-spin mx-auto" />
-                                <p className="mt-3 text-xs text-slate-400">Loading...</p>
+                                <p className="mt-3 text-xs text-slate-400">Đang tải...</p>
                             </div>
                         ) : notifications.length === 0 ? (
                             <div className="py-12 text-center px-4">
                                 <Inbox className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                                <p className="font-medium text-slate-600 text-sm">No notifications</p>
-                                <p className="text-xs text-slate-400 mt-1">You're all caught up!</p>
+                                <p className="font-medium text-slate-600 text-sm">Không có thông báo</p>
+                                <p className="text-xs text-slate-400 mt-1">Bạn đã xem hết rồi!</p>
                             </div>
                         ) : (
                             <div className="py-1">
                                 {notifications.map((notification) => {
-                                    const config = getNotificationConfig(notification.messageType)
+                                    const config = getIconComponent(notification.type)
                                     return (
                                         <div
                                             key={notification.id}
-                                            className={`px-4 py-3 cursor-pointer transition-colors border-l-2 ${!notification.isRead
+                                            className={`group px-4 py-3 cursor-pointer transition-colors border-l-2 ${!notification.isRead
                                                 ? 'bg-blue-50/50 border-l-blue-500 hover:bg-blue-50'
                                                 : 'border-l-transparent hover:bg-slate-50'
                                                 }`}
@@ -280,7 +311,7 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
                                         >
                                             <div className="flex items-start gap-3">
                                                 {/* Icon */}
-                                                <div className={`flex-shrink-0 w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center text-white`}>
+                                                <div className={`flex-shrink-0 w-8 h-8 rounded-lg ${config.bgColor} flex items-center justify-center text-white`}>
                                                     {config.icon}
                                                 </div>
 
@@ -290,9 +321,19 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
                                                         <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
                                                             {config.label}
                                                         </span>
-                                                        <span className="text-[10px] text-slate-400">
-                                                            {formatTime(notification.createdAt)}
-                                                        </span>
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[10px] text-slate-400">
+                                                                {formatTime(notification.createdAt)}
+                                                            </span>
+                                                            {/* Delete button - shows on hover */}
+                                                            <button
+                                                                onClick={(e) => handleDelete(e, notification.id)}
+                                                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-slate-400 hover:text-red-500"
+                                                                title="Xóa"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                     <p className={`text-sm leading-snug line-clamp-2 ${!notification.isRead ? 'font-medium text-slate-800' : 'text-slate-600'
                                                         }`}>
@@ -303,6 +344,26 @@ export default function NotificationCenter({ textColor = 'text-gray-700' }: Noti
                                         </div>
                                     )
                                 })}
+
+                                {/* Load More Button */}
+                                {hasMore && (
+                                    <div className="px-4 py-3 border-t border-slate-100">
+                                        <button
+                                            onClick={handleLoadMore}
+                                            disabled={loadingMore}
+                                            className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            {loadingMore ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    Đang tải...
+                                                </>
+                                            ) : (
+                                                'Tải thêm'
+                                            )}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
