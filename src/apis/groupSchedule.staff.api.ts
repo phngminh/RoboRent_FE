@@ -14,10 +14,8 @@ export const getAllScheduleByGroupIdAsync = async (groupId: number) => {
 export const addScheduleAsync = async (
     staffId: number,
     payload: {
-        deliveryTime: string;
         startTime: string;
         endTime: string;
-        finishTime: string;
         activityTypeGroupId: number;
         rentalId: number;
     }
