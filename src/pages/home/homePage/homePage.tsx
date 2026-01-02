@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Calendar, Monitor, Sparkles, X, Zap } from 'lucide-react'
 import HowItWorks from './howItWorks'
 import RobotCarousel from './robotCarousel'
-import emailImg from  '../../../assets/email.jpg'
+import emailImg from  '../../../assets/email.png'
 import loginImg from  '../../../assets/login_img.png'
 import Layout from '../../../components/layout'
 import { useNavigate } from 'react-router-dom'
@@ -182,15 +182,14 @@ export default function Home() {
                 />
               </div>
 
-              <h2 className='text-3xl font-bold font-orbitron mb-2 text-emerald-300'>
+              <h2 className='text-2xl font-bold font-orbitron mb-2 text-emerald-500'>
                 Verify Your Account!
               </h2>
               
               <p className='text-gray-300 mb-6 leading-relaxed text-base px-10'>
                 We’ve sent a verification link to your email to complete your registration for 
-                <span className='font-bold text-emerald-400'> RoboRent</span>
-                . If you don’t see the email, check your spam folder or 
-                <span className='font-bold hover:underline cursor-pointer text-emerald-400'> request a new link.</span>
+                <span className='font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent'> RoboRent</span>
+                . If you don’t see the email, please check your spam folder.
               </p>
             </div>
           </div>
@@ -198,7 +197,7 @@ export default function Home() {
 
         {requireLoginModal && (
           <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-300'>
-            <div className='bg-gray-900 p-8 rounded-xl shadow-2xl text-center max-w-xl mx-4 relative'>
+            <div className='bg-gray-900 p-8 rounded-xl shadow-2xl text-center max-w-xl mx-4 relative border-2 border-emerald-600'>
               <button
                 onClick={() => setRequireLoginModal(false)}
                 className='absolute top-4 right-4 text-emerald-400 hover:text-emerald-300 transition-colors'
@@ -211,18 +210,18 @@ export default function Home() {
                 <img
                   src={loginImg}
                   alt='Email verification'
-                  className='w-80 h-80 object-contain'
+                  className='w-72 h-72 object-contain'
                   loading='eager'
                 />
               </div>
 
-              <h2 className='text-3xl font-bold font-orbitron -mt-4 mb-4 text-emerald-300'>
+              <h2 className='text-2xl font-bold font-orbitron -mt-4 mb-4 text-emerald-300'>
                 Login to get started!
               </h2>
               
               <p className='text-gray-300 mb-6 leading-relaxed text-base px-10'>
                 Please login to your account to send rental requests for 
-                <span className='font-bold text-emerald-400'> RoboRent</span>
+                <span className='font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent'> RoboRent</span>
                 . If you don’t have an account yet, please sign up and verify your biometric authentication first.
               </p>
             </div>

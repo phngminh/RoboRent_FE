@@ -374,7 +374,7 @@ const Header = () => {
             </button>
 
             <div className='p-8 md:p-10 flex flex-col justify-center font-medium ml-6'>
-              <h2 className='text-4xl font-orbitron font-bold text-gray-300 mb-10 animate-in slide-in-from-left duration-500'>
+              <h2 className='text-4xl font-orbitron font-bold text-emerald-300 mb-10 animate-in slide-in-from-left duration-500'>
                 Login or signup to get started
               </h2>
 
