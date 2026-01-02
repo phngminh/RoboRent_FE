@@ -135,17 +135,23 @@ const CustomerChatPage: React.FC = () => {
     loadMessages()
   }, [rentalId])
 
-  // Load quotes
+  // Load quotes - only show Manager-approved ones to customer
   const loadQuotes = async () => {
     if (!rentalId) return
     try {
       const quotes = await getQuotesByRentalId(parseInt(rentalId))
       setQuotesData(quotes)
 
+      // Only show quotes that Manager has approved (PendingCustomer, RejectedCustomer, Approved)
+      // Exclude: PendingManager, RejectedManager
+      const approvedByManager = quotes.quotes.filter(q =>
+        q.status === QuoteStatus.PendingCustomer ||
+        q.status === QuoteStatus.RejectedCustomer ||
+        q.status === QuoteStatus.Approved
+      )
+
       const fullQuoteDetails = await Promise.all(
-        quotes.quotes
-          .filter(q => q.status !== QuoteStatus.PendingManager)
-          .map(q => getPriceQuoteById(q.id))
+        approvedByManager.map(q => getPriceQuoteById(q.id))
       )
       setFullQuotes(fullQuoteDetails)
     } catch (error) {
@@ -493,11 +499,32 @@ const CustomerChatPage: React.FC = () => {
     const status = rentalInfo?.status || ''
     const steps: ProgressStep[] = []
 
-    // Step 1: Robot Scheduling
-    const scheduleStatus: StepStatus =
-      ['Scheduled', 'PendingDemo', 'AcceptedDemo', 'DeniedDemo', 'PendingPriceQuote', 'AcceptedPriceQuote', 'RejectedPriceQuote', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
+    // CORRECT FLOW: PriceQuote → Schedule → Demo → Contract → Deposit → Delivery → Completed
+
+    // Step 1: Price Quote (FIRST!)
+    const quoteStatus: StepStatus =
+      ['AcceptedPriceQuote', 'Scheduled', 'PendingDemo', 'AcceptedDemo', 'DeniedDemo', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
         ? 'completed'
-        : status === 'Received'
+        : status === 'Received' || status === 'PendingPriceQuote' || status === 'RejectedPriceQuote' || fullQuotes.some(q => q.status === 'PendingCustomer')
+          ? 'in-progress'
+          : 'pending'
+
+    steps.push({
+      id: 'quote',
+      label: 'Price Quote',
+      status: quoteStatus,
+      icon: <FileText className="w-5 h-5" />,
+      substatus:
+        quoteStatus === 'completed' ? 'Quote approved ✓' :
+          quoteStatus === 'in-progress' ? `Reviewing quote #${quotesData?.totalQuotes || 1}` :
+            'Waiting for price quote'
+    })
+
+    // Step 2: Robot Scheduling (after quote approved)
+    const scheduleStatus: StepStatus =
+      ['Scheduled', 'PendingDemo', 'AcceptedDemo', 'DeniedDemo', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
+        ? 'completed'
+        : status === 'AcceptedPriceQuote'
           ? 'in-progress'
           : 'pending'
 
@@ -509,12 +536,12 @@ const CustomerChatPage: React.FC = () => {
       substatus:
         scheduleStatus === 'completed' ? 'Robots scheduled ✓' :
           scheduleStatus === 'in-progress' ? 'Staff is scheduling robots...' :
-            'Waiting for staff to schedule robots'
+            'Waiting for quote approval'
     })
 
-    // Step 2: Demo Review
+    // Step 3: Demo Review
     const demoStatus: StepStatus =
-      ['AcceptedDemo', 'PendingPriceQuote', 'AcceptedPriceQuote', 'RejectedPriceQuote', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
+      ['AcceptedDemo', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
         ? 'completed'
         : status === 'PendingDemo'
           ? 'in-progress'
@@ -532,25 +559,6 @@ const CustomerChatPage: React.FC = () => {
           demoStatus === 'in-progress' ? 'Review demo video...' :
             demoStatus === 'failed' ? 'Demo rejected - awaiting new demo' :
               'Waiting for staff to send demo'
-    })
-
-    // Step 3: Price Quote
-    const quoteStatus: StepStatus =
-      ['AcceptedPriceQuote', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
-        ? 'completed'
-        : (status === 'PendingPriceQuote' || fullQuotes.some(q => q.status === 'PendingCustomer'))
-          ? 'in-progress'
-          : 'pending'
-
-    steps.push({
-      id: 'quote',
-      label: 'Price Quote',
-      status: quoteStatus,
-      icon: <FileText className="w-5 h-5" />,
-      substatus:
-        quoteStatus === 'completed' ? 'Quote approved ✓' :
-          quoteStatus === 'in-progress' ? `Reviewing quote #${quotesData?.totalQuotes || 1}` :
-            'Waiting for price quote'
     })
 
     // Step 4: Contract Signing
@@ -770,6 +778,61 @@ const CustomerChatPage: React.FC = () => {
                 )}
               </div>
             ))}
+
+            {/* Inline Status Guidance Card */}
+            {rentalInfo?.status && ['AcceptedPriceQuote', 'Scheduled', 'PendingDemo', 'AcceptedDemo', 'DeniedDemo', 'PendingContract', 'PendingDeposit'].includes(rentalInfo.status) && (
+              <div className="flex justify-center">
+                <div className={`max-w-md w-full p-4 rounded-xl border-2 ${rentalInfo.status === 'AcceptedPriceQuote'
+                  ? 'bg-green-50 border-green-200 text-green-800'
+                  : rentalInfo.status === 'Scheduled'
+                    ? 'bg-purple-50 border-purple-200 text-purple-800'
+                    : rentalInfo.status === 'PendingDemo'
+                      ? 'bg-blue-50 border-blue-200 text-blue-800'
+                      : rentalInfo.status === 'AcceptedDemo'
+                        ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                        : rentalInfo.status === 'DeniedDemo'
+                          ? 'bg-orange-50 border-orange-200 text-orange-800'
+                          : rentalInfo.status === 'PendingContract'
+                            ? 'bg-violet-50 border-violet-200 text-violet-800'
+                            : rentalInfo.status === 'PendingDeposit'
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                              : 'bg-gray-50 border-gray-200 text-gray-700'
+                  }`}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">
+                      {rentalInfo.status === 'AcceptedPriceQuote' && '✅'}
+                      {rentalInfo.status === 'Scheduled' && '📅'}
+                      {rentalInfo.status === 'PendingDemo' && '🎬'}
+                      {rentalInfo.status === 'AcceptedDemo' && '📝'}
+                      {rentalInfo.status === 'DeniedDemo' && '🔄'}
+                      {rentalInfo.status === 'PendingContract' && '✍️'}
+                      {rentalInfo.status === 'PendingDeposit' && '💳'}
+                    </span>
+                    <div>
+                      <p className="font-semibold text-sm">
+                        {rentalInfo.status === 'AcceptedPriceQuote' && 'Bạn đã chấp nhận báo giá!'}
+                        {rentalInfo.status === 'Scheduled' && 'Đã xếp lịch!'}
+                        {rentalInfo.status === 'PendingDemo' && 'Demo đang chờ bạn duyệt'}
+                        {rentalInfo.status === 'AcceptedDemo' && 'Demo đã được duyệt!'}
+                        {rentalInfo.status === 'DeniedDemo' && 'Bạn đã từ chối demo'}
+                        {rentalInfo.status === 'PendingContract' && 'Hợp đồng đang chờ ký'}
+                        {rentalInfo.status === 'PendingDeposit' && 'Chờ đóng tiền cọc'}
+                      </p>
+                      <p className="text-xs mt-1 opacity-80">
+                        {rentalInfo.status === 'AcceptedPriceQuote' && 'Vui lòng chờ nhân viên xếp lịch và gửi video demo cho bạn xem.'}
+                        {rentalInfo.status === 'Scheduled' && 'Nhân viên sẽ gửi video demo robot sớm nhất có thể.'}
+                        {rentalInfo.status === 'PendingDemo' && 'Xem video demo bên phải và chấp nhận nếu hài lòng.'}
+                        {rentalInfo.status === 'AcceptedDemo' && 'Nhân viên sẽ gửi hợp đồng để bạn ký.'}
+                        {rentalInfo.status === 'DeniedDemo' && 'Nhân viên sẽ gửi video demo mới sớm nhất có thể.'}
+                        {rentalInfo.status === 'PendingContract' && 'Vui lòng ký hợp đồng ở trang Contract.'}
+                        {rentalInfo.status === 'PendingDeposit' && 'Thanh toán tiền cọc để xác nhận đặt chỗ.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 

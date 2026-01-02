@@ -1,6 +1,6 @@
 // src/components/chat/CreateQuoteModal.tsx
 import { useState, useEffect } from 'react'
-import { X, AlertCircle, Sparkles, Lock, Calendar, MapPin, Package, User, Clock, Zap, ArrowRight, Info, ChevronDown, ChevronUp, DollarSign, Truck, Calculator, HelpCircle } from 'lucide-react'
+import { X, AlertCircle, Sparkles, Lock, Calendar, MapPin, Package, User, Clock, Zap, ArrowRight, Info, ChevronDown, ChevronUp, DollarSign, Truck, Calculator, HelpCircle, MessageSquareX } from 'lucide-react'
 import { createPriceQuote, checkCanCreateMoreQuotes } from '../../apis/priceQuote.api'
 import type { CreatePriceQuoteRequest } from '../../types/chat.types'
 import { toast } from 'react-toastify'
@@ -61,11 +61,19 @@ const DELIVERY_FEE_CONFIG: Record<string, { fee: number; distance: number }> = {
   'Cần Thơ': { fee: 1200000, distance: 170 },
 }
 
+// Simplified quote info for rejection display
+interface RejectedQuoteInfo {
+  quoteNumber: number
+  customerReason: string | null
+  status: string
+}
+
 interface CreateQuoteModalProps {
   isOpen: boolean
   rentalId: number
   currentQuoteCount: number
   rentalInfo?: RentalInfo | null
+  rejectedQuotes?: RejectedQuoteInfo[]  // Quotes rejected by customer
   onClose: () => void
   onSuccess: () => void
 }
@@ -75,6 +83,7 @@ export default function CreateQuoteModal({
   rentalId,
   currentQuoteCount,
   rentalInfo,
+  rejectedQuotes = [],
   onClose,
   onSuccess
 }: CreateQuoteModalProps) {
@@ -294,6 +303,59 @@ export default function CreateQuoteModal({
                 </p>
                 <p className={`text-sm mt-1 ${quotesRemaining === 0 ? 'text-red-700' : 'text-amber-700'}`}>
                   {quotesRemaining === 1 ? 'Đây là cơ hội cuối để chỉnh sửa giá.' : 'Không thể tạo thêm báo giá.'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 🚨 SECTION: Previous Rejection Reasons (for Quote #2, #3) */}
+          {rejectedQuotes.length > 0 && (
+            <div className="animate-slide-up">
+              <div className="relative overflow-hidden rounded-2xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-5">
+                <div className="absolute top-4 right-4">
+                  <MessageSquareX className="w-6 h-6 text-orange-400 opacity-50" />
+                </div>
+
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1.5 bg-orange-200 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h4 className="font-bold text-orange-900">Lý do từ chối từ khách hàng</h4>
+                  <span className="text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                    {rejectedQuotes.length} quote bị từ chối
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {rejectedQuotes.map((quote) => (
+                    <div
+                      key={quote.quoteNumber}
+                      className="p-3 bg-white rounded-xl border border-orange-200 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-orange-800">
+                          Quote #{quote.quoteNumber}
+                        </span>
+                        <span className="text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                          Đã từ chối
+                        </span>
+                      </div>
+                      {quote.customerReason ? (
+                        <p className="text-sm text-slate-700 italic">
+                          "{quote.customerReason}"
+                        </p>
+                      ) : (
+                        <p className="text-sm text-slate-400 italic">
+                          Không có lý do cụ thể
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-xs text-orange-600 mt-3 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  Xem xét feedback trên để điều chỉnh báo giá mới phù hợp hơn.
                 </p>
               </div>
             </div>

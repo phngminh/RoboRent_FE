@@ -1,15 +1,21 @@
-import http from '../utils/http';
+import http from "../utils/http";
 const API_BASE = `${import.meta.env.VITE_API_URL}/RentalDetail`;
 
-export interface CreateRentalDetailItem {
+export interface CreateRobotAbilityValueRequest {
+  robotAbilityId: number;
+  valueText?: string | null;
+  valueJson?: string | null;
+  isUpdated?: boolean;
+}
+
+export interface CreateRentalDetailRequest {
   rentalId: number;
   roboTypeId: number;
-  robotAbilityId: number | null;
-  script?: string;
-  branding?: string;
-  scenario?: string;
-  status?: string;
-  isDeleted?: boolean;
+  status?: string | null;
+  isDeleted?: boolean | null;
+  isLocked?: boolean | null;
+
+  createRobotAbilityValueRequests: CreateRobotAbilityValueRequest[];
 }
 
 export interface RentalDetailResponse {
@@ -36,7 +42,13 @@ export interface UpdateRentalDetailItem {
   isDeleted?: boolean;
 }
 
-export const createRentalDetailsBulkAsync = async (items: CreateRentalDetailItem[]) => {
+/**
+ * ✅ BULK CREATE: backend expects a list
+ * FE will send: CreateRentalDetailRequest[]
+ */
+export const createRentalDetailsBulkAsync = async (
+  items: CreateRentalDetailRequest[]
+) => {
   const res = await http.post(`${API_BASE}`, items);
   return res.data;
 };
@@ -49,7 +61,10 @@ export const getRentalDetailsByRentalIdAsync = async (rentalId: number) => {
   };
 };
 
-export const updateRentalDetailsAsync = async (rentalId: number, items: UpdateRentalDetailItem[]) => {
+export const updateRentalDetailsAsync = async (
+  rentalId: number,
+  items: UpdateRentalDetailItem[]
+) => {
   const res = await http.put(`${API_BASE}/${rentalId}`, items);
-  return res.data
-}
+  return res.data;
+};

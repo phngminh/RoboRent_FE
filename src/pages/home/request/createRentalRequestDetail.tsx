@@ -80,9 +80,9 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({ o
             try {
               const infos = await getRoboTypesByIdsAsync(uniqueIds)
               const dict: Record<number, string> = {}
-              infos.forEach(x => { dict[x.id] = x.name })
+              infos.forEach(x => { dict[x.id] = (x as any).typeName || `Robot Type ${x.id}` })
               setRoboTypeNames(dict)
-            } catch {}
+            } catch { }
           }
           setLoading(false)
           return
@@ -114,9 +114,9 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({ o
           try {
             const infos = await getRoboTypesByIdsAsync(uniqueIds)
             const dict: Record<number, string> = {}
-            infos.forEach(x => { dict[x.id] = x.name })
+            infos.forEach(x => { dict[x.id] = (x as any).typeName || `Robot Type ${x.id}` })
             setRoboTypeNames(dict)
-          } catch {}
+          } catch { }
         }
       } catch (e: any) {
         setErrors([e?.message || 'Failed to load rental details.'])
@@ -181,6 +181,7 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({ o
           scenario: r.scenario?.trim() || '',
           status: r.status || 'Draft',
           isDeleted: r.isDeleted ?? false,
+          createRobotAbilityValueRequests: [], // Required field
         }))
 
         await createRentalDetailsBulkAsync(payload)

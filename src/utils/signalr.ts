@@ -242,6 +242,24 @@ class SignalRService {
     this.connection?.off('NewMessageInRoom')
   }
 
+  // 🎯 NEW: Notification bell event (from Notification entity)
+  // Fired when a new notification is created for the user
+  onNewNotification(callback: (data: {
+    Id: number
+    Type: number
+    TypeName: string
+    Content: string
+    RentalId?: number
+    RelatedEntityId?: number
+    CreatedAt: string
+  }) => void) {
+    this.connection?.on('NewNotification', callback)
+  }
+
+  offNewNotification() {
+    this.connection?.off('NewNotification')
+  }
+
 }
 
 export const signalRService = new SignalRService()

@@ -25,7 +25,11 @@ import Header from '../../components/header'
 import { toast } from 'react-toastify'
 import { formatDistanceToNow } from 'date-fns'
 import { formatMoney } from '../../utils/format'
-import { getRentalByIdAsync } from '../../apis/rental.staff.api'
+import { getRentalByIdAsync, getUpdatedStatusAsync, rejectActiveQuotesForRentalAsync } from '../../apis/rental.staff.api'
+import { getRentalDetailsByRentalIdAsync } from '../../apis/rentaldetail.api'
+import { Eye } from "lucide-react"
+import RentalDetailModal from '../../components/staff/RentalDetailModal'
+
 
 // Interface for customer chat list
 interface CustomerChat {
@@ -46,6 +50,34 @@ interface StaffChatPageProps {
 }
 
 const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
+  const [showRentalDetailModal, setShowRentalDetailModal] = useState(false)
+type ApiResponse<T> = { success: boolean; data: T }
+
+type RentalDetailResponse = {
+  id: number
+  isDeleted: boolean
+  status: string
+  rentalId: number
+  roboTypeId: number
+  robotAbilityId: number | null
+  script: string
+  branding: string
+  scenario: string
+  robotTypeName: string
+  robotTypeDescription: string
+  robotAbilityValueResponses: Array<{
+    id: number
+    rentalDetailId: number
+    robotAbilityId: number
+    valueText: string | null
+    valueJson: string | null
+    updatedAt: string
+    isUpdated: boolean
+  }>
+}
+
+const [rentalDetails, setRentalDetails] = useState<RentalDetailResponse[]>([])
+  const [isLoadingRentalDetails, setIsLoadingRentalDetails] = useState(false)
   const { rentalId } = useParams<{ rentalId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -92,6 +124,21 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
 
     loadRentalInfo()
   }, [rentalId])
+
+const loadRentalDetails = async () => {
+  if (!rentalId) return
+  setIsLoadingRentalDetails(true)
+  try {
+    const res = await getRentalDetailsByRentalIdAsync(parseInt(rentalId)) as ApiResponse<RentalDetailResponse[]>
+    setRentalDetails(res.data) // ✅ FIX
+  } catch (e) {
+    console.error("Failed to load rental details:", e)
+    toast.error("Failed to load rental details")
+  } finally {
+    setIsLoadingRentalDetails(false)
+  }
+}
+
 
   // ✅ Persist sidebar states to localStorage
   useEffect(() => {
@@ -172,17 +219,49 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
       : 'A demo is already pending customer review'
 
 
-  // Create Quote button
-  const isCreateQuoteDisabled = rentalStatus !== 'Received' || quotesData?.canCreateMore === false
+  // Create Quote button - allow when status is Received or RejectedPriceQuote (matching BE validation)
+  const allowedQuoteStatuses = ['Received', 'RejectedPriceQuote']
+  const isCreateQuoteDisabled = !allowedQuoteStatuses.includes(rentalStatus) || quotesData?.canCreateMore === false
   const createQuoteDisabledReason =
-    rentalStatus !== 'Received'
-      ? 'Rental status must be "Received" to create quote'
-      : 'Maximum 3 quotes reached'
+    !allowedQuoteStatuses.includes(rentalStatus)
+      ? `Rental status must be "Received" or "RejectedPriceQuote" to create quote (current: ${rentalStatus})`
+      : 'Maximum 3 quotes reached or active quote exists'
 
-  // Send Contract button
-  const hasApprovedQuote = quotesData?.quotes.some(q => q.status === QuoteStatus.Approved)
-  const isSendContractDisabled = !hasApprovedQuote
-  const sendContractDisabledReason = 'Customer must approve a quote first'
+  // Send Contract button - only after demo accepted
+  const isSendContractDisabled = rentalStatus !== 'AcceptedDemo'
+  const sendContractDisabledReason =
+    rentalStatus === 'AcceptedPriceQuote'
+      ? 'Cần xếp lịch (Schedule) trước khi gửi Contract'
+      : rentalStatus === 'Scheduled' || rentalStatus === 'PendingDemo' || rentalStatus === 'DeniedDemo'
+        ? 'Cần customer chấp nhận Demo trước'
+        : `Rental status phải là "AcceptedDemo" (hiện tại: ${rentalStatus})`
+
+  // Status guidance for staff
+  const getStatusGuidance = () => {
+    switch (rentalStatus) {
+      case 'Received':
+      case 'PendingPriceQuote':
+      case 'RejectedPriceQuote':
+        return { icon: '💰', message: 'Tạo báo giá cho khách hàng', color: 'blue' }
+      case 'AcceptedPriceQuote':
+        return { icon: '📅', message: 'Quote approved! Bước tiếp:', linkText: 'Xếp lịch', linkUrl: '/staff/robot-group', color: 'green' }
+      case 'Scheduled':
+        return { icon: '🎬', message: 'Đã xếp lịch! Bước tiếp: Gửi video Demo', color: 'purple' }
+      case 'PendingDemo':
+        return { icon: '⏳', message: 'Demo đang chờ khách duyệt...', color: 'yellow' }
+      case 'DeniedDemo':
+        return { icon: '🔄', message: 'Khách từ chối demo. Gửi demo mới!', color: 'orange' }
+      case 'AcceptedDemo':
+        return { icon: '📝', message: 'Demo accepted! Bước tiếp: Tạo và gửi hợp đồng', color: 'indigo' }
+      case 'PendingContract':
+        return { icon: '✍️', message: 'Hợp đồng đang chờ ký...', color: 'violet' }
+      case 'PendingDeposit':
+        return { icon: '💳', message: 'Chờ khách đóng tiền cọc...', color: 'emerald' }
+      default:
+        return null
+    }
+  }
+  const statusGuidance = getStatusGuidance()
 
   // Filter chats based on search
   const filteredChats = customerChats.filter(chat =>
@@ -284,6 +363,44 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
   useEffect(() => {
     if (!rentalId) return
     fetchQuotes(parseInt(rentalId))
+  }, [rentalId])
+
+  // Check updated status and auto reject quotes if needed
+  useEffect(() => {
+    if (!rentalId) return
+
+    const checkAndRejectQuotes = async () => {
+      try {
+        const response = await getUpdatedStatusAsync(parseInt(rentalId))
+        
+        if (response.success && response.data) {
+          const { rentalIsUpdated, rentalDetailIsUpdated } = response.data
+          
+          if (rentalIsUpdated === true || rentalDetailIsUpdated === true) {
+            // Auto reject active quotes
+            try {
+              await rejectActiveQuotesForRentalAsync(parseInt(rentalId))
+              
+              // Refresh quotes list
+              await fetchQuotes(parseInt(rentalId))
+              
+              // Show notification
+              toast.info("Rental information has been updated. Quotes have been rejected for update.", {
+                autoClose: 5000
+              })
+            } catch (error) {
+              console.error("Failed to reject active quotes:", error)
+              toast.error("Failed to reject quotes after rental update")
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check updated status:", error)
+        // Don't show error to user, this is not critical
+      }
+    }
+
+    checkAndRejectQuotes()
   }, [rentalId])
 
   // SignalR setup
@@ -641,7 +758,17 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
                   </p>
                 </div>
               </div>
-
+  <button
+    onClick={async () => {
+      await loadRentalDetails()
+      setShowRentalDetailModal(true)
+    }}
+    className="px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium flex items-center gap-2"
+    title="View rental detail"
+  >
+    <Eye className="w-4 h-4 text-gray-700" />
+    View Details
+  </button>
               <button
                 onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -673,6 +800,34 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
             ))}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Status Guidance Banner */}
+          {statusGuidance && (
+            <div className={`px-6 py-2 flex items-center gap-2 text-sm border-b border-gray-100 ${statusGuidance.color === 'blue' ? 'bg-blue-50 text-blue-700' :
+              statusGuidance.color === 'green' ? 'bg-green-50 text-green-700' :
+                statusGuidance.color === 'purple' ? 'bg-purple-50 text-purple-700' :
+                  statusGuidance.color === 'yellow' ? 'bg-yellow-50 text-yellow-700' :
+                    statusGuidance.color === 'orange' ? 'bg-orange-50 text-orange-700' :
+                      statusGuidance.color === 'indigo' ? 'bg-indigo-50 text-indigo-700' :
+                        statusGuidance.color === 'violet' ? 'bg-violet-50 text-violet-700' :
+                          statusGuidance.color === 'emerald' ? 'bg-emerald-50 text-emerald-700' :
+                            'bg-gray-50 text-gray-700'
+              }`}>
+              <span className="text-lg">{statusGuidance.icon}</span>
+              <span className="font-medium">
+                {statusGuidance.message}
+                {statusGuidance.linkText && statusGuidance.linkUrl && (
+                  <span
+                    onClick={() => navigate(statusGuidance.linkUrl!)}
+                    className="ml-1 underline cursor-pointer hover:opacity-80"
+                  >
+                    {statusGuidance.linkText}
+                  </span>
+                )}
+              </span>
+              <span className="ml-auto text-xs opacity-70">Status: {rentalStatus}</span>
+            </div>
+          )}
 
           {/* Action Buttons - ✅ All visible, disabled when not available */}
           <div className="border-t border-gray-100 px-6 py-3 bg-gray-50">
@@ -767,6 +922,17 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
             {/* Rental Info */}
             <div className="p-6 bg-white border-b border-gray-200">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Rental Information</h2>
+
+              {/* Schedule Button - ONLY show when AcceptedPriceQuote */}
+              {rentalStatus === 'AcceptedPriceQuote' && (
+                <button
+                  onClick={() => navigate('/staff/robot-group')}
+                  className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                >
+                  <Calendar size={18} />
+                  Go to Schedule
+                </button>
+              )}
 
               {!rentalInfo ? (
                 <p className="text-gray-500 text-sm">Loading...</p>
@@ -948,6 +1114,14 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
           rentalId={parseInt(rentalId)}
           currentQuoteCount={quotesData?.totalQuotes || 0}
           rentalInfo={rentalInfo}
+          rejectedQuotes={quotesData?.quotes
+            .filter(q => q.status === QuoteStatus.RejectedCustomer)
+            .map(q => ({
+              quoteNumber: q.quoteNumber,
+              customerReason: q.customerReason,
+              status: q.status
+            })) || []
+          }
           onClose={() => setShowCreateQuoteModal(false)}
           onSuccess={() => {
             fetchQuotes(parseInt(rentalId))
@@ -971,6 +1145,15 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
           }}
         />
       )}
+
+      <RentalDetailModal
+  isOpen={showRentalDetailModal}
+  onClose={() => setShowRentalDetailModal(false)}
+  rentalInfo={rentalInfo}
+  rentalDetails={rentalDetails}
+  isLoading={isLoadingRentalDetails}
+/>
+
     </div>
   )
 }
