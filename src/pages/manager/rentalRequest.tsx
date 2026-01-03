@@ -1,6 +1,12 @@
 import { Eye, Search } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { getAllRequests, type RentalRequestResponse } from '../../apis/rentalRequest.api'
+import { Card, CardContent, CardHeader } from '../../components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { Input } from '../../components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { Button } from '../../components/ui/button'
+import { Label } from '../../components/ui/label'
 
 interface RentalRequestsContentProps {
   onView: (id: number) => void
@@ -20,7 +26,9 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
   const [appliedDateTo, setAppliedDateTo] = useState('')
 
   const perPage = 5
-  const totalPages = Math.ceil(filteredRentals.length / perPage)
+  const totalPages = Math.max(1, Math.ceil(filteredRentals.length / perPage))
+
+  const statusOptions = ['All Status', 'Pending', 'Draft', 'Canceled', 'Received']
 
   const fetchData = async () => {
     try {
@@ -90,11 +98,11 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
   }
 
   const handleNext = () => {
-    if (page < totalPages) setPage(page + 1)
+    setPage((prev) => Math.min(prev + 1, totalPages))
   }
 
   const handlePrev = () => {
-    if (page > 1) setPage(page - 1)
+    setPage((prev) => Math.max(prev - 1, 1))
   }
 
   const handlePageSelect = (num: number) => {
@@ -105,204 +113,190 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
 
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
-      <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
-        <h2 className='text-lg font-semibold text-gray-800 mb-4 text-center'>Filter Requests</h2>
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Event Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            >
-              <option>All Status</option>
-              <option>Pending</option>
-              <option>Draft</option>
-              <option>Canceled</option>
-              <option>Received</option>
-            </select>
+      <Card className='rounded-xl shadow-sm border border-gray-100'>
+        <CardHeader className='pb-0'>
+          <h2 className='text-lg font-semibold text-gray-800 text-center mb-3'>Filter Requests</h2>
+        </CardHeader>
+        <CardContent className='p-6 pt-0'>
+          <div className='flex flex-col gap-4 md:flex-row md:items-end md:gap-4'>
+            <div className='flex flex-1 md:gap-4'>
+              <div className='w-full md:w-40'>
+                <Label className='block text-sm font-medium text-gray-700 mb-1'>Event Status</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className='w-full'>
+                    <SelectValue placeholder='All Status' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className='w-full md:w-40'>
+                <Label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</Label>
+                <Input
+                  type='date'
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  max={dateTo || undefined}
+                />
+              </div>
+              <div className='w-full md:w-40'>
+                <Label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</Label>
+                <Input
+                  type='date'
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  min={dateFrom || undefined}
+                />
+              </div>
+              <div className='flex-1'>
+                <Label className='block text-sm font-medium text-gray-700 mb-1'>Search by Event Name</Label>
+                <div className='relative'>
+                  <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
+                  <Input
+                    type='text'
+                    placeholder='Enter event name...'
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className='pl-10'
+                  />
+                </div>
+              </div>
+            </div>
+            <div className='flex gap-2'>
+              <Button onClick={applyFilters}>Apply Filters</Button>
+              <Button
+                variant='outline'
+                onClick={clearFilters}
+                className='bg-gray-200 text-gray-700 hover:bg-gray-300'
+              >
+                Clear
+              </Button>
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</label>
-            <input
-              type='date'
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</label>
-            <input
-              type='date'
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-
-          <div className='flex items-end space-x-2'>
-            <button
-              onClick={applyFilters}
-              className='flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'
-            >
-              Apply Filters
-            </button>
-
-            <button
-              onClick={clearFilters}
-              className='bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors'
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-
-        <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Event Name</label>
-        <div className='flex gap-3 mb-4'>
-          <div className='relative flex-1'>
-            <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
-            <input
-              type='text'
-              placeholder='Enter event name...'
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className='w-full pl-10 pr-4 py-2 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className='bg-white rounded-xl shadow-sm border border-gray-300'>
-        <div className='p-6 border-b border-gray-100'>
+      <Card className='rounded-xl shadow-sm border border-gray-300'>
+        <CardHeader className='p-6 border-b border-gray-100'>
           <h2 className='text-xl font-semibold text-gray-800'>All Rental Requests</h2>
-        </div>
+        </CardHeader>
+        <CardContent className='p-0'>
+          <div className='overflow-x-auto'>
+            <Table>
+              <TableHeader className='bg-gray-50'>
+                <TableRow>
+                  <TableHead className='text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap'>Request ID</TableHead>
+                  <TableHead className='text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap'>Event Name</TableHead>
+                  <TableHead className='text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap'>Status</TableHead>
+                  <TableHead className='text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap'>Activity Type</TableHead>
+                  <TableHead className='text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap'>Event Date</TableHead>
+                  <TableHead className='text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap'>Created Date</TableHead>
+                  <TableHead className='text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap'>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedRentals.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
+                      No rental requests found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedRentals.map((request: RentalRequestResponse) => {
+                    const eventDate = request.eventDate
+                      ? new Date(request.eventDate).toLocaleDateString()
+                      : '—'
 
-        <div className='overflow-x-auto'>
-          <table className='w-full'>
-            <thead className='bg-gray-50'>
-              <tr>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Request ID</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Name</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Status</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Activity</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Activity Type</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Event Date</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Created Date</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>Actions</th>
-              </tr>
-            </thead>
+                    const createdDate = request.createdDate
+                      ? new Date(request.createdDate).toLocaleDateString()
+                      : '—'
 
-            <tbody className='bg-white divide-y divide-gray-200'>
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
-                    Loading...
-                  </td>
-                </tr>
-              ) : paginatedRentals.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className='text-center py-6 text-gray-500 text-sm'>
-                    No rental requests found.
-                  </td>
-                </tr>
-              ) : (
-                paginatedRentals.map((request: RentalRequestResponse) => {
-                  const eventDate = request.eventDate
-                    ? new Date(request.eventDate).toLocaleDateString()
-                    : '—'
+                    const statusClass = request.status === 'Received'
+                      ? 'bg-green-100 text-green-800'
+                      : request.status === 'Pending'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : request.status === 'Canceled'
+                      ? 'bg-red-100 text-red-800'
+                      : request.status === 'Draft'
+                      ? 'bg-gray-100 text-gray-800'
+                      : 'bg-blue-100 text-blue-800'
 
-                  const createdDate = request.createdDate
-                    ? new Date(request.createdDate).toLocaleDateString()
-                    : '—'
-
-                  return (
-                    <tr key={request.id} className='hover:bg-gray-50'>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.id}</td>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventName}</td>
-                      <td className='px-6 py-4 text-sm text-center'>
-                        <div className='flex items-center justify-center space-x-2'>
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              request.status === 'Received'
-                                ? 'bg-green-100 text-green-800'
-                                : request.status === 'Pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : request.status === 'Canceled'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-blue-100 text-blue-800'
-                            }`}
-                          >
+                    return (
+                      <TableRow key={request.id} className='hover:bg-gray-50'>
+                        <TableCell className='text-center'>{request.id}</TableCell>
+                        <TableCell className='text-center'>{request.eventName}</TableCell>
+                        <TableCell className='text-center'>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}`}>
                             {request.status}
                           </span>
-                        </div>
-                      </td>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventActivityName}</td>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.activityTypeName}</td>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>
-                        {eventDate}
-                      </td>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>
-                        {createdDate}
-                      </td>
-                      <td className='px-6 py-4 text-sm text-center'>
-                        <div className='flex justify-center space-x-2'>
-                          <button
-                            onClick={() => onView(request.id)}
-                            className='text-gray-600 hover:text-gray-800 flex items-center space-x-1'
-                          >
-                            <Eye size={14} />
-                            <span>View</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
-          <div className='flex space-x-2'>
-            <button
-              disabled={page === 1}
-              onClick={handlePrev}
-              className={`px-3 py-1 text-sm ${
-                page === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              Previous
-            </button>
-
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i}
-                onClick={() => handlePageSelect(i + 1)}
-                className={`px-3 py-1 text-sm rounded ${
-                  page === i + 1 ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-
-            <button
-              disabled={page === totalPages}
-              onClick={handleNext}
-              className={`px-3 py-1 text-sm ${
-                page === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              Next
-            </button>
+                        </TableCell>
+                        <TableCell className='text-center'>{request.activityTypeName}</TableCell>
+                        <TableCell className='text-center'>{eventDate}</TableCell>
+                        <TableCell className='text-center'>{createdDate}</TableCell>
+                        <TableCell className='text-center'>
+                          <div className='flex justify-center space-x-2'>
+                            <button
+                              onClick={() => onView(request.id)}
+                              className='flex items-center space-x-1 bg-blue-100 text-blue-800 hover:bg-blue-200 px-2 py-1 rounded whitespace-nowrap'
+                            >
+                              <Eye size={14} />
+                              <span>View</span>
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
-        </div>
-      </div>
+          <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
+            <div className='flex space-x-2'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={handlePrev}
+                disabled={page === 1}
+              >
+                Previous
+              </Button>
+              {[...Array(totalPages)].map((_, i) => (
+                <Button
+                  key={i}
+                  size='sm'
+                  variant={page === i + 1 ? 'default' : 'outline'}
+                  onClick={() => handlePageSelect(i + 1)}
+                >
+                  {i + 1}
+                </Button>
+              ))}
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={handleNext}
+                disabled={page === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+            <div className='text-sm text-gray-500'>
+              Showing {paginatedRentals.length} of {filteredRentals.length}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -153,27 +153,19 @@ const Header = () => {
     }
   }
 
-  const handleNavClick = (sectionId: string, route?: string) => {
-    if (isTransparentHeaderPage) {
-      scrollToSection(sectionId)
-    } else if (route) {
-      navigate(route)
-    }
-    setIsMenuOpen(false)
-  }
-
   const displayName = user?.name || user?.userName
   const capitalizedRole = user?.role.charAt(0).toUpperCase() + user?.role.slice(1)
   const linkText = `Welcome, ${capitalizedRole} ${displayName}`
 
   const userDisplay = isDashboardPage ? (
-    <span
+    <Link
+      to={roleRedirectMap[user?.role]}
       className={`text-lg transition-colors duration-200 ${textColor} whitespace-nowrap`}
       title={linkText}
     >
       Welcome, {capitalizedRole}{' '}
       <span className={nameColor}>{displayName}</span>
-    </span>
+    </Link>
   ) : (
     <Link
       to={roleRedirectMap[user?.role]}
