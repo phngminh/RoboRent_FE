@@ -3,8 +3,8 @@ import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Textarea } from '../../../components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
-import { ArrowLeft } from 'lucide-react'
-import { customerRejects, customerRequestChange, customerSigns, getDraftsByRentalId, sendVerificationCode, verifyCode, type ContractDraftResponse } from '../../../apis/contractDraft.api'
+import { ArrowLeft, Download, Info, UploadCloud } from 'lucide-react'
+import { customerRejects, customerRequestChange, customerSignsWithFile, downloadContractAsPdf, downloadContractAsWord, getDraftsByRentalId, type ContractDraftResponse } from '../../../apis/contractDraft.api'
 import { useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { signalRService } from '../../../utils/signalr'
@@ -12,8 +12,6 @@ import { signalRService } from '../../../utils/signalr'
 interface CustomerContractDraftProps {
   onBack: () => void
 }
-
-type SignStep = 'request' | 'verify' | 'sign'
 
 const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack }) => {
   const { rentalId: rentalIdString } = useParams<{ rentalId: string }>()
@@ -25,14 +23,11 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
   const [approveOpen, setApproveOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [comment, setComment] = useState('')
-  const [signature, setSignature] = useState('')
   const [reason, setReason] = useState('')
-  const [otpStep, setOtpStep] = useState<SignStep>('request')
-  const [otp, setOtp] = useState(['', '', '', '', '', ''])
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([])
-  const [isVerified, setIsVerified] = useState(false)
-  const [verificationExpiry, setVerificationExpiry] = useState<Date | null>(null)
-  const [timeLeft, setTimeLeft] = useState(300)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [dragActive, setDragActive] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchDraft = async (rentalId: number) => {
     try {
@@ -66,14 +61,12 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
     }
   }, [rentalId])
 
-  // 🎯 SignalR: Auto-refresh when contract status changes
   useEffect(() => {
     const handleContractPendingSignature = (data: {
       ContractId: number
       RentalId: number
       Message: string
     }) => {
-      // Only refresh if this is for the current rental
       if (data.RentalId === rentalId) {
         toast.info(`📝 ${data.Message}`)
         fetchDraft(rentalId)
@@ -89,110 +82,59 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
     }
   }, [rentalId])
 
-  useEffect(() => {
-    if (verificationExpiry && Date.now() < verificationExpiry.getTime()) {
-      const interval = setInterval(() => {
-        const now = Date.now()
-        const expiry = verificationExpiry.getTime()
-        const remaining = Math.floor((expiry - now) / 1000)
-        setTimeLeft(Math.max(0, remaining))
-        if (remaining <= 0) {
-          setIsVerified(false)
-          setOtpStep('request')
-          setVerificationExpiry(null)
-          toast.warning('Verification expired. Please request a new code.')
-        }
-      }, 1000)
-      return () => clearInterval(interval)
-    }
-  }, [verificationExpiry])
+  const handleUploadSignedContract = async () => {
+    if (!selectedFile || !draft) return
 
-  useEffect(() => {
-    if (otpStep === 'verify' && inputRefs.current[0]) {
-      inputRefs.current[0]?.focus()
-    }
-  }, [otpStep])
-
-  const resetOtpStates = () => {
-    setOtpStep('request')
-    setOtp(['', '', '', '', '', ''])
-    setIsVerified(false)
-    setVerificationExpiry(null)
-    setTimeLeft(300)
-    setSignature('')
-  }
-
-  const handleInputChange = (index: number, value: string) => {
-    if (value.length > 1) {
-      value = value[0]
-    }
-
-    const newOtp = [...otp]
-    newOtp[index] = value
-    setOtp(newOtp)
-
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus()
+    setIsUploading(true)
+    try {
+      const response = await customerSignsWithFile(draft.id, selectedFile)
+      if (response.success) {
+        toast.success('Signed successfully!')
+        setApproveOpen(false)
+        setSelectedFile(null)
+        onBack()
+      } else {
+        toast.error(response.message || 'Upload failed.')
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
+    } finally {
+      setIsUploading(false)
     }
   }
 
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus()
-    }
-  }
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number) => {
+  const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
-    const pasteData = e.clipboardData.getData('Text').trim().slice(0, 6 - index)
-    if (/^\d+$/.test(pasteData)) {
-      const newOtp = [...otp]
-      for (let i = 0; i < pasteData.length && index + i < 6; i++) {
-        newOtp[index + i] = pasteData[i]
-      }
-      setOtp(newOtp)
-      const nextFocus = Math.min(index + pasteData.length, 5)
-      inputRefs.current[nextFocus]?.focus()
+    e.stopPropagation()
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true)
+    } else if (e.type === 'dragleave') {
+      setDragActive(false)
     }
   }
 
-  const handleRequestOtp = async () => {
-    if (!draft) {
-      toast.error('No draft loaded.')
-      return
-    }
-    try {
-      await sendVerificationCode(draft.id)
-      toast.success('Verification code sent to your email!')
-      setOtp(['', '', '', '', '', ''])
-      setOtpStep('verify')
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to send code.'
-      toast.error(errorMessage)
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0]
+      if (file && (file.name.endsWith('.pdf') || file.name.endsWith('.docx'))) {
+        setSelectedFile(file)
+      } else {
+        toast.error('Invalid file type. Allowed: PDF, DOCX')
+      }
     }
   }
 
-  const handleVerifyOtp = async () => {
-    if (!draft || otp.some(digit => !digit)) {
-      toast.error('Please enter the full code.')
-      return
-    }
-    const otpValue = otp.join('')
-    try {
-      await verifyCode(draft.id, otpValue)
-      setIsVerified(true)
-      setOtpStep('sign')
-      const expiry = new Date()
-      expiry.setMinutes(expiry.getMinutes() + 5)
-      setVerificationExpiry(expiry)
-      toast.success('Code verified! You have 5 minutes to sign.')
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Invalid or expired code.'
-      toast.error(errorMessage)
-      setOtp(['', '', '', '', '', ''])
-      if (inputRefs.current[0]) {
-        inputRefs.current[0]?.focus()
-      }
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file && (file.name.endsWith('.pdf') || file.name.endsWith('.docx'))) {
+      setSelectedFile(file)
+    } else {
+      toast.error('Invalid file type. Allowed: PDF, DOCX')
+      e.target.value = ''
     }
   }
 
@@ -213,29 +155,6 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
     }
   }
 
-  const handleConfirmApprove = async () => {
-    if (!draft || !signature.trim()) {
-      toast.error('Please enter your signature.')
-      return
-    }
-    if (!isVerified) {
-      toast.error('Please verify your code first.')
-      return
-    }
-    try {
-      await customerSigns(draft.id, signature)
-      toast.success('Signed successfully!')
-      setApproveOpen(false)
-      resetOtpStates()
-      onBack()
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
-      toast.error(errorMessage)
-      setIsVerified(false)
-      setOtpStep('request')
-    }
-  }
-
   const handleConfirmReject = async () => {
     if (!draft) {
       toast.error('No draft loaded to reject.')
@@ -249,6 +168,52 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       onBack()
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleDownloadPdf = async () => {
+    if (!draft) {
+      toast.error('No draft loaded.')
+      return
+    }
+    try {
+      const response = await downloadContractAsPdf(draft.id)
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Contract_${draft.id}_${new Date().toISOString().slice(0, 10)}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      toast.success('PDF downloaded successfully!')
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to download PDF.'
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleDownloadWord = async () => {
+    if (!draft) {
+      toast.error('No draft loaded.')
+      return
+    }
+    try {
+      const response = await downloadContractAsWord(draft.id)
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Contract_${draft.id}_${new Date().toISOString().slice(0, 10)}.docx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      toast.success('Word document downloaded successfully!')
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to download Word document.'
       toast.error(errorMessage)
     }
   }
@@ -281,14 +246,43 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
 
   return (
     <div className='space-y-6 bg-white p-6 max-w-7xl mx-auto rounded-lg shadow-sm border border-gray-200'>
-      <Button
-        onClick={onBack}
-        variant='ghost'
-        className='flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 mb-2 -mt-4'
-      >
-        <ArrowLeft size={18} />
-        Back to Drafts
-      </Button>
+      <div className='flex justify-between items-center mb-4'>
+        <Button
+          onClick={onBack}
+          variant='ghost'
+          className='flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800'
+        >
+          <ArrowLeft size={18} />
+          Back to Drafts
+        </Button>
+        <div className='flex gap-2'>
+          <Button onClick={handleDownloadPdf}
+            variant='outline'
+            size='lg'
+            className='px-3 py-2'
+          >
+            <Download size={16} className='mr-2' />
+            Download as PDF
+          </Button>
+          {/* <Button onClick={handleDownloadWord}
+            variant='outline'
+            size='lg'
+            className='px-3 py-2'
+          >
+            <Download size={16} className='mr-2' />
+            Download as Word
+          </Button> */}
+        </div>
+      </div>
+
+      <div className='bg-blue-50 border border-blue-200 rounded-md p-4 mb-4 max-w-5xl mx-auto'>
+        <div className='flex items-start gap-2'>
+          <Info className='h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0' />
+          <p className='text-md text-blue-800'>
+            You can download the contract as PDF or Word, print it out, sign it manually (or using digital tools), and then upload the signed version by clicking the "Upload Signed Contract" button.
+          </p>
+        </div>
+      </div>
 
       <div className='flex-1 overflow-y-auto overflow-x-visible pr-3 pl-3 space-y-6'>
         <div className='max-w-4xl mx-auto'>
@@ -318,13 +312,12 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
         </Button>
         <Button
           onClick={() => {
-            setOtpStep('request')
             setApproveOpen(true)
           }}
           disabled={draft.status !== 'PendingCustomerSignature'}
           className='bg-indigo-600 hover:bg-indigo-700 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed'
         >
-          Sign
+          Upload Signed Contract
         </Button>
       </div>
 
@@ -366,68 +359,88 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setApproveOpen(false)
-            resetOtpStates()
+            setSelectedFile(null)
+            setDragActive(false)
           }
         }}
       >
-        <DialogContent className='sm:max-w-[425px]'>
+        <DialogContent className='sm:max-w-[600px]'>
           <DialogHeader>
-            <DialogTitle>{otpStep === 'request' ? 'Verify Your Identity' : otpStep === 'verify' ? 'Enter Verification Code' : 'Sign the Contract'}</DialogTitle>
+            <DialogTitle>Upload Signed Contract</DialogTitle>
             <DialogDescription>
-              {otpStep === 'request' && 'To sign, we need to verify your email. A code will be sent to your email.'}
-              {otpStep === 'verify' && `Check your email for the 6-digit code. Expires in 5 minutes.`}
-              {otpStep === 'sign' && `Verification complete! You have 5 minutes to sign.`}
+              Please upload your signed contract file. Allowed types: PDF, DOCX.
             </DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4 -mt-4'>
-            {otpStep === 'verify' && (
-              <div className="flex justify-center space-x-2 mb-4">
-                {otp.map((digit, index) => (
-                  <Input
-                    key={index}
-                    ref={(el) => { inputRefs.current[index] = el }}
-                    className="w-12 h-12 text-center text-lg font-semibold flex-1"
-                    type="text"
-                    value={digit}
-                    onChange={(e) => handleInputChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(index, e)}
-                    onPaste={(e) => handlePaste(e, index)}
-                    maxLength={1}
-                    autoFocus={index === 0}
-                  />
-                ))}
+            <div
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                dragActive
+                  ? 'border-blue-400 bg-blue-50'
+                  : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              <UploadCloud className='mx-auto h-12 w-12 text-gray-400 mb-4' />
+              <p className='mb-2 text-sm font-medium text-gray-900'>
+                <span className='relative'>
+                  {dragActive ? (
+                    <span>Drop the file here...</span>
+                  ) : (
+                    <>
+                      <span
+                        aria-hidden='true'
+                        className='absolute inset-0 z-0 h-full w-full cursor-pointer'
+                        onClick={() => fileInputRef.current?.click()}
+                      />
+                      <span className='relative z-10'>Choose a file or drag & drop here</span>
+                    </>
+                  )}
+                </span>
+              </p>
+              <p className='text-xs text-gray-500 mb-4'>PDF, DOCX formats, up to 6MB</p>
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                onClick={() => fileInputRef.current?.click()}
+                className='px-4'
+              >
+                Browse
+              </Button>
+              <Input
+                ref={fileInputRef}
+                type='file'
+                accept='.pdf,.docx'
+                onChange={handleFileSelect}
+                className='hidden'
+              />
+            </div>
+            {selectedFile && (
+              <div className='bg-green-50 border border-green-200 rounded-md p-3'>
+                <p className='text-sm text-green-800'>Selected: {selectedFile.name}</p>
               </div>
-            )}
-            {otpStep === 'sign' && (
-              <>
-                <Input
-                  placeholder='Enter your name as signature'
-                  value={signature}
-                  onChange={(e) => setSignature(e.target.value)}
-                />
-                {timeLeft > 0 && <p className='text-sm text-orange-600'>Time remaining: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</p>}
-              </>
             )}
           </div>
           <DialogFooter>
-            {otpStep !== 'request' && otpStep !== 'sign' && (
-              <Button type='button' variant='outline' onClick={() => setOtpStep('request')} className='-mt-6'>
-                Back
-              </Button>
-            )}
-            {otpStep === 'request' && (
-              <Button onClick={handleRequestOtp} className='-mt-7'>Send Code</Button>
-            )}
-            {otpStep === 'verify' && (
-              <Button onClick={handleVerifyOtp} disabled={otp.some(digit => !digit)} className='bg-green-600 -mt-6'>
-                Verify
-              </Button>
-            )}
-            {otpStep === 'sign' && (
-              <Button onClick={handleConfirmApprove} disabled={!signature.trim() || timeLeft <= 0} className='-mt-6'>
-                Sign Contract
-              </Button>
-            )}
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => setApproveOpen(false)}
+              className='-mt-6'
+              disabled={isUploading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUploadSignedContract}
+              disabled={!selectedFile || isUploading}
+              className='-mt-6'
+            >
+              {isUploading ? 'Uploading...' : 'Upload'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

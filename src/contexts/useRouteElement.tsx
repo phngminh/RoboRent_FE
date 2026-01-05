@@ -43,6 +43,10 @@ import CustomerDeliveryTrackingPage from '../pages/customer/CustomerDeliveryTrac
 import CreateRentalRequestHome from '../pages/home/request/createRentalRequest'
 import CreateRentalDetailHome from '../pages/home/request/createRentalRequestDetail'
 import { toast } from 'react-toastify'
+import AdminProfile from '../pages/admin/profile'
+import StaffDashboardContent from '../pages/staff/dashboard'
+import ManagerDashboardContent from '../pages/manager/dashboard'
+import AdminDashboard from '../pages/admin/AdminDashboard'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -88,7 +92,7 @@ export default function useRouteElements() {
         {
           element: <CustomerProfile />,
           children: [
-            { path: 'dashboard', element: <DashboardContent /> },
+            { path: 'dashboard', element: <ManagerDashboard /> },
             { path: 'account', element: <AccountProfile /> },
             {
               path: 'rental-requests',
@@ -211,7 +215,7 @@ export default function useRouteElements() {
         {
           element: <StaffProfile />,
           children: [
-            { path: 'dashboard', element: <DashboardContent /> },
+            { path: 'dashboard', element: <StaffDashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
             {
               path: 'rental-requests',
@@ -294,7 +298,7 @@ export default function useRouteElements() {
         {
           element: <ManagerProfile />,
           children: [
-            { path: 'dashboard', element: <ManagerDashboard /> },
+            { path: 'dashboard', element: <DashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
             {
               path: 'rental-requests',
@@ -355,10 +359,13 @@ export default function useRouteElements() {
       path: path.BASE_ADMIN,
       element: <ProtectedRoute allowedRoles={['admin']} />,
       children: [
+        { index: true, element: <Navigate to='dashboard' replace /> },
         {
-          path: 'quotes',
-          element: <ManagerQuotesPage />
-        }
+          element: <AdminProfile />,
+          children: [
+            { path: 'dashboard', element: <AdminDashboard /> }
+          ]
+        },
       ]
     }
   ])

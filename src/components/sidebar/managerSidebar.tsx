@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, CreditCard, ChevronRight, ChartColumn, Newspaper, ChevronDown, UserPlus } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, ChevronRight, ChartColumn, Newspaper, ChevronDown, UserPlus, LogOut } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 import path from '../../constants/path'
 
 interface ProfileSidebarProps {
@@ -9,6 +10,7 @@ interface ProfileSidebarProps {
 
 const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   const navigate = useNavigate()
+  const { logout } = useAuth()
   const [contractsExpanded, setContractsExpanded] = useState(false)
 
   const menuItems = [
@@ -18,6 +20,7 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
     { id: 'contracts', label: 'Contracts', icon: Newspaper, hasSubItems: true },
     { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.MANAGER_REPORTS },
     { id: 'staff-assignment', label: 'Staff Assignment', icon: UserPlus, path: path.MANAGER_STAFF_ASSIGNMENT },
+    { id: 'logout', label: 'Logout', icon: LogOut, path: undefined }
   ]
 
   const contractSubItems = [
@@ -49,6 +52,10 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   const handleSubItemClick = (subItemPath: string) => {
     navigate(subItemPath)
     setContractsExpanded(true)
+  }
+
+  const handleLogout = () => {
+    logout()
   }
 
   return (
@@ -102,6 +109,21 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
                     </div>
                   )}
                 </div>
+              )
+            }
+
+            if (item.id === 'logout') {
+              return (
+                <button
+                  key={item.id}
+                  onClick={handleLogout}
+                  className='w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors duration-200 text-red-500 hover:bg-red-50 hover:text-red-600'
+                >
+                  <div className='flex items-center space-x-3'>
+                    <Icon size={20} className='shrink-0' />
+                    <span className='font-medium whitespace-nowrap'>{item.label}</span>
+                  </div>
+                </button>
               )
             }
             

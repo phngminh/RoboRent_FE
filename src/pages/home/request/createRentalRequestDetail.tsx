@@ -229,7 +229,8 @@ const CreateRentalDetailContent: React.FC<CreateRentalDetailContentProps> = ({ o
 
   return (
     <Layout>
-      <div className='max-w-5xl mx-auto my-8 bg-gradient-to-br from-white to-gray-50 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 w-full'>
+      <div className='fixed inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 -z-10' />
+      <div className='max-w-5xl mx-auto my-8 relative z-10 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 w-full bg-white'>
         <button
           onClick={() => onBack(rentalId)}
           className='flex items-center gap-3 text-base text-gray-600 hover:text-purple-600 mb-4 transition-colors duration-200'

@@ -8,18 +8,12 @@ interface ProfileSidebarProps {
   activeTab: string
 }
 
-const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
+const AdminSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   const navigate = useNavigate()
   const { logout } = useAuth()
 
   const menuItems = [
-    { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_STAFF },
-    { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.STAFF_REQUESTS },
-    { id: 'contract-drafts', label: 'Contract Drafts', icon: Calendar, path: path.STAFF_CONTRACT_DRAFTS },
-    { id: 'deliveries', label: 'Delivery Tracking', icon: Truck, path: path.STAFF_DELIVERIES },
-    { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.STAFF_REPORTS },
-    { id: 'robot-group', label: 'Robot Groups', icon: Group, path: path.STAFF_ROBOT_GROUP },
-    { id: 'account', label: 'Account', icon: User, path: path.STAFF_ACCOUNT },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_ADMIN },
     { id: 'logout', label: 'Logout', icon: LogOut, path: undefined }
   ]
 
@@ -54,9 +48,8 @@ const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
               <button
                 key={item.id}
                 onClick={() => navigate(item.path!)}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors duration-200 ${
-                  isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
-                }`}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors duration-200 ${isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+                  }`}
               >
                 <div className='flex items-center space-x-3'>
                   <Icon size={20} className='shrink-0' />
@@ -72,4 +65,4 @@ const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   )
 }
 
-export default StaffSidebar
+export default AdminSidebar

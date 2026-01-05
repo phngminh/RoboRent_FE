@@ -142,13 +142,13 @@ const RobotCarousel = () => {
   }
 
   return (
-    <div className='relative bg-white py-20 px-6 overflow-hidden'>
+    <div className='relative bg-gray-900 py-20 px-6 overflow-hidden'>
       <div className='relative max-w-8xl mx-auto text-center -mt-8'>
-        <p className='inline-block text-lg font-medium text-gray-600 tracking-wide mb-4 border border-gray-500 rounded-full px-4 py-1 bg-white' data-aos='fade-down'>
+        <p className='inline-block text-lg font-medium text-emerald-400 tracking-wide mb-4 border border-emerald-500 rounded-full px-4 py-1 bg-gray-800' data-aos='fade-down'>
           OUR SERVICES
         </p>
-        <h1 className='text-[2.5rem] font-bold text-blue-900 mb-12' data-aos='fade-up'>
-          Our <span className='text-teal-500'> featured </span>robots, built with quality you can rely on
+        <h1 className='text-[2.5rem] font-bold text-emerald-400 mb-12' data-aos='fade-up'>
+          Our <span className='text-emerald-300'> featured </span>robots, built with quality you can rely on
         </h1>
 
         <div className='relative w-full overflow-hidden' data-aos='fade-left'>
@@ -164,8 +164,8 @@ const RobotCarousel = () => {
                 className='flex-shrink-0 px-3'
                 style={{ width: `${100 / 3.6}%` }}
               >
-                <div className='bg-white overflow-hidden rounded-lg shadow-sm'>
-                  <div className='relative h-96 bg-gray-100'>
+                <div className='bg-gray-800 overflow-hidden rounded-lg shadow-sm'>
+                  <div className='relative h-96 bg-gray-700'>
                     <img
                       src={robot.image || '/placeholder.svg'}
                       alt={robot.typeName}
@@ -176,7 +176,7 @@ const RobotCarousel = () => {
                       }}
                     />
                     <div className='absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent' />
-                    <div className='absolute bottom-4 left-4 right-4 text-left text-white'>
+                    <div className='absolute bottom-4 left-4 right-4 text-left text-gray-300'>
                       <h3 className='text-2xl font-bold mb-2 drop-shadow-lg'>
                         {robot.typeName}
                       </h3>
@@ -195,7 +195,7 @@ const RobotCarousel = () => {
 
           <button
             onClick={goToPrevious}
-            className='absolute left-4 top-1/2 transform -translate-y-1/2 text-white p-3 hover:bg-black/20 transition-all duration-300 z-10'
+            className='absolute left-4 top-1/2 transform -translate-y-1/2 text-emerald-300 p-3 hover:bg-black/20 transition-all duration-300 z-10'
             disabled={isTransitioning}
           >
             <ChevronLeft size={24} />
@@ -203,7 +203,7 @@ const RobotCarousel = () => {
 
           <button
             onClick={goToNext}
-            className='absolute right-4 top-1/2 transform -translate-y-1/2 text-white p-3 hover:bg-black/20 transition-all duration-300 z-10'
+            className='absolute right-4 top-1/2 transform -translate-y-1/2 text-emerald-300 p-3 hover:bg-black/20 transition-all duration-300 z-10'
             disabled={isTransitioning}
           >
             <ChevronRight size={24} />
@@ -216,7 +216,7 @@ const RobotCarousel = () => {
                 key={index}
                 onClick={() => goToSlide(index)}
                 className={`h-2 rounded-full transition-all duration-300 ${
-                  currentIndex === index ? 'w-8 bg-emerald-500' : 'w-2 bg-gray-300'
+                  currentIndex === index ? 'w-8 bg-emerald-500' : 'w-2 bg-gray-600'
                 }`}
                 aria-label={`Go to slide ${index + 1}`}
               />

@@ -18,7 +18,7 @@ const Footer = () => {
           </div>
 
           <div className='ml-28'>
-            <h4 className='text-white font-semibold mb-4 font-orbitron'>Company</h4>
+            <h4 className='text-white font-semibold mb-4 font-orbitron'>Website</h4>
             <ul className='space-y-3 text-sm'>
               <li>
                 <Link to='/' className='hover:text-white transition-colors'>Home</Link>
@@ -83,7 +83,6 @@ const Footer = () => {
           <div className='flex items-center space-x-6 mt-3 sm:mt-0'>
             <a href='#' className='text-gray-400 hover:text-white transition-colors'>Privacy Policy</a>
             <a href='#' className='text-gray-400 hover:text-white transition-colors'>Terms of Service</a>
-            <a href='#' className='text-gray-400 hover:text-white transition-colors'>Security</a>
           </div>
         </div>
       </div>
