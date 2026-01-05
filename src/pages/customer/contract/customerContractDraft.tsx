@@ -264,14 +264,14 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
             <Download size={16} className='mr-2' />
             Download as PDF
           </Button>
-          <Button onClick={handleDownloadWord}
+          {/* <Button onClick={handleDownloadWord}
             variant='outline'
             size='lg'
             className='px-3 py-2'
           >
             <Download size={16} className='mr-2' />
             Download as Word
-          </Button>
+          </Button> */}
         </div>
       </div>
 
