@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Calendar, Monitor, Sparkles, X, Zap } from 'lucide-react'
 import HowItWorks from './howItWorks'
-import RobotCarousel from './robotCarousel'
 import emailImg from  '../../../assets/email.png'
 import loginImg from  '../../../assets/login_img.png'
 import Layout from '../../../components/layout'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
 import OurProblems from './ourProblems'
+import PackageDisplay from '../product/packageSection'
 
 export default function Home() {
   const { user } = useAuth()
@@ -43,7 +43,7 @@ export default function Home() {
           <div className='min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 p-8'>
             <div className='max-w-6xl mx-auto mt-4'>
               <div className='mb-6' data-aos='fade-down'>
-                <p className='inline-block text-lg font-medium text-emerald-400 tracking-wide mb-4 border border-emerald-500 rounded-full px-4 py-1 bg-gray-800'>
+                <p className='inline-block text-lg font-medium text-emerald-200 tracking-wide mb-4 border border-emerald-500 rounded-full px-4 py-1 bg-gray-800'>
                   WHY CHOOSE US
                 </p>
                 <h1 className='text-[2.5rem] font-bold text-emerald-300'>
@@ -129,8 +129,8 @@ export default function Home() {
           </div>
         </section>
 
-        <section id='our-products' className='min-h-screen w-full'>
-          <RobotCarousel />
+        <section id='our-products' className='w-full'>
+          <PackageDisplay />
         </section>
 
         <section id='about-us' className='min-h-screen w-full overflow-hidden'>
