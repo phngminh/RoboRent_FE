@@ -1,8 +1,14 @@
 import { DollarSign, Phone, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
+import Layout from '../../../components/layout'
+import path from '../../../constants/path'
+import { useLocation } from 'react-router-dom'
 
 const OurProblems = () => {
   const [activeTab, setActiveTab] = useState('platform')
+  const location = useLocation()
+  const isAboutUsPage = location.pathname === path.aboutUs
+
   const tabs = [
     {
       id: 'platform',
@@ -45,7 +51,7 @@ const OurProblems = () => {
     }
   ]
 
-  return (
+  const content = (
     <div className='relative bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 px-6 overflow-hidden'>
       <div className='max-w-7xl mx-auto p-8 py-10 mt-4'>
         <div className='mb-6 text-center' data-aos='fade-down'>
@@ -127,13 +133,19 @@ const OurProblems = () => {
             <img
               src={currentTab?.img}
               alt={currentTab?.label}
-              className='w-full h-full object-cover rounded-3xl'
+              className='w-full h-full object-cover rounded-3xl transition-opacity duration-300'
             />
           </div>
         </div>
       </div>
     </div>
   )
+
+  if (isAboutUsPage) {
+    return <Layout>{content}</Layout>
+  }
+
+  return content
 }
 
 export default OurProblems

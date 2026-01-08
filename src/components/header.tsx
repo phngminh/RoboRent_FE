@@ -17,6 +17,12 @@ const roleRedirectMap: Record<string, string> = {
   admin: path.BASE_ADMIN,
 }
 
+const sectionToPath: Record<string, string> = {
+  home: path.home,
+  'our-services': path.products,
+  'about-us': path.aboutUs,
+}
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -27,7 +33,11 @@ const Header = () => {
   const [currentSection, setCurrentSection] = useState('home')
   const [, setUnreadCount] = useState(0)
 
-  const isTransparentHeaderPage = location.pathname === path.home || location.pathname === path.create_request
+  const isTransparentHeaderPage =
+    location.pathname === path.home ||
+    location.pathname === path.create_request ||
+    location.pathname === path.aboutUs ||
+    location.pathname === path.products
   const isDashboardPage = Object.values(roleRedirectMap).some(basePath => location.pathname.startsWith(basePath))
   const showNav = !isDashboardPage
 
@@ -69,7 +79,7 @@ const Header = () => {
       return () => window.removeEventListener('hashchange', handleHashChange)
     } else if (showNav) {
       if (location.pathname === path.products) {
-        setCurrentSection('our-products')
+        setCurrentSection('our-services')
       } else if (location.pathname === path.aboutUs) {
         setCurrentSection('about-us')
       } else {
@@ -187,6 +197,19 @@ const Header = () => {
     </Link>
   )
 
+  const handleNavClick = (e: React.MouseEvent, sectionId: string) => {
+    e.preventDefault()
+    if (location.pathname === path.home) {
+      scrollToSection(sectionId)
+    } else {
+      const targetPath = sectionToPath[sectionId] || path.home
+      navigate(targetPath)
+    }
+    if (isMenuOpen) {
+      setIsMenuOpen(false)
+    }
+  }
+
   return (
     <>
       <header
@@ -213,42 +236,21 @@ const Header = () => {
                 <nav className='hidden md:flex justify-center space-x-8 tracking-wide text-lg'>
                   <a
                     href='#home'
-                    onClick={(e) => {
-                      e.preventDefault()
-                      if (location.pathname === path.home) {
-                        scrollToSection('home')
-                      } else {
-                        navigate(path.home)
-                      }
-                    }}
+                    onClick={(e) => handleNavClick(e, 'home')}
                     className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
                     HOME
                   </a>
                   <a
-                    href='#our-products'
-                    onClick={(e) => {
-                      e.preventDefault()
-                      if (location.pathname === path.home) {
-                        scrollToSection('our-products')
-                      } else {
-                        navigate(path.products)
-                      }
-                    }}
+                    href='#our-services'
+                    onClick={(e) => handleNavClick(e, 'our-services')}
                     className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
                     SERVICES
                   </a>
                   <a
                     href='#about-us'
-                    onClick={(e) => {
-                      e.preventDefault()
-                      if (location.pathname === path.home) {
-                        scrollToSection('about-us')
-                      } else {
-                        navigate(path.aboutUs)
-                      }
-                    }}
+                    onClick={(e) => handleNavClick(e, 'about-us')}
                     className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
                     ABOUT US
@@ -303,47 +305,23 @@ const Header = () => {
               <nav className='px-4 py-4 space-y-2'>
                 <a
                   href='#home'
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (location.pathname === path.home) {
-                      scrollToSection('home')
-                    } else {
-                      navigate(path.home)
-                    }
-                    setIsMenuOpen(false)
-                  }}
+                  onClick={(e) => handleNavClick(e, 'home')}
                   className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'home' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}
                 >
                   Home
                 </a>
                 <a
-                  href='#our-products'
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (location.pathname === path.home) {
-                      scrollToSection('our-products')
-                    } else {
-                      navigate(path.products)
-                    }
-                    setIsMenuOpen(false)
-                  }}
-                  className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'our-products' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
+                  href='#our-services'
+                  onClick={(e) => handleNavClick(e, 'our-services')}
+                  className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'our-services' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}
                 >
                   Products
                 </a>
                 <a
                   href='#about-us'
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (location.pathname === path.home) {
-                      scrollToSection('about-us')
-                    } else {
-                      navigate(path.aboutUs)
-                    }
-                    setIsMenuOpen(false)
-                  }}
+                  onClick={(e) => handleNavClick(e, 'about-us')}
                   className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'about-us' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}
                 >

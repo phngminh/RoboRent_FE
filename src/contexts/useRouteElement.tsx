@@ -46,6 +46,8 @@ import AdminProfile from '../pages/admin/profile'
 import StaffDashboardContent from '../pages/staff/dashboard'
 import ManagerDashboardContent from '../pages/manager/dashboard'
 import AdminDashboardContent from '../pages/admin/dashboard'
+import PackageDisplay from '../pages/home/product/packageSection'
+import OurProblems from '../pages/home/homePage/ourProblems'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -81,6 +83,8 @@ export default function useRouteElements() {
         }
       ]
     },
+    { path: path.products, element: <PackageDisplay /> },
+    { path: path.aboutUs, element: <OurProblems /> },
     { path: path.callback, element: <AuthCallback /> },
     //================ Customer routes ================
     {
