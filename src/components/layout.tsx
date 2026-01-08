@@ -51,6 +51,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     api?.scrollTo(index)
   }
 
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
   return (
     <>
       <Header />
@@ -81,7 +88,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <p className='text-xl md:text-1xl lg:text-2xl mb-8 opacity-90 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300'>
                       {slide.description}
                     </p>
-                    <button className='bg-white text-gray-900 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500'>
+                    <button 
+                      className='bg-white text-gray-900 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500'
+                      onClick={(e) => {
+                        e.preventDefault()
+                        scrollToSection('home')
+                      }}
+                    >
                       Learn More
                     </button>
                   </div>

@@ -1,6 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, CreditCard, ChevronRight, User,ScanFace, ChartColumn  } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, ChevronRight, User, ScanFace, ChartColumn, LogOut } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 import path from '../../constants/path'
 
 interface ProfileSidebarProps {
@@ -9,6 +10,7 @@ interface ProfileSidebarProps {
 
 const CustomerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   const navigate = useNavigate()
+  const { logout } = useAuth()
 
   const menuItems = [
     { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.CUSTOMER_DASHBOARD },
@@ -16,8 +18,13 @@ const CustomerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
     { id: 'transactions', label: 'Transactions', icon: CreditCard, path: path.CUSTOMER_TRANSACTIONS },
     { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.CUSTOMER_REPORTS },
     { id: 'account', label: 'Account', icon: User, path: path.CUSTOMER_ACCOUNT },
-    { id: 'face-profile', label: 'Face Profile', icon:ScanFace, path: path.FACE_PROFILE }
+    { id: 'face-profile', label: 'Face Profile', icon: ScanFace, path: path.FACE_PROFILE },
+    { id: 'logout', label: 'Logout', icon: LogOut, path: undefined }
   ]
+
+  const handleLogout = () => {
+    logout()
+  }
 
   return (
     <div className='w-64 bg-white shadow-lg h-full'>
@@ -25,14 +32,22 @@ const CustomerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
         <nav className='space-y-2'>
           {menuItems.map((item) => {
             const Icon = item.icon
-            const isActive = activeTab === item.id
+            const isActive = activeTab === item.id && item.id !== 'logout'
             
             return (
               <button
                 key={item.id}
-                onClick={() => navigate(item.path)}
+                onClick={() => {
+                  if (item.id === 'logout') {
+                    handleLogout()
+                  } else {
+                    navigate(item.path!)
+                  }
+                }}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors duration-200 ${
-                  isActive
+                  item.id === 'logout'
+                    ? 'text-red-500 hover:bg-red-50 hover:text-red-600'
+                    : isActive
                     ? 'bg-gray-100 text-gray-800'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                 }`}

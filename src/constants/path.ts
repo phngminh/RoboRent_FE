@@ -1,7 +1,7 @@
 const path = {
   //============= Public ==============
   home: '/',
-  products: '/our-products',
+  products: '/our-services',
   aboutUs: '/about-us',
   create_request: '/create-request',
   create_request_detail: '/create-request-detail',

@@ -61,8 +61,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
       description: '',
       evidencePath: ''
     })
-  const [detailsMap, setDetailsMap] = useState<Record<number, boolean>>({});
-
+  const [detailsMap, setDetailsMap] = useState<Record<number, boolean>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const pageSize = 5
@@ -284,7 +283,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
       )
     }
 
-    filtered.sort((a, b) => a.id - b.id)
+    filtered.sort((a, b) => b.id - a.id)
     setFilteredRentals(filtered)
     setCurrentPage(1)
   }
@@ -355,25 +354,23 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
   const fetchDetailsForRentals = async () => {
     for (const rental of allRentals.filter(r => detailsMap[r.id!] === undefined)) {
       try {
-        const res = await getRentalDetailsByRentalIdAsync(rental.id);
-        const hasDetails = res.success && res.data && res.data.length > 0;
+        const res = await getRentalDetailsByRentalIdAsync(rental.id)
+        const hasDetails = res.success && res.data && res.data.length > 0
 
         setDetailsMap(prev => ({
           ...prev,
           [rental.id]: hasDetails
-        }));
+        }))
       } catch (error) {
-        console.error("Error fetching rental detail:", rental.id, error);
-        setDetailsMap(prev => ({ ...prev, [rental.id]: false }));
+        console.error('Error fetching rental detail:', rental.id, error)
+        setDetailsMap(prev => ({ ...prev, [rental.id]: false }))
       }
     }
   }
 
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
-      {/* QUICK FILTER BUTTONS */}
-      <div className="flex justify-center gap-3 mb-4">
-        {/* All */}
+      <div className='flex justify-center gap-3 mb-4'>
         <Button
           variant={appliedStatus === 'All Status' ? 'default' : 'outline'}
           onClick={() => {
@@ -388,44 +385,40 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
           All
         </Button>
 
-        {/* Pending */}
         <Button
           variant={appliedStatus === 'Pending' ? 'default' : 'outline'}
           onClick={() => {
             setStatusFilter('Pending')
             setAppliedStatus('Pending')
           }}
-          className="bg-yellow-500/20 text-yellow-800 hover:bg-yellow-500/30"
+          className='bg-yellow-500/20 text-yellow-800 hover:bg-yellow-500/30'
         >
           Pending
         </Button>
 
-        {/* Completed */}
         <Button
           variant={appliedStatus === 'Completed' ? 'default' : 'outline'}
           onClick={() => {
             setStatusFilter('Completed')
             setAppliedStatus('Completed')
           }}
-          className="bg-blue-500/20 text-blue-800 hover:bg-blue-500/30"
+          className='bg-blue-500/20 text-blue-800 hover:bg-blue-500/30'
         >
           Completed
         </Button>
 
-        {/* NEW: Canceled */}
         <Button
           variant={appliedStatus === 'Canceled' ? 'default' : 'outline'}
           onClick={() => {
             setStatusFilter('Canceled')
             setAppliedStatus('Canceled')
           }}
-          className="bg-red-500/20 text-red-800 hover:bg-red-500/30"
+          className='bg-red-500/20 text-red-800 hover:bg-red-500/30'
         >
           Canceled
         </Button>
       </div>
 
-      {/* FILTER CARD */}
       <Card className='rounded-xl shadow-sm border border-gray-100'>
         <CardHeader className='pb-0'>
           <h2 className='text-lg font-semibold text-gray-800 text-center mb-3'>Filter Requests</h2>
@@ -434,7 +427,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
         <CardContent className='p-6 pt-0'>
           <div className='flex flex-col gap-4 md:flex-row md:items-end md:gap-4'>
             <div className='flex flex-1 md:gap-4'>
-              {/* Status Filter */}
               <div className='w-full md:w-40'>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -451,19 +443,16 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                 </Select>
               </div>
 
-              {/* Date From */}
               <div className='w-full md:w-40'>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</label>
                 <Input type='date' value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
               </div>
 
-              {/* Date To */}
               <div className='w-full md:w-40'>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</label>
                 <Input type='date' value={dateTo} onChange={e => setDateTo(e.target.value)} />
               </div>
 
-              {/* Search */}
               <div className='flex-1'>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>Search Event</label>
                 <div className='relative'>
@@ -492,7 +481,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
         </CardContent>
       </Card>
 
-      {/* MAIN TABLE */}
       <Card className='rounded-xl shadow-sm border border-gray-300 relative'>
         <CardHeader className='p-6 border-b border-gray-100 relative'>
           <h2 className='text-xl font-semibold text-gray-800 text-center'>
@@ -517,7 +505,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                   <TableHead className='text-center whitespace-nowrap'>Event Name</TableHead>
                   <TableHead className='text-center whitespace-nowrap'>Address</TableHead>
                   <TableHead className='text-center whitespace-nowrap'>Status</TableHead>
-                  <TableHead className='text-center whitespace-nowrap'>Event Activity</TableHead>
                   <TableHead className='text-center whitespace-nowrap'>Activity Type</TableHead>
                   <TableHead className='text-center whitespace-nowrap'>Event Date</TableHead>
                   <TableHead className='text-center whitespace-nowrap'>Created Date</TableHead>
@@ -579,7 +566,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                             {request.status}
                           </span>
                         </TableCell>
-                        <TableCell className='text-center whitespace-nowrap'>{request.eventActivityName}</TableCell>
                         <TableCell className='text-center whitespace-nowrap'>{request.activityTypeName}</TableCell>
                         <TableCell className='text-center whitespace-nowrap'>{eventDate}</TableCell>
                         <TableCell className='text-center whitespace-nowrap'>{createdDate}</TableCell>
@@ -587,8 +573,8 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                           <div className='flex justify-center space-x-3'>
                             <button
                               onClick={() => {
-                                if (request.status === "Draft" || request.status === "Canceled") {
-                                  onView(request.id)            // Canceled → onView
+                                if (request.status === 'Draft' || request.status === 'Canceled') {
+                                  onView(request.id)
                                 } else {
                                   onDetaild(request.id)
                                 }
@@ -597,11 +583,11 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                             >
                               <Eye size={14} />
                               <span>
-                                {request.status === "Draft" || request.status === "Canceled" ? "View" : "Detail"}
+                                {request.status === 'Draft' || request.status === 'Canceled' ? 'View' : 'Detail'}
                               </span>
                             </button>
 
-                            {request.status === "Draft" && (
+                            {request.status === 'Draft' && (
                               <button
                                 onClick={() => handleCancelRental(request.id)}
                                 className='flex items-center space-x-1 bg-red-100 text-red-800 hover:bg-red-200 px-2 py-1 rounded'
@@ -610,7 +596,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                                 <span>Cancel</span>
                               </button>
                             )}
-                            {request.status === "Canceled" && (
+                            {request.status === 'Canceled' && (
                               <button
                                 onClick={() => handleDeleteRental(request.id)}
                                 className='flex items-center space-x-1 bg-gray-100 text-gray-800 hover:bg-gray-200 px-2 py-1 rounded'
@@ -630,9 +616,9 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                               </button>
                             )}
 
-                            {request.status !== "Draft" &&
-                            request.status !== "Pending" &&
-                            request.status !== "Canceled" && (     // 🔥 hide when Canceled
+                            {request.status !== 'Draft' &&
+                            request.status !== 'Pending' &&
+                            request.status !== 'Canceled' && (
                               <button
                                 onClick={() =>
                                   navigate(path.CUSTOMER_CHAT.replace(':rentalId', String(request.id)))
@@ -644,8 +630,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                               </button>
                             )}
 
-                            {/* SEND BUTTON (only show if Draft AND has details) */}
-                            {request.status === "Draft" && detailsMap[request.id] === true && (
+                            {request.status === 'Draft' && detailsMap[request.id] === true && (
                               <button
                                 onClick={() => handleSendRequest(request.id)}
                                 className='flex items-center space-x-1 bg-green-100 text-green-800 hover:bg-green-200 px-2 py-1 rounded'
@@ -655,8 +640,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                               </button>
                             )}
 
-                            {/* Disabled send button when no details */}
-                            {request.status === "Draft" && detailsMap[request.id] === false && (
+                            {request.status === 'Draft' && detailsMap[request.id] === false && (
                               <button
                                 disabled
                                 className='flex items-center space-x-1 bg-gray-200 text-gray-500 px-2 py-1 rounded cursor-not-allowed'
@@ -696,7 +680,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
             </Table>
           </div>
 
-          {/* PAGINATION */}
           <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
             <div className='flex space-x-2'>
               <Button
