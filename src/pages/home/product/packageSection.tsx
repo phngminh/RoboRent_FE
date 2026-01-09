@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react'
 import { getActivityTypeByEAIdAsync } from '../../../apis/activitytype.api'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Check, X, ChevronUp, ChevronDown, Coins } from 'lucide-react'
+import { Check, X, ChevronUp, ChevronDown, Coins, Dot, Camera } from 'lucide-react'
 import path from '../../../constants/path'
 import Layout from '../../../components/layout'
 import { useAuth } from '../../../contexts/AuthContext'
 import loginImg from  '../../../assets/login_img.png'
+import BrandActivationRobot from '../../../assets/Brand_Activation_Robot.jpg'
+import HumanoidPerformanceRobot from '../../../assets/Humanoid_Performance_Robot.jpg'
+import HostMCRobot from '../../../assets/Host_MC_Robot.jpg'
+import PromotionalRobot from '../../../assets/Promotional_Robot.jpg'
 
 interface ActivityType {
   id: number
@@ -31,6 +35,13 @@ interface Feature {
   included: boolean
 }
 
+const robotImageMap: Record<string, string> = {
+  'Reception Robot': BrandActivationRobot,
+  'Performance Robot': HumanoidPerformanceRobot,
+  'Host Robot': HostMCRobot,
+  'Promotion Robot': PromotionalRobot,
+}
+
 const PackageDisplay = () => {
   const { user } = useAuth()
   const [packages, setPackages] = useState<ActivityType[]>([])
@@ -38,6 +49,8 @@ const PackageDisplay = () => {
   const [selectedRoboType, setSelectedRoboType] = useState<string>('')
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [requireLoginModal, setRequireLoginModal] = useState(false)
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+  const [imageError, setImageError] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const isProductPage = location.pathname === path.products
@@ -54,6 +67,20 @@ const PackageDisplay = () => {
   useEffect(() => {
     fetchPackages()
   }, [])
+
+  useEffect(() => {
+    Object.values(robotImageMap).forEach((imgSrc) => {
+      const img = new Image()
+      img.src = imgSrc
+      img.onerror = () => console.warn(`Preload failed for: ${imgSrc}`)
+    })
+  }, [])
+
+  const handleRoboSelect = (typeName: string) => {
+    setSelectedRoboType(typeName)
+    setIsDescriptionExpanded(false)
+    setImageError(false)
+  }
 
   const getRobotTypeCountText = (pkg: ActivityType) => {
     const count = pkg.roboTypes?.length || 0
@@ -104,12 +131,18 @@ const PackageDisplay = () => {
 
       setTimeout(() => {
         setSelectedPackage(pkg)
-        setSelectedRoboType(pkg.roboTypes?.[0]?.typeName || '')
+        const firstRoboType = pkg.roboTypes?.[0]?.typeName || ''
+        setSelectedRoboType(firstRoboType)
+        setIsDescriptionExpanded(false)
+        setImageError(false)
         setIsDetailOpen(true)
       }, 300)
     } else {
       setSelectedPackage(pkg)
-      setSelectedRoboType(pkg.roboTypes?.[0]?.typeName || '')
+      const firstRoboType = pkg.roboTypes?.[0]?.typeName || ''
+      setSelectedRoboType(firstRoboType)
+      setIsDescriptionExpanded(false)
+      setImageError(false)
       setIsDetailOpen(true)
     }
   }
@@ -123,6 +156,10 @@ const PackageDisplay = () => {
     }
 
     navigate('/create-request')
+  }
+
+  const getRobotImagePath = (typeName: string): string => {
+    return robotImageMap[typeName] || ''
   }
 
   const buttonText = isProductPage ? 'View Details' : 'Explore More'
@@ -306,21 +343,145 @@ const PackageDisplay = () => {
                               ? 'bg-white text-gray-900 shadow-md' 
                               : 'text-gray-300 hover:text-white'
                           }`}
-                          onClick={() => setSelectedRoboType(roboType.typeName)}
+                          onClick={() => {
+                            handleRoboSelect(roboType.typeName)
+                          }}
                         >
                           {roboType.typeName}
                         </button>
                       ))}
                     </div>
 
-                    {selectedPackage.roboTypes && selectedRoboType && (
-                      <div className='mt-4 p-4 bg-white/5 rounded-xl'>
-                        <h4 className='text-white font-semibold mb-2'>{selectedRoboType}</h4>
-                        <p className='text-gray-200 text-sm leading-relaxed'>
-                          {selectedPackage.roboTypes.find(rt => rt.typeName === selectedRoboType)?.description || 'No description available.'}
-                        </p>
-                      </div>
-                    )}
+                    {selectedPackage.roboTypes && selectedRoboType && (() => {
+                      const robo = selectedPackage.roboTypes.find(rt => rt.typeName === selectedRoboType)
+                      if (!robo) return null
+
+                      const description = robo.description || 'No description available.'
+                      const truncatedDescription = description.length > 200 
+                        ? description.substring(0, 200) + '...' 
+                        : description
+                      
+                      const imgSrc = getRobotImagePath(robo.typeName)
+                      const hasImage = !!imgSrc && !imageError
+
+                      return (
+                        <div className='mt-6 bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-md rounded-2xl overflow-hidden border border-white/20 shadow-2xl'>
+                          <div className={`grid md:grid-cols-5 gap-6 items-stretch transition-all duration-300 ${isDescriptionExpanded ? 'min-h-[400px]' : 'h-[300px]'}`}>
+                            <div className='md:col-span-2 relative overflow-hidden group h-full min-h-[300px]'>
+                              <div className='absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-blue-500/20 z-10'></div>
+                              {hasImage ? (
+                                <img 
+                                  src={imgSrc}
+                                  alt={robo.typeName}
+                                  className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-110'
+                                  onError={() => setImageError(true)}
+                                  onLoad={() => setImageError(false)}
+                                />
+                              ) : (
+                                <div className='w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800'>
+                                  <Camera className='w-24 h-24 text-slate-500' />
+                                </div>
+                              )}
+                              <div className='absolute bottom-4 left-4 right-4 z-20'>
+                                <div className='bg-black/50 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20'>
+                                  <h3 className='text-white font-bold text-lg'>{robo.typeName}</h3>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className='md:col-span-3 p-6 flex flex-col justify-center h-full'>
+                              <div className='flex flex-col items-start gap-2'>
+                                <div className='flex items-center justify-center gap-2 ml-3'>
+                                  <div className='h-1 w-12 bg-gradient-to-r from-emerald-400 to-blue-400 rounded-full'></div>
+                                  <h4 className='text-emerald-300 font-semibold text-sm uppercase tracking-wide'>
+                                    Description
+                                  </h4>
+                                </div>
+                                <div className='relative flex-1 flex flex-col justify-center items-center text-center w-full'>
+                                  <p className='text-gray-200 leading-relaxed text-sm max-w-prose'>
+                                    {isDescriptionExpanded ? description : truncatedDescription}
+                                  </p>
+                                  
+                                  {description.length > 200 && (
+                                    <div className='flex justify-center mt-3'>
+                                      <button
+                                        onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                                        className='flex items-center gap-2 text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-colors group'
+                                      >
+                                        <span>{isDescriptionExpanded ? 'Show Less' : 'Show More'}</span>
+                                        {isDescriptionExpanded ? (
+                                          <ChevronUp className='w-4 h-4 group-hover:-translate-y-0.5 transition-transform' />
+                                        ) : (
+                                          <ChevronDown className='w-4 h-4 group-hover:translate-y-0.5 transition-transform' />
+                                        )}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {(() => {
+                      const robo = selectedPackage.roboTypes.find(rt => rt.typeName === selectedRoboType)
+
+                      if (!robo?.robotAbilityResponses?.length) return null
+
+                      const groupMap = robo.robotAbilityResponses.reduce(
+                        (acc: any, item: any) => {
+                          acc[item.abilityGroup] ??= []
+                          acc[item.abilityGroup].push(item)
+                          return acc
+                        },
+                        {}
+                      )
+
+                      return (
+                        <div className='mt-6 space-y-4'>
+                          <div className='flex items-center gap-3 mb-6'>
+                            <div className='h-1 w-12 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full'></div>
+                            <h4 className='text-white font-bold text-xl'>
+                              Robot Capabilities
+                            </h4>
+                          </div>
+
+                          <div className='grid sm:grid-cols-2 gap-4'>
+                            {Object.entries(groupMap).map(([group, items]: any) => (
+                              <div
+                                key={group}
+                                className='group bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10 hover:border-emerald-400/30 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10'
+                              >
+                                <div className='flex items-center gap-2 mb-4 pb-3 border-b border-white/10'>
+                                  <div className='w-2 h-2 rounded-full bg-gradient-to-r from-emerald-400 to-blue-400 animate-pulse'></div>
+                                  <h5 className='text-white font-semibold text-base'>
+                                    {group}
+                                  </h5>
+                                </div>
+
+                                <div className='flex flex-wrap gap-2'>
+                                  {items.map((item: any) => (
+                                    <span
+                                      key={item.id}
+                                      className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                                        text-xs font-medium bg-gradient-to-r from-emerald-500/10 to-blue-500/10 
+                                        text-emerald-300 border border-emerald-500/20
+                                        hover:border-emerald-400/40 hover:shadow-sm transition-all duration-200
+                                        group-hover:scale-105'
+                                    >
+                                      <Check size={12} className='text-emerald-400' />
+                                      {item.label}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </div>
                 </>
               )}
@@ -356,7 +517,7 @@ const PackageDisplay = () => {
             <p className='text-gray-300 mb-6 leading-relaxed text-base px-10'>
               Please login to your account to send rental requests for 
               <span className='font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent'> RoboRent</span>
-              . If you don’t have an account yet, please sign up and verify your biometric authentication first.
+              . If you don't have an account yet, please sign up and verify your biometric authentication first.
             </p>
           </div>
         </div>
