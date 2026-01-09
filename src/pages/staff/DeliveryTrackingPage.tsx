@@ -1,58 +1,57 @@
 // src/pages/staff/DeliveryTrackingPage.tsx
-import { useState, useEffect, useCallback } from 'react';
-import { 
-  Truck, Package, CheckCircle2, Clock, MapPin, Phone, User, 
+import { useState, useEffect } from 'react'
+import {
+  Truck, Package, CheckCircle2, Clock, MapPin, Phone, User,
   Calendar, ChevronRight, Search, RefreshCw,
   MessageSquare, X, ArrowRight,
   Building2, Timer, Bot, Send
-} from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { toast } from 'react-toastify';
-import Header from '../../components/header';
-import { 
-  getMyDeliveries, 
-  updateDeliveryStatus, 
+} from 'lucide-react'
+import { toast } from 'react-toastify'
+import Header from '../../components/header'
+import {
+  getMyDeliveries,
+  updateDeliveryStatus,
   updateDeliveryNotes,
-  completeRental // ✅ Đã thêm import
-} from '../../apis/delivery.api';
-import type { ActualDeliveryResponse, DeliveryStatus } from '../../types/delivery.types';
+  completeRental
+} from '../../apis/delivery.api'
+import type { ActualDeliveryResponse, DeliveryStatus, DeliveryType } from '../../types/delivery.types'
 
 // Status configuration with vibrant colors
-const STATUS_CONFIG: Record<DeliveryStatus, { 
-  color: string; 
-  bg: string; 
+const STATUS_CONFIG: Record<DeliveryStatus, {
+  color: string;
+  bg: string;
   border: string;
   gradient: string;
   icon: React.ReactNode;
   label: string;
 }> = {
-  Pending: { 
-    color: 'text-slate-600', 
-    bg: 'bg-slate-100', 
+  Pending: {
+    color: 'text-slate-600',
+    bg: 'bg-slate-100',
     border: 'border-slate-300',
     gradient: 'from-slate-400 to-slate-500',
     icon: <Clock className="w-4 h-4" />,
     label: 'Pending'
   },
-  Assigned: { 
-    color: 'text-violet-600', 
-    bg: 'bg-violet-100', 
+  Assigned: {
+    color: 'text-violet-600',
+    bg: 'bg-violet-100',
     border: 'border-violet-300',
     gradient: 'from-violet-400 to-violet-600',
     icon: <User className="w-4 h-4" />,
     label: 'Assigned'
   },
-  Delivering: { 
-    color: 'text-amber-600', 
-    bg: 'bg-amber-100', 
+  Delivering: {
+    color: 'text-amber-600',
+    bg: 'bg-amber-100',
     border: 'border-amber-300',
     gradient: 'from-amber-400 to-orange-500',
     icon: <Truck className="w-4 h-4" />,
     label: 'Delivering'
   },
-  Delivered: { 
-    color: 'text-emerald-600', 
-    bg: 'bg-emerald-100', 
+  Delivered: {
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-100',
     border: 'border-emerald-300',
     gradient: 'from-emerald-400 to-teal-500',
     icon: <Package className="w-4 h-4" />,
@@ -61,6 +60,13 @@ const STATUS_CONFIG: Record<DeliveryStatus, {
 };
 
 const STATUS_ORDER: DeliveryStatus[] = ['Pending', 'Assigned', 'Delivering', 'Delivered'];
+
+// DeliveryType configuration
+const TYPE_CONFIG: Record<DeliveryType, { label: string; color: string; bg: string; emoji: string }> = {
+  FirstOfDay: { label: 'First of Day', color: 'text-sky-700', bg: 'bg-sky-100', emoji: '🌅' },
+  MidDay: { label: 'Mid-Day', color: 'text-slate-600', bg: 'bg-slate-100', emoji: '☀️' },
+  LastOfDay: { label: 'Last of Day', color: 'text-indigo-700', bg: 'bg-indigo-100', emoji: '🌆' },
+};
 
 // Helper functions
 const getNextStatus = (current: DeliveryStatus): DeliveryStatus | null => {
@@ -132,7 +138,7 @@ const StatusUpdateModal: React.FC<{
                 <p className="text-white/80 text-sm">Transition to next step</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={onClose}
               className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
             >
@@ -242,7 +248,7 @@ const NotesModal: React.FC<{
                 <p className="text-white/80 text-sm">Record important details</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={onClose}
               className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
             >
@@ -306,26 +312,23 @@ const StatusStepper: React.FC<{ currentStatus: DeliveryStatus }> = ({ currentSta
             <div key={status} className="flex-1 flex flex-col items-center relative">
               {/* Connector Line */}
               {index > 0 && (
-                <div className={`absolute left-0 right-1/2 top-5 h-1 -translate-y-1/2 rounded-full transition-all duration-500 ${
-                  isCompleted || isCurrent ? `bg-gradient-to-r ${STATUS_CONFIG[STATUS_ORDER[index - 1]].gradient}` : 'bg-slate-200'
-                }`} style={{ right: '50%', left: '-50%' }} />
+                <div className={`absolute left-0 right-1/2 top-5 h-1 -translate-y-1/2 rounded-full transition-all duration-500 ${isCompleted || isCurrent ? `bg-gradient-to-r ${STATUS_CONFIG[STATUS_ORDER[index - 1]].gradient}` : 'bg-slate-200'
+                  }`} style={{ right: '50%', left: '-50%' }} />
               )}
-              
+
               {/* Status Node */}
-              <div className={`relative z-10 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                isCompleted 
-                  ? `bg-gradient-to-br ${config.gradient} text-white shadow-lg` 
-                  : isCurrent 
-                    ? `bg-gradient-to-br ${config.gradient} text-white shadow-xl ring-4 ring-offset-2 ${config.border} scale-110` 
+              <div className={`relative z-10 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${isCompleted
+                  ? `bg-gradient-to-br ${config.gradient} text-white shadow-lg`
+                  : isCurrent
+                    ? `bg-gradient-to-br ${config.gradient} text-white shadow-xl ring-4 ring-offset-2 ${config.border} scale-110`
                     : 'bg-slate-100 text-slate-400'
-              }`}>
+                }`}>
                 {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : config.icon}
               </div>
-              
+
               {/* Label */}
-              <span className={`mt-2 text-xs font-semibold transition-colors ${
-                isCurrent ? config.color : isCompleted ? 'text-slate-600' : 'text-slate-400'
-              }`}>
+              <span className={`mt-2 text-xs font-semibold transition-colors ${isCurrent ? config.color : isCompleted ? 'text-slate-600' : 'text-slate-400'
+                }`}>
                 {config.label}
               </span>
             </div>
@@ -349,37 +352,34 @@ const DeliveryCard: React.FC<{
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-4 rounded-2xl border-2 transition-all duration-300 group ${
-        isSelected 
-          ? `border-transparent bg-gradient-to-r ${config.gradient} text-white shadow-xl scale-[1.02]` 
+      className={`w-full text-left p-4 rounded-2xl border-2 transition-all duration-300 group ${isSelected
+          ? `border-transparent bg-gradient-to-r ${config.gradient} text-white shadow-xl scale-[1.02]`
           : 'border-slate-200 bg-white hover:border-violet-300 hover:shadow-lg'
-      }`}
+        }`}
     >
       <div className="flex items-start justify-between mb-3">
-        <div className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 ${
-          isSelected ? 'bg-white/20 text-white' : `${config.bg} ${config.color}`
-        }`}>
+        <div className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 ${isSelected ? 'bg-white/20 text-white' : `${config.bg} ${config.color}`
+          }`}>
           {config.icon}
           {delivery.status}
         </div>
         {isToday && (
-          <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${
-            isSelected ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'
-          }`}>
+          <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${isSelected ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'
+            }`}>
             TODAY
           </span>
         )}
       </div>
-      
+
       <h3 className={`font-bold text-lg mb-1 truncate ${isSelected ? 'text-white' : 'text-slate-800'}`}>
         {delivery.rentalInfo.eventName}
       </h3>
-      
+
       <div className={`flex items-center gap-2 text-sm mb-2 ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
         <MapPin className="w-4 h-4 flex-shrink-0" />
         <span className="truncate">{delivery.scheduleInfo.eventLocation}</span>
       </div>
-      
+
       <div className={`flex items-center gap-4 text-sm ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
         <div className="flex items-center gap-1.5">
           <Calendar className="w-4 h-4" />
@@ -403,7 +403,7 @@ const TimeComparison: React.FC<{
 }> = ({ label, scheduled, actual, icon }) => {
   const scheduledDate = scheduled ? new Date(scheduled) : null;
   const actualDate = actual ? new Date(actual) : null;
-  
+
   let comparison = null;
   if (scheduledDate && actualDate) {
     const diff = Math.round((actualDate.getTime() - scheduledDate.getTime()) / 60000);
@@ -447,7 +447,6 @@ const TimeComparison: React.FC<{
 
 // Main Dashboard Component
 export default function DeliveryTrackingPage() {
-  const { user } = useAuth();
   const [deliveries, setDeliveries] = useState<ActualDeliveryResponse[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -455,8 +454,7 @@ export default function DeliveryTrackingPage() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // ✅ NEW STATE: Loading state cho nút Complete
   const [isCompleting, setIsCompleting] = useState(false);
 
@@ -467,7 +465,7 @@ export default function DeliveryTrackingPage() {
     try {
       const data = await getMyDeliveries();
       setDeliveries(data);
-      
+
       // Auto-select first delivery if none selected
       if (!selectedId && data.length > 0) {
         setSelectedId(data[0].id);
@@ -486,7 +484,7 @@ export default function DeliveryTrackingPage() {
 
   // Filter deliveries
   const filteredDeliveries = deliveries.filter(d => {
-    const matchesSearch = 
+    const matchesSearch =
       d.rentalInfo.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.rentalInfo.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.scheduleInfo.eventLocation.toLowerCase().includes(searchQuery.toLowerCase());
@@ -495,17 +493,17 @@ export default function DeliveryTrackingPage() {
   });
 
   // Refresh handler
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await loadDeliveries();
-      toast.success('Deliveries refreshed');
-    } catch (error) {
-      toast.error('Failed to refresh');
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, []);
+  // const handleRefresh = useCallback(async () => {
+  //   setIsRefreshing(true);
+  //   try {
+  //     await loadDeliveries();
+  //     toast.success('Deliveries refreshed');
+  //   } catch (error) {
+  //     toast.error('Failed to refresh');
+  //   } finally {
+  //     setIsRefreshing(false);
+  //   }
+  // }, []);
 
   // Auto-refresh every 30 seconds ← bỏ luôn cái này
   // useEffect(() => {
@@ -522,12 +520,12 @@ export default function DeliveryTrackingPage() {
         status: newStatus,
         notes: notes || undefined
       });
-      
+
       // Update local state
-      setDeliveries(prev => 
+      setDeliveries(prev =>
         prev.map(d => d.id === selectedDelivery.id ? updated : d)
       );
-      
+
       setShowStatusModal(false);
       toast.success(`Status updated to ${newStatus}`);
     } catch (error: any) {
@@ -542,12 +540,12 @@ export default function DeliveryTrackingPage() {
 
     try {
       const updated = await updateDeliveryNotes(selectedDelivery.id, { notes });
-      
+
       // Update local state
       setDeliveries(prev =>
         prev.map(d => d.id === selectedDelivery.id ? updated : d)
       );
-      
+
       setShowNotesModal(false);
       toast.success('Notes saved successfully');
     } catch (error: any) {
@@ -567,9 +565,9 @@ export default function DeliveryTrackingPage() {
     setIsCompleting(true);
     try {
       await completeRental(selectedDelivery.rentalInfo.rentalId);
-      
+
       toast.success('Rental completed successfully! Payment link generated for customer.');
-      
+
       // Có thể reload list nếu cần, nhưng trạng thái delivery không đổi nên không bắt buộc
     } catch (error: any) {
       console.error('Failed to complete rental:', error);
@@ -648,11 +646,10 @@ export default function DeliveryTrackingPage() {
                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
                   <button
                     onClick={() => setStatusFilter('all')}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
-                      statusFilter === 'all' 
-                        ? 'bg-slate-800 text-white' 
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${statusFilter === 'all'
+                        ? 'bg-slate-800 text-white'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
+                      }`}
                   >
                     All ({deliveries.length})
                   </button>
@@ -663,11 +660,10 @@ export default function DeliveryTrackingPage() {
                       <button
                         key={status}
                         onClick={() => setStatusFilter(status)}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
-                          statusFilter === status 
-                            ? `bg-gradient-to-r ${config.gradient} text-white` 
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${statusFilter === status
+                            ? `bg-gradient-to-r ${config.gradient} text-white`
                             : `${config.bg} ${config.color} hover:opacity-80`
-                        }`}
+                          }`}
                       >
                         {config.icon}
                         {count}
@@ -694,7 +690,7 @@ export default function DeliveryTrackingPage() {
                   </div>
                 ) : (
                   filteredDeliveries.map((delivery, index) => (
-                    <div 
+                    <div
                       key={delivery.id}
                       className="animate-slide-up"
                       style={{ animationDelay: `${index * 50}ms` }}
@@ -728,6 +724,10 @@ export default function DeliveryTrackingPage() {
                           <span className="px-3 py-1 rounded-lg bg-white/20 text-sm">
                             ID: #{selectedDelivery.id}
                           </span>
+                          <span className="px-3 py-1 rounded-lg bg-white/20 text-sm flex items-center gap-1.5">
+                            <span>{TYPE_CONFIG[selectedDelivery.type].emoji}</span>
+                            {TYPE_CONFIG[selectedDelivery.type].label}
+                          </span>
                         </div>
                         <h2 className="text-3xl font-extrabold mb-2">{selectedDelivery.rentalInfo.eventName}</h2>
                         <div className="flex items-center gap-2 text-white/80">
@@ -735,10 +735,10 @@ export default function DeliveryTrackingPage() {
                           <span>{selectedDelivery.scheduleInfo.eventLocation}, {selectedDelivery.scheduleInfo.eventCity}</span>
                         </div>
                       </div>
-                      
+
                       {/* ✅ NÚT BẤM COMPLETE RENTAL VÀ CÁC NÚT KHÁC */}
                       <div className="flex gap-2">
-                        <button 
+                        <button
                           onClick={() => setShowNotesModal(true)}
                           className="px-5 py-3 rounded-xl bg-white/20 hover:bg-white/30 font-semibold flex items-center gap-2 transition-colors"
                         >
@@ -748,7 +748,7 @@ export default function DeliveryTrackingPage() {
 
                         {/* Update Status (Existing) */}
                         {getNextStatus(selectedDelivery.status) && (
-                          <button 
+                          <button
                             onClick={() => setShowStatusModal(true)}
                             className="px-5 py-3 rounded-xl bg-white text-slate-800 font-bold flex items-center gap-2 hover:bg-white/90 transition-colors shadow-lg"
                           >
@@ -759,24 +759,24 @@ export default function DeliveryTrackingPage() {
 
                         {/* ✅ NEW: Complete Rental Button - ULTRA PREMIUM VERSION */}
                         {selectedDelivery.status === 'Delivered' && (
-                          <button 
+                          <button
                             onClick={handleCompleteRental}
                             disabled={isCompleting}
                             className="relative px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500 text-slate-900 font-extrabold flex items-center gap-2 hover:from-amber-300 hover:via-yellow-400 hover:to-orange-400 transition-all duration-300 shadow-2xl shadow-amber-500/50 disabled:opacity-50 ring-4 ring-amber-300/30 hover:ring-amber-400/50 hover:scale-105 group overflow-hidden"
                           >
                             {/* Shine effect overlay */}
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                            
+
                             {/* Icon with animation */}
                             {isCompleting ? (
                               <RefreshCw className="w-5 h-5 animate-spin relative z-10" />
                             ) : (
                               <CheckCircle2 className="w-5 h-5 relative z-10 group-hover:rotate-12 transition-transform" />
                             )}
-                            
+
                             {/* Text */}
                             <span className="relative z-10">Complete Rental</span>
-                            
+
                             {/* Sparkle decorations */}
                             <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity animate-pulse" />
                             <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity animate-pulse delay-75" />
@@ -873,7 +873,7 @@ export default function DeliveryTrackingPage() {
                           <p className="text-slate-500">Event Organizer</p>
                         </div>
                       </div>
-                      <a 
+                      <a
                         href={`tel:${selectedDelivery.rentalInfo.phoneNumber}`}
                         className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 hover:shadow-lg transition-shadow group"
                       >

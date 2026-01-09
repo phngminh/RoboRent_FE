@@ -34,6 +34,7 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
   const [managers, setManagers] = useState<AccountResponse[]>([])
   const [chosenTemplate, setChosenTemplate] = useState<ContractTemplateResponse | null>(null)
   const [chosenRental, setChosenRental] = useState<RentalRequestResponse | null>(null)
+  const [isTemplateLoading, setIsTemplateLoading] = useState(false)
   const [formData, setFormData] = useState<FormData>({
     title: '',
     comments: '',
@@ -83,6 +84,7 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
 
   const handleTemplateChange = async (value: string) => {
     const templateId = value ? parseInt(value) : null
+    const prevTemplateId = formData.contractTemplatesId
     setFormData((prev) => ({ ...prev, contractTemplatesId: templateId }))
     if (errors.contractTemplatesId) {
       setErrors((prev) => {
@@ -91,6 +93,11 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
       })
     }
     setChosenTemplate(null)
+
+    if (templateId !== prevTemplateId) {
+      setChosenTemplate(null)
+      setIsTemplateLoading(true)
+    }
 
     if (templateId) {
       try {
@@ -101,6 +108,8 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
         console.error('Failed to load template body', err)
         toast.error('Failed to load template preview!')
         setChosenTemplate(null)
+      } finally {
+        setIsTemplateLoading(false)
       }
     }
   }
@@ -174,7 +183,7 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
     if (user?.accountId) {
       try {
         const rentalsData = await getReceivedRentalByStaffIdAsync(user.accountId)
-        const filteredRentals = rentalsData.data.filter((rental: RentalRequestResponse) => rental.status === 'AcceptedPriceQuote' || rental.status === 'PendingContract')
+        const filteredRentals = rentalsData.data.filter((rental: RentalRequestResponse) => rental.status === 'AcceptedDemo' || rental.status === 'PendingContract')
         setRentals(filteredRentals)
         const templatesData = await getAllTemplates()
         const filteredTemplates = templatesData.filter(t =>t.status === 'Updated' || t.status === 'Initiated')
@@ -207,7 +216,11 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
         }
       }}
     >
-      <DialogContent className='sm:max-w-[780px] flex flex-col max-h-[90vh] p-8'>
+      <DialogContent 
+        className={`flex flex-col max-h-[90vh] p-8 transition-all duration-500 ease-in-out ${
+          formData.contractTemplatesId ? 'sm:max-w-[1024px]' : 'max-w-[680px]'
+        }`}
+      >
         <DialogHeader>
           <DialogTitle>Create Contract Draft</DialogTitle>
         </DialogHeader>
@@ -308,14 +321,23 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
               {errors.contractTemplatesId && <ErrorMessage message={errors.contractTemplatesId} />}
             </div>
 
-            {chosenTemplate && (
+            {(formData.contractTemplatesId || isTemplateLoading) && (
               <div className='space-y-4'>
                 <Label className='font-semibold text-gray-900'>Full Contract Preview</Label>
                 <div className='space-y-6 bg-gray-50 p-4 rounded-md border'>
-                  <div
-                    className='prose max-w-none prose-sm'
-                    dangerouslySetInnerHTML={{ __html: chosenTemplate.bodyJson }}
-                  />
+                  {isTemplateLoading ? (
+                    <div className='flex items-center justify-center py-8'>
+                      <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900'></div>
+                      <span className='ml-2 text-sm text-muted-foreground'>Loading preview...</span>
+                    </div>
+                  ) : chosenTemplate ? (
+                    <div
+                      className='prose max-w-none prose-sm'
+                      dangerouslySetInnerHTML={{ __html: chosenTemplate.bodyJson }}
+                    />
+                  ) : (
+                    <p className='text-sm text-muted-foreground italic'>Preview not available</p>
+                  )}
                 </div>
               </div>
             )}

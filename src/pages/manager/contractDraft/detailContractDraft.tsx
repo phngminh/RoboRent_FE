@@ -269,7 +269,7 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
           className='bg-red-500 border-gray-300 text-white hover:bg-red-600'
         >
           <XCircle size={18} />
-          Reject
+          Cancel Request
         </Button>
         <Button 
           onClick={() => setApproveOpen(true)} 
@@ -326,14 +326,14 @@ const DetailContractDraft: React.FC<DetailContractDraftProps> = ({ onBack }) => 
       >
         <DialogContent className='sm:max-w-[425px]'>
           <DialogHeader>
-            <DialogTitle>Enter Rejection Reason</DialogTitle>
+            <DialogTitle>Enter Cancel Reason</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting the contract.
+              Please provide a reason for canceling the request. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4 -mt-4'>
             <Textarea
-              placeholder='Enter rejection reason...'
+              placeholder='Enter cancel reason...'
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className='min-h-[100px]'

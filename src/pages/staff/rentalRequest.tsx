@@ -1,5 +1,11 @@
-import { Eye, MessageCircle, Send, Search, Flag, X, Upload } from 'lucide-react'
+import { Eye, MessageCircle, Send, Search, Flag, X, Upload, Truck } from 'lucide-react'
 import React, { useEffect, useState, useRef } from 'react'
+import { Card, CardContent, CardHeader } from '../../components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { Input } from '../../components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { Button } from '../../components/ui/button'
+import { Label } from '../../components/ui/label'
 import { useNavigate } from 'react-router-dom'
 import path from '../../constants/path'
 import { cn } from '../../lib/utils'
@@ -11,9 +17,6 @@ import { sendReport, type CreateContractReportPayload } from '../../apis/contrac
 import { useAuth } from '../../contexts/AuthContext'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { Textarea } from '../../components/ui/textarea'
-import { Label } from '../../components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
-import { Button } from '../../components/ui/button'
 import type { RentalRequestResponse } from '../../apis/rentalRequest.api'
 
 interface RentalRequestsContentProps {
@@ -34,7 +37,6 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
   const [allItems, setAllItems] = useState<RentalRequestResponse[]>([])
   const [filteredItems, setFilteredItems] = useState<RentalRequestResponse[]>([])
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize] = useState(5)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [statusFilter, setStatusFilter] = useState('All Status')
@@ -63,29 +65,36 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-const fetchData = async () => {
-  try {
-    setLoading(true)
-    let res;
+  const pageSize = 5
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize))
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  )
 
-    if (viewMode === 'pending') {
-      res = await getPendingRentalAsync()
-    } 
-    else if (viewMode === 'received') {
-      res = await getReceivedRentalByStaffIdAsync(staffId)
-    }
-    else if (viewMode === 'canceled') {
-      res = await getReceivedRentalByStaffIdAsync(staffId)
-    }
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      let res;
 
-    setAllItems(res.data ?? [])
+      if (viewMode === 'pending') {
+        res = await getPendingRentalAsync()
+      } 
+      else if (viewMode === 'received') {
+        res = await getReceivedRentalByStaffIdAsync(staffId)
+      }
+      else if (viewMode === 'canceled') {
+        res = await getReceivedRentalByStaffIdAsync(staffId)
+      }
+
+      setAllItems(res.data ?? [])
       setDraftsMap({})
-  } catch (err) {
-    console.error('Failed to load rental requests', err)
-  } finally {
-    setLoading(false)
+    } catch (err) {
+      console.error('Failed to load rental requests', err)
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
   const fetchDraftsForRentals = async () => {
     for (const rental of allItems.filter(r => !draftsMap[r.id!])) {
@@ -123,22 +132,23 @@ const fetchData = async () => {
     }
 
     if (appliedDateFrom) {
-      const fromDate = new Date(appliedDateFrom)
-      filtered = filtered.filter((r) => new Date(r.createdDate) >= fromDate)
+      const from = new Date(appliedDateFrom)
+      filtered = filtered.filter(r => new Date(r.createdDate) >= from)
     }
 
     if (appliedDateTo) {
-      const toDate = new Date(appliedDateTo)
-      toDate.setHours(23, 59, 59, 999)
-      filtered = filtered.filter((r) => new Date(r.createdDate) <= toDate)
+      const to = new Date(appliedDateTo)
+      to.setHours(23, 59, 59, 999)
+      filtered = filtered.filter(r => new Date(r.createdDate) <= to)
     }
 
     if (search.trim()) {
-      filtered = filtered.filter((r) =>
+      filtered = filtered.filter(r =>
         r.eventName?.toLowerCase().includes(search.toLowerCase().trim())
       )
     }
 
+    filtered.sort((a, b) => b.id - a.id)
     setFilteredItems(filtered)
     setCurrentPage(1)
   }
@@ -147,19 +157,21 @@ const fetchData = async () => {
     filterData()
   }, [allItems, search, appliedStatus, appliedDateFrom, appliedDateTo])
 
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize))
-  const paginatedItems = filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-
-  const handleNext = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+  const applyFilters = () => {
+    setAppliedStatus(statusFilter)
+    setAppliedDateFrom(dateFrom)
+    setAppliedDateTo(dateTo)
   }
 
-  const handlePrev = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1)
-  }
-
-  const handlePageSelect = (num: number) => {
-    if (num >= 1 && num <= totalPages) setCurrentPage(num)
+  const clearFilters = () => {
+    setSearch('')
+    setStatusFilter('All Status')
+    setAppliedStatus('All Status')
+    setDateFrom('')
+    setAppliedDateFrom('')
+    setDateTo('')
+    setAppliedDateTo('')
+    setCurrentPage(1)
   }
 
   const handleReceive = async (id: number) => {
@@ -167,23 +179,23 @@ const fetchData = async () => {
       setReceiving(id)
 
       if (!staffId) {
-        alert('Staff ID missing!')
+        toast.error('Staff ID missing!')
         return
       }
 
       const res = await receiveRentalAsync(id, staffId)
 
       if (res.success) {
-        alert(`Rental ID ${id} successfully received!`)
+        toast.success(`Rental ID ${id} successfully received!`)
       } else {
-        alert(`Failed: ${res.message || 'Unknown error'}`)
+        toast.error(`Failed: ${res.message || 'Unknown error'}`)
       }
 
       await fetchData()
 
     } catch (err) {
       console.error(err)
-      alert('Failed to receive rental')
+      toast.error('Failed to receive rental')
     } finally {
       setReceiving(null)
     }
@@ -192,6 +204,7 @@ const fetchData = async () => {
   const handleOpenReport = async (rental: RentalRequestResponse) => {
     setSelectedRental(rental)
     clearFields()
+
     try {
       const drafts = draftsMap[rental.id] ?? []
       const relevantDrafts = drafts.filter(d =>
@@ -275,6 +288,7 @@ const fetchData = async () => {
     const res = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/auto/upload`,
       { method: 'POST', body: formData }
     )
+
     return res.json()
   }
 
@@ -339,286 +353,293 @@ const fetchData = async () => {
     <p className='text-sm text-destructive mt-1'>{message}</p>
   )
 
+  const statusOptions = ['All Status', 'Pending', 'Received', 'Canceled']
+
   return (
     <div className='space-y-6 bg-gray-50 p-6'>
-      <div className='flex justify-center gap-3'>
-        {/* Pending */}
-        <button
+      <div className='flex justify-center gap-3 mb-4'>
+        <Button
+          variant={viewMode === 'pending' ? 'default' : 'outline'}
           onClick={() => {
             setViewMode('pending')
             setStatusFilter('All Status')
             setAppliedStatus('All Status')
+            setDateFrom('')
+            setAppliedDateFrom('')
+            setDateTo('')
+            setAppliedDateTo('')
           }}
-          className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
-            viewMode === 'pending' && appliedStatus !== 'Canceled'
-              ? 'bg-blue-600 text-white border-blue-600'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-          }`}
+          className='bg-yellow-500/20 text-yellow-800 hover:bg-yellow-500/30'
         >
           Pending
-        </button>
+        </Button>
 
-        {/* Received */}
-        <button
+        <Button
+          variant={viewMode === 'received' ? 'default' : 'outline'}
           onClick={() => {
             setViewMode('received')
             setStatusFilter('All Status')
             setAppliedStatus('All Status')
           }}
-          className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
-            viewMode === 'received' && appliedStatus !== 'Canceled'
-              ? 'bg-green-600 text-white border-green-600'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-          }`}
+          className='bg-green-500/20 text-green-800 hover:bg-green-500/30'
         >
           Received
-        </button>
+        </Button>
 
-        {/* NEW: Canceled Only Filter */}
-        <button
+        <Button
+          variant={viewMode === 'canceled' ? 'default' : 'outline'}
           onClick={() => {
             setViewMode('canceled')
             setStatusFilter('Canceled')
             setAppliedStatus('Canceled')
           }}
-          className={`px-4 py-1.5 rounded-lg font-medium border text-sm ${
-            appliedStatus === 'Canceled'
-              ? 'bg-red-600 text-white border-red-600'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-          }`}
+          className='bg-red-500/20 text-red-800 hover:bg-red-500/30'
         >
           Canceled
-        </button>
+        </Button>
       </div>
 
-      {/* FILTER BOX */}
-      <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
-        <h2 className='text-lg font-semibold text-gray-800 mb-4 text-center'>Filter Requests</h2>
+      <Card className='rounded-xl shadow-sm border border-gray-100'>
+        <CardHeader className='pb-0'>
+          <h2 className='text-lg font-semibold text-gray-800 text-center mb-3'>Filter Requests</h2>
+        </CardHeader>
 
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Event Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
-            >
-              <option>All Status</option>
-              <option>Pending</option>
-              <option>Canceled</option>
-              <option>Received</option>
-            </select>
-          </div>
+        <CardContent className='p-6 pt-0'>
+          <div className='flex flex-col gap-4 md:flex-row md:items-end md:gap-4'>
+            <div className='flex flex-1 md:gap-4'>
+              <div className='w-full md:w-40'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className='w-full'>
+                    <SelectValue placeholder='Status' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map(status => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</label>
-            <input
-              type='date'
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
-            />
-          </div>
+              <div className='w-full md:w-40'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date From</label>
+                <Input 
+                  type='date' 
+                  value={dateFrom} 
+                  onChange={e => setDateFrom(e.target.value)}
+                  max={dateTo || undefined}
+                />
+              </div>
 
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</label>
-            <input
-              type='date'
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
-            />
-          </div>
+              <div className='w-full md:w-40'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Created Date To</label>
+                <Input 
+                  type='date' 
+                  value={dateTo} 
+                  onChange={e => setDateTo(e.target.value)}
+                  min={dateFrom || undefined}
+                />
+              </div>
 
-          <div className='flex items-end space-x-2'>
-            <button
-              onClick={() => {
-                setAppliedStatus(statusFilter)
-                setAppliedDateFrom(dateFrom)
-                setAppliedDateTo(dateTo)
-              }}
-              className='flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg'
-            >
-              Apply Filters
-            </button>
-            <button
-              onClick={() => {
-                setSearch('')
-                setStatusFilter('All Status')
-                setAppliedStatus('All Status')
-                setDateFrom('')
-                setAppliedDateFrom('')
-                setDateTo('')
-                setAppliedDateTo('')
-                setCurrentPage(1)
-              }}
-              className='bg-gray-300 text-gray-700 px-4 py-2 rounded-lg'
-            >
-              Clear
-            </button>
-          </div>
-        </div>
+              <div className='flex-1'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Search Event</label>
+                <div className='relative'>
+                  <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
+                  <Input
+                    placeholder='Search by event name...'
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className='pl-10'
+                  />
+                </div>
+              </div>
+            </div>
 
-        <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Event Name</label>
-        <div className='flex gap-3 mb-4'>
-          <div className='relative flex-1'>
-            <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
-            <input
-              type='text'
-              placeholder='Search by event name...'
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg'
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* TABLE */}
-      <div className='bg-white rounded-xl shadow-sm border border-gray-100'>
-        <div className='overflow-x-auto'>
-          <table className='w-full'>
-            <thead className='bg-gray-50'>
-              <tr>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>ID</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Event</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Status</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Event Activity</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Activity Type</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Created Date</th>
-                <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase'>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody className='bg-white divide-y divide-gray-200'>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className='text-center py-6 text-gray-500'>Loading...</td>
-                </tr>
-              ) : filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className='text-center py-6 text-gray-500'>No requests found.</td>
-                </tr>
-              ) : (
-                paginatedItems.map((request: RentalRequestResponse) => {
-                  const drafts = draftsMap[request.id] ?? []
-                  const canReport = drafts.length > 0 && drafts.some(d => d.status === 'Active')
-
-                  return (
-                    <tr key={request.id} className='hover:bg-gray-50'>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.id}</td>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventName}</td>
-                      <td className='px-6 py-4 text-sm text-center'>
-                        <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800'>
-                          {request.status}
-                        </span>
-                      </td>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.eventActivityName}</td>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>{request.activityTypeName}</td>
-                      <td className='px-6 py-4 text-sm text-gray-900 text-center'>
-                        {new Date(request.createdDate).toLocaleDateString()}
-                      </td>
-
-                      <td className='px-6 py-4 text-sm text-center'>
-                        <div className='flex justify-center space-x-2'>
-
-                          {/* View */}
-                          <button
-                            onClick={() => onView(request.id)}
-                            className='text-gray-600 hover:text-gray-800 flex items-center space-x-1'
-                          >
-                            <Eye size={14} />
-                            <span>View</span>
-                          </button>
-
-                          {/* Receive button only in pending view */}
-                          {viewMode === 'pending' && (
-                            <button
-                              onClick={() => handleReceive(request.id)}
-                              disabled={receiving === request.id}
-                              className={`px-3 py-1 rounded-lg flex items-center space-x-1 ${
-                                receiving === request.id
-                                  ? 'bg-gray-400 text-white cursor-not-allowed'
-                                  : 'bg-green-600 text-white hover:bg-green-700'
-                              }`}
-                            >
-                              <Send size={14} />
-                              <span>{receiving === request.id ? 'Receiving...' : 'Receive'}</span>
-                            </button>
-                          )}
-
-                          {/* Chat button only in RECEIVED view */}
-                          {viewMode === 'received' && (
-                            <button
-                              onClick={() => navigate(path.STAFF_CHAT.replace(':rentalId', String(request.id)))}
-                              className='px-3 py-1 rounded-lg bg-purple-600 text-white hover:bg-purple-700 flex items-center space-x-1'
-                            >
-                              <MessageCircle size={14} />
-                              <span>Chat</span>
-                            </button>
-                          )}
-
-                          {canReport && (
-                            <button
-                              onClick={() => handleOpenReport(request)}
-                              className='flex items-center space-x-1 bg-red-100 text-red-800 hover:bg-red-200 px-2 py-1 rounded whitespace-nowrap'
-                            >
-                              <Flag size={14} />
-                              <span>Report</span>
-                            </button>
-                          )}
-
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* PAGINATION */}
-        <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
-          <div className='flex space-x-2'>
-            <button
-              disabled={currentPage === 1}
-              onClick={handlePrev}
-              className={`px-3 py-1 text-sm ${
-                currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              Previous
-            </button>
-
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i}
-                onClick={() => handlePageSelect(i + 1)}
-                className={`px-3 py-1 text-sm rounded ${
-                  currentPage === i + 1 ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-800'
-                }`}
+            <div className='flex gap-2'>
+              <Button onClick={applyFilters}>Apply</Button>
+              <Button
+                variant='outline'
+                onClick={clearFilters}
+                className='bg-gray-200 text-gray-700 hover:bg-gray-300'
               >
-                {i + 1}
-              </button>
-            ))}
+                Clear
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            <button
-              disabled={currentPage === totalPages}
-              onClick={handleNext}
-              className={`px-3 py-1 text-sm ${
-                currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              Next
-            </button>
+      <Card className='rounded-xl shadow-sm border border-gray-300 relative'>
+        <CardHeader className='p-6 border-b border-gray-100 relative'>
+          <h2 className='text-xl font-semibold text-gray-800 text-center'>
+            All Rental Requests
+          </h2>
+          <p className='text-gray-600 mt-1 text-center'>Manage your rental requests and track status.</p>
+        </CardHeader>
+
+        <CardContent className='p-0'>
+          <div className='overflow-x-auto'>
+            <Table>
+              <TableHeader className='bg-gray-50'>
+                <TableRow>
+                  <TableHead className='text-center whitespace-nowrap'>ID</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Event Name</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Address</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Status</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Activity Type</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Event Date</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Created Date</TableHead>
+                  <TableHead className='text-center whitespace-nowrap'>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className='text-center py-6 text-gray-500'>
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedItems.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className='text-center py-6 text-gray-500'>
+                      No rental requests found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedItems.map(request => {
+                    const badgeClass =
+                      request.status === 'Accepted' || request.status === 'AcceptedDemo'
+                        ? 'bg-green-100 text-green-800'
+                        : request.status === 'Completed' || request.status === 'Received'
+                        ? 'bg-blue-100 text-blue-800'
+                        : request.status === 'Pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : request.status === 'Rejected' || request.status === 'ForceCancelled' || request.status === 'Canceled'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
+
+                    const eventDate = request.eventDate
+                      ? new Date(request.eventDate).toLocaleDateString()
+                      : '—'
+
+                    const createdDate = request.createdDate
+                      ? new Date(request.createdDate).toLocaleDateString()
+                      : '—'
+
+                    const drafts = draftsMap[request.id] ?? []
+                    const canReport = drafts.length > 0 && drafts.some(d => d.status === 'Active')
+
+                    return (
+                      <TableRow key={request.id} className='hover:bg-gray-50'>
+                        <TableCell className='text-center whitespace-nowrap'>{request.id}</TableCell>
+                        <TableCell className='text-center whitespace-nowrap'>{request.eventName}</TableCell>
+                        <TableCell className='text-center whitespace-nowrap'>{request.address}</TableCell>
+                        <TableCell className='text-center'>
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`}
+                          >
+                            {request.status}
+                          </span>
+                        </TableCell>
+                        <TableCell className='text-center whitespace-nowrap'>{request.activityTypeName}</TableCell>
+                        <TableCell className='text-center whitespace-nowrap'>{eventDate}</TableCell>
+                        <TableCell className='text-center whitespace-nowrap'>{createdDate}</TableCell>
+                        <TableCell className='text-center'>
+                          <div className='flex justify-center space-x-3'>
+                            <button
+                              onClick={() => onView(request.id)}
+                              className='flex items-center space-x-1 bg-blue-100 text-blue-800 hover:bg-blue-200 px-2 py-1 rounded whitespace-nowrap'
+                            >
+                              <Eye size={14} />
+                              <span>View</span>
+                            </button>
+
+                            {viewMode === 'pending' && (
+                              <button
+                                onClick={() => handleReceive(request.id)}
+                                disabled={receiving === request.id}
+                                className={`flex items-center space-x-1 px-2 py-1 rounded whitespace-nowrap ${
+                                  receiving === request.id
+                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                    : 'bg-green-100 text-green-800 hover:bg-green-200'
+                                }`}
+                              >
+                                <Send size={14} />
+                                <span>{receiving === request.id ? 'Receiving...' : 'Receive'}</span>
+                              </button>
+                            )}
+
+                            {viewMode === 'received' && (
+                              <button
+                                onClick={() => navigate(path.STAFF_CHAT.replace(':rentalId', String(request.id)))}
+                                className='flex items-center space-x-1 bg-purple-100 text-purple-800 hover:bg-purple-200 px-2 py-1 rounded'
+                              >
+                                <MessageCircle size={14} />
+                                <span>Chat</span>
+                              </button>
+                            )}
+
+                            {canReport && (
+                              <button
+                                onClick={() => handleOpenReport(request)}
+                                className='flex items-center space-x-1 bg-red-100 text-red-800 hover:bg-red-200 px-2 py-1 rounded'
+                              >
+                                <Flag size={14} />
+                                <span>Report</span>
+                              </button>
+                            )}
+
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
 
-          <div className='text-sm text-gray-500'>
-            Showing {paginatedItems.length} of {filteredItems.length}
+          <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
+            <div className='flex space-x-2'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+
+              {Array.from({ length: totalPages }, (_, i) => (
+                <Button
+                  key={i}
+                  size='sm'
+                  variant={i + 1 === currentPage ? 'default' : 'outline'}
+                  onClick={() => setCurrentPage(i + 1)}
+                >
+                  {i + 1}
+                </Button>
+              ))}
+
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+
+            <div className='text-sm text-gray-500'>
+              Showing {paginatedItems.length} of {filteredItems.length}
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <Dialog 
         open={reportOpen} 
@@ -731,7 +752,6 @@ const fetchData = async () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   )
 }

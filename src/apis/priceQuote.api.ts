@@ -3,11 +3,12 @@ import http from '../utils/http'
 import type {
   PriceQuoteResponse,
   CreatePriceQuoteRequest,
+  UpdatePriceQuoteRequest,
   RentalQuotesResponse,
   ManagerQuoteListItemResponse
 } from '../types/chat.types'
 
-const API_URL = 'https://localhost:7249/api'
+const API_URL = `${import.meta.env.VITE_API_URL}`
 
 export const createPriceQuote = async (request: CreatePriceQuoteRequest): Promise<PriceQuoteResponse> => {
   const response = await http.post(`${API_URL}/PriceQuotes`, request)
@@ -39,10 +40,10 @@ export const acceptQuote = async (quoteId: number): Promise<{
   return response.data
 }
 
-// Update Quote (Staff resubmit after Manager reject)
+// Update Quote (Staff resubmit after Manager reject) - Phase 2 fields only
 export const updatePriceQuote = async (
-  quoteId: number, 
-  data: Partial<CreatePriceQuoteRequest>
+  quoteId: number,
+  data: UpdatePriceQuoteRequest
 ): Promise<PriceQuoteResponse> => {
   const response = await http.put(`${API_URL}/PriceQuotes/${quoteId}`, data)
   return response.data

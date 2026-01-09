@@ -72,13 +72,8 @@ export const managerSigns = (id: number, signature: string) => {
   return http.patch(`/ContractDrafts/${id}/manager-sign`, { signature })
 }
 
-export const customerSigns = async (id: number, signature: string) => {
-  const response = await http.patch<SignContractResponse>(`/ContractDrafts/${id}/customer-sign`, { signature })
-  return response.data
-}
-
 export const managerRejects = (id: number, reason: string) => {
-  return http.patch(`/ContractDrafts/${id}/manager-reject`, { reason })
+  return http.patch(`/ContractDrafts/${id}/manager-cancel`, { reason })
 }
 
 export const customerRejects = (id: number, reason: string) => {
@@ -87,6 +82,25 @@ export const customerRejects = (id: number, reason: string) => {
 
 export const customerRequestChange = (id: number, comment: string) => {
   return http.patch(`/ContractDrafts/${id}/customer-request-change`, { comment })
+}
+
+export const customerSignsWithFile = async (id: number, file: File) => {
+  const formData = new FormData()
+  formData.append('signedContractFile', file)
+  const response = await http.post<SignContractResponse>(`/ContractDrafts/${id}/customer-sign-file`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return response.data
+}
+
+export const downloadContractAsPdf = (id: number) => {
+  return http.get(`/ContractDrafts/${id}/download/pdf`, { responseType: 'blob' })
+}
+
+export const downloadContractAsWord = (id: number) => {
+  return http.get(`/ContractDrafts/${id}/download/word`, { responseType: 'blob' })
 }
 
 export interface CreateContractDraftPayload {

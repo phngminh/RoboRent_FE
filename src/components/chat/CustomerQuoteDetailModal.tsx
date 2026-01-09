@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { X, CheckCircle, ChevronDown, ChevronUp, XCircle, Truck } from 'lucide-react'
 import type { PriceQuoteResponse } from '../../types/chat.types'
 import { QuoteStatus } from '../../types/chat.types'
+import { formatMoney } from '../../utils/format'
 
 interface CustomerQuoteDetailModalProps {
   quote: PriceQuoteResponse | null
@@ -13,10 +14,10 @@ interface CustomerQuoteDetailModalProps {
   onAcceptQuote?: (quoteId: number) => void
 }
 
-export default function CustomerQuoteDetailModal({ 
-  quote, 
+export default function CustomerQuoteDetailModal({
+  quote,
   allQuotes = [],
-  isOpen, 
+  isOpen,
   onClose,
   onRejectQuote,
   onAcceptQuote
@@ -79,6 +80,25 @@ export default function CustomerQuoteDetailModal({
     }
   }
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case QuoteStatus.PendingManager:
+        return 'Awaiting Manager Approval'
+      case QuoteStatus.RejectedManager:
+        return 'Needs Revision'
+      case QuoteStatus.PendingCustomer:
+        return 'Awaiting Your Review'
+      case QuoteStatus.RejectedCustomer:
+        return 'Rejected'
+      case QuoteStatus.Approved:
+        return 'Approved'
+      case QuoteStatus.Expired:
+        return 'Expired'
+      default:
+        return status
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
@@ -89,9 +109,9 @@ export default function CustomerQuoteDetailModal({
               Quote #{quote.quoteNumber} Details
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Created on {new Date(quote.createdAt || '').toLocaleDateString('en-US', { 
-                month: 'long', 
-                day: 'numeric', 
+              Created on {new Date(quote.createdAt || '').toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
                 year: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
@@ -121,86 +141,78 @@ export default function CustomerQuoteDetailModal({
             </div>
           </div>
 
-          {/* Cost Breakdown */}
+          {/* Cost Breakdown - Two Phase Pricing */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
-            
-            {/* Delivery Fee Info Banner */}
-            {quote.deliveryFee && quote.deliveryFee > 0 && (
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-                <div className="flex items-center gap-3">
-                  <Truck className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-purple-900">Auto-Calculated Delivery Fee</p>
-                    <p className="text-xs text-purple-700 mt-1">
-                      {quote.deliveryDistance 
-                        ? `${quote.deliveryDistance} km distance (round-trip)`
-                        : 'HCM flat rate'}
-                    </p>
-                  </div>
-                  <p className="text-xl font-bold text-purple-700">
-                    ${quote.deliveryFee.toLocaleString()}
-                  </p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Chi tiết báo giá</h3>
+
+            {/* === PHASE 1: DEPOSIT (LOCKED) === */}
+            <div className="bg-gradient-to-r from-blue-50 to-violet-50 rounded-lg p-4 mb-4 border border-blue-200">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-blue-600 text-xl">💰</span>
+                <span className="font-bold text-blue-800">PHASE 1: Đặt cọc trước</span>
+                <span className="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full">🔒 LOCKED</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Phí thuê robot (30%)</span>
+                  <span className="font-medium">{formatMoney(0.3 * quote.rentalFee)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Phí nhân viên (30%)</span>
+                  <span className="font-medium">{formatMoney(0.3 * quote.staffFee)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Cọc thiệt hại</span>
+                  <span className="font-medium">{formatMoney(quote.damageDeposit)}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-blue-200">
+                  <span className="font-bold text-blue-800">Tổng đặt cọc</span>
+                  <span className="font-bold text-blue-800 text-lg">{formatMoney(quote.totalDeposit)}</span>
                 </div>
               </div>
-            )}
-            
-            <div className="bg-gray-50 rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">Item</th>
-                    <th className="text-right px-4 py-3 text-sm font-semibold text-gray-700">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {/* Delivery Fee (Auto) */}
-                  {quote.deliveryFee && quote.deliveryFee > 0 && (
-                    <tr className="bg-purple-50">
-                      <td className="px-4 py-3 text-purple-900 font-medium">
-                        Delivery Fee (Auto-calculated)
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-purple-900">
-                        ${quote.deliveryFee?.toLocaleString() || '0.00'}
-                      </td>
-                    </tr>
-                  )}
-                  <tr>
-                    <td className="px-4 py-3 text-gray-900">Delivery & Setup (Manual)</td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ${quote.delivery?.toLocaleString() || '0.00'}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-900">
-                      Deposit <span className="text-sm text-gray-500">(Refundable)</span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ${quote.deposit?.toLocaleString() || '0.00'}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-900">Completion Payment</td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ${quote.complete?.toLocaleString() || '0.00'}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-gray-900">Service & Support</td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      ${quote.service?.toLocaleString() || '0.00'}
-                    </td>
-                  </tr>
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gray-100 border-t-2 border-gray-300">
-                    <td className="px-4 py-4 text-lg font-bold text-gray-900">Total Amount</td>
-                    <td className="px-4 py-4 text-right text-2xl font-bold text-blue-600">
-                      ${quote.total.toLocaleString()}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+            </div>
+
+            {/* === PHASE 2: PAYMENT (ADJUSTABLE) === */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-4 border border-blue-200">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-blue-600 text-xl">💳</span>
+                <span className="font-bold text-blue-800">PHASE 2: Thanh toán sau sự kiện</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Còn lại (70%)</span>
+                  <span className="font-medium">{formatMoney(0.7 * (quote.rentalFee + quote.staffFee))}</span>
+                </div>
+                {quote.deliveryFee && quote.deliveryFee > 0 && (
+                  <div className="flex justify-between text-sm text-purple-600">
+                    <span className="flex items-center gap-1">
+                      <Truck className="w-3 h-3" /> Phí giao hàng
+                      {quote.deliveryDistance && <span className="text-xs">({quote.deliveryDistance}km)</span>}
+                    </span>
+                    <span className="font-medium">{formatMoney(quote.deliveryFee)}</span>
+                  </div>
+                )}
+                {quote.customizationFee > 0 && (
+                  <div className="flex justify-between text-sm text-purple-600">
+                    <span>✨ Phí tùy chỉnh</span>
+                    <span className="font-medium">{formatMoney(quote.customizationFee)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2 border-t border-blue-200">
+                  <span className="font-bold text-blue-800">Tổng thanh toán</span>
+                  <span className="font-bold text-blue-800 text-lg">{formatMoney(quote.totalPayment)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* === GRAND TOTAL === */}
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-4">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-white text-lg">🎯 TỔNG GIÁ TRỊ</span>
+                <span className="font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                  {formatMoney(quote.grandTotal)}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -246,52 +258,45 @@ export default function CustomerQuoteDetailModal({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {/* Delivery Fee (Auto) */}
+                        {/* Deposit Components */}
                         <tr>
-                          <td className="px-4 py-2 text-gray-700 font-medium">Delivery Fee (Auto)</td>
+                          <td className="px-4 py-2 text-emerald-700 font-medium">Tổng đặt cọc</td>
                           {allQuotes.map((q) => (
-                            <td key={q.id} className="px-4 py-2 text-right text-purple-700 font-semibold">
-                              ${q.deliveryFee?.toLocaleString() || '0'}
+                            <td key={q.id} className="px-4 py-2 text-right text-emerald-700 font-semibold">
+                              {formatMoney(q.totalDeposit)}
+                            </td>
+                          ))}
+                        </tr>
+                        {/* Payment Components */}
+                        <tr>
+                          <td className="px-4 py-2 text-blue-700 font-medium">Tổng thanh toán</td>
+                          {allQuotes.map((q) => (
+                            <td key={q.id} className="px-4 py-2 text-right text-blue-700 font-semibold">
+                              {formatMoney(q.totalPayment)}
                             </td>
                           ))}
                         </tr>
                         <tr>
-                          <td className="px-4 py-2 text-gray-700">Delivery & Setup (Manual)</td>
+                          <td className="px-4 py-2 text-purple-700">Phí giao hàng</td>
                           {allQuotes.map((q) => (
-                            <td key={q.id} className="px-4 py-2 text-right text-gray-900">
-                              ${q.delivery?.toLocaleString() || '0'}
+                            <td key={q.id} className="px-4 py-2 text-right text-purple-700">
+                              {formatMoney(q.deliveryFee || 0)}
                             </td>
                           ))}
                         </tr>
                         <tr>
-                          <td className="px-4 py-2 text-gray-700">Deposit</td>
+                          <td className="px-4 py-2 text-amber-700">Phí tùy chỉnh</td>
                           {allQuotes.map((q) => (
-                            <td key={q.id} className="px-4 py-2 text-right text-gray-900">
-                              ${q.deposit?.toLocaleString() || '0'}
+                            <td key={q.id} className="px-4 py-2 text-right text-amber-700">
+                              {formatMoney(q.customizationFee)}
                             </td>
                           ))}
                         </tr>
-                        <tr>
-                          <td className="px-4 py-2 text-gray-700">Service & Support</td>
-                          {allQuotes.map((q) => (
-                            <td key={q.id} className="px-4 py-2 text-right text-gray-900">
-                              ${q.service?.toLocaleString() || '0'}
-                            </td>
-                          ))}
-                        </tr>
-                        <tr>
-                          <td className="px-4 py-2 text-gray-700">Completion Payment</td>
-                          {allQuotes.map((q) => (
-                            <td key={q.id} className="px-4 py-2 text-right text-gray-900">
-                              ${q.complete?.toLocaleString() || '0'}
-                            </td>
-                          ))}
-                        </tr>
-                        <tr className="bg-gray-50 font-semibold">
-                          <td className="px-4 py-3 text-gray-900">Total</td>
+                        <tr className="bg-gray-100 font-bold">
+                          <td className="px-4 py-3 text-gray-900">Tổng giá trị</td>
                           {allQuotes.map((q) => (
                             <td key={q.id} className={`px-4 py-3 text-right ${q.id === quote.id ? 'text-blue-600' : 'text-gray-900'}`}>
-                              ${q.total.toLocaleString()}
+                              {formatMoney(q.grandTotal)}
                             </td>
                           ))}
                         </tr>
@@ -307,7 +312,7 @@ export default function CustomerQuoteDetailModal({
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Quote Status</h3>
             <div className={`inline-block px-4 py-2 rounded-lg font-medium ${getStatusBadge(quote.status || '')}`}>
-              {quote.status}
+              {getStatusText(quote.status || '')}
             </div>
           </div>
         </div>

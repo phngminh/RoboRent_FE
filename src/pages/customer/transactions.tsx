@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
-  Search, 
-  Filter, 
+  Search,
   CreditCard, 
   CheckCircle2, 
   Clock, 
@@ -9,15 +8,26 @@ import {
   AlertCircle, 
   ExternalLink,
   Calendar,
-  Wallet,
-  ArrowUpRight
+  Wallet
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { paymentApi } from '../../apis/payment.api';
 import type { PaymentRecordResponse } from '../../types/payment.types';
+import { formatMoney } from '../../utils/format';
 
-// Component hiển thị Status Badge chuyên nghiệp
+// Component hiển thị Status Badge chuyên nghiệp (Hybrid: BE status first, then client-side check)
 const StatusBadge = ({ status, expired }: { status: string, expired: boolean }) => {
+  // Priority 1: Nếu BE đã set status = "Expired" → hiển thị luôn
+  if (status === 'Expired') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">
+        <XCircle className="w-3.5 h-3.5" />
+        Expired
+      </span>
+    );
+  }
+
+  // Priority 2: Nếu status = "Pending" nhưng đã expired (client-side check) → hiển thị expired (real-time)
   if (status === 'Pending' && expired) {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">
@@ -30,6 +40,7 @@ const StatusBadge = ({ status, expired }: { status: string, expired: boolean }) 
   const configs: Record<string, any> = {
     Paid: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', icon: CheckCircle2 },
     Pending: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: Clock },
+    Expired: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', icon: XCircle },
     Cancelled: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', icon: XCircle },
     Failed: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', icon: AlertCircle },
   };
@@ -78,9 +89,6 @@ export default function TransactionsContent() {
   }, []);
 
   // Format Helpers
-  const formatMoney = (amount: number) => 
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-
   const formatDate = (dateStr: string) => 
     new Date(dateStr).toLocaleDateString('vi-VN', { 
       day: '2-digit', month: 'short', year: 'numeric',
@@ -96,7 +104,23 @@ export default function TransactionsContent() {
       (item.rentalName?.toLowerCase() || '').includes(search.toLowerCase()) ||
       item.orderCode.toString().includes(search);
     const matchType = typeFilter === 'All' || item.paymentType === typeFilter;
-    const matchStatus = statusFilter === 'All' || item.status === statusFilter;
+    
+    // Handle status filter: Support both BE status "Expired" and client-side expired check
+    let matchStatus = true;
+    if (statusFilter !== 'All') {
+      if (statusFilter === 'Expired') {
+        // Match if status is "Expired" from BE OR status is "Pending" but expired (client-side)
+        matchStatus = item.status === 'Expired' || (item.status === 'Pending' && checkExpired(item.expiredAt));
+      } else {
+        // For other statuses, only match exact status (but exclude expired Pending records)
+        if (statusFilter === 'Pending') {
+          matchStatus = item.status === 'Pending' && !checkExpired(item.expiredAt);
+        } else {
+          matchStatus = item.status === statusFilter;
+        }
+      }
+    }
+    
     return matchSearch && matchType && matchStatus;
   });
 
@@ -164,6 +188,7 @@ export default function TransactionsContent() {
             <option value="All">All Status</option>
             <option value="Pending">Pending</option>
             <option value="Paid">Paid</option>
+            <option value="Expired">Expired</option>
           </select>
         </div>
       </div>
@@ -244,6 +269,7 @@ export default function TransactionsContent() {
 
                       {/* Cột 6: Action (Căn phải) */}
                       <td className="py-4 px-6 text-right">
+                        {/* Show Pay Now only if status is Pending AND not expired (from BE or client-side) */}
                         {item.status === 'Pending' && !isExpiredLink ? (
                           <button
                             onClick={() => handlePay(item.checkoutUrl)}

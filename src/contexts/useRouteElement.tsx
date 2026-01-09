@@ -8,6 +8,7 @@ import StaffChatPage from '../pages/chat/StaffChatPage'
 import ManagerQuotesPage from '../pages/manager/ManagerQuotesPage'
 import AuthCallback from '../pages/auth/callback'
 import DashboardContent from '../pages/customer/dashboard'
+import ManagerDashboard from '../pages/manager/ManagerDashboard'
 import CustomerRentalRequestsContent from '../pages/customer/RentalRequest/rentalRequest'
 import StaffRentalRequestsContent from '../pages/staff/rentalRequest'
 import ManagerRentalRequestsContent from '../pages/manager/rentalRequest'
@@ -42,6 +43,10 @@ import CustomerDeliveryTrackingPage from '../pages/customer/CustomerDeliveryTrac
 import CreateRentalRequestHome from '../pages/home/request/createRentalRequest'
 import CreateRentalDetailHome from '../pages/home/request/createRentalRequestDetail'
 import { toast } from 'react-toastify'
+import AdminProfile from '../pages/admin/profile'
+import StaffDashboardContent from '../pages/staff/dashboard'
+import ManagerDashboardContent from '../pages/manager/dashboard'
+import AdminDashboard from '../pages/admin/AdminDashboard'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -51,12 +56,12 @@ export default function useRouteElements() {
       path: path.create_request,
       element: <ProtectedRoute allowedRoles={['customer']} />,
       children: [
-        { 
-          index: true, 
-          element: 
+        {
+          index: true,
+          element:
             <CreateRentalRequestHome
-              onNextStep={(rentalId, activityTypeId) => navigate(`/create-request-detail/${rentalId}/${activityTypeId}`)} 
-            /> 
+              onNextStep={(rentalId, activityTypeId) => navigate(`/create-request-detail/${rentalId}/${activityTypeId}`)}
+            />
         }
       ]
     },
@@ -64,16 +69,16 @@ export default function useRouteElements() {
       path: `${path.create_request_detail}/:rentalId/:activityTypeId`,
       element: <ProtectedRoute allowedRoles={['customer']} />,
       children: [
-        { 
-          index: true, 
-          element: 
+        {
+          index: true,
+          element:
             <CreateRentalDetailHome
               onBack={() => navigate(-1)}
               onSave={() => {
                 toast.success('Rental request created successfully!')
                 navigate(`${path.BASE_CUSTOMER}/rental-requests`)
               }}
-            /> 
+            />
         }
       ]
     },
@@ -87,12 +92,12 @@ export default function useRouteElements() {
         {
           element: <CustomerProfile />,
           children: [
-            { path: 'dashboard', element: <DashboardContent /> },
+            { path: 'dashboard', element: <ManagerDashboard /> },
             { path: 'account', element: <AccountProfile /> },
             {
               path: 'rental-requests',
               element: (
-                <CustomerRentalRequestsContent 
+                <CustomerRentalRequestsContent
                   onCreate={() => navigate(`${path.BASE_CUSTOMER}/create-rental-request`)}
                   onView={(rentalId) => navigate(`${path.BASE_CUSTOMER}/create-rental-request/${rentalId}`)}
                   onViewContract={(rentalId) => navigate(`${path.BASE_CUSTOMER}/contract-draft/${rentalId}`)}
@@ -141,7 +146,7 @@ export default function useRouteElements() {
             {
               path: 'create-rental-detail/:rentalId/:activityTypeId',
               element: (
-                <CreateRentalDetailContent 
+                <CreateRentalDetailContent
                   onBack={(rentalId) =>
                     navigate(`${path.BASE_CUSTOMER}/create-rental-request/${rentalId}`)
                   }
@@ -150,27 +155,27 @@ export default function useRouteElements() {
               )
             },
             { path: 'transactions', element: <TransactionsContent /> },
-            { 
-              path: 'breach-reports', 
-              element: 
+            {
+              path: 'breach-reports',
+              element:
                 <CustomerBreachReports
                   onView={(reportId) => navigate(`${path.BASE_CUSTOMER}/breach-reports/${reportId}`)}
-                /> 
+                />
             },
-            { 
-              path: 'breach-reports/:reportId', 
-              element: 
+            {
+              path: 'breach-reports/:reportId',
+              element:
                 <CustomerReportDetail
                   onBack={() => navigate(`${path.BASE_CUSTOMER}/breach-reports`)}
-                /> 
+                />
             },
             {
               path: '/customer/face-profile',
               element: (
                 <FaceProfilePage
-                onNotFound={() => navigate(`${path.BASE_CUSTOMER}/face-profile/create`)}
-                onUpdate={() => navigate(`${path.BASE_CUSTOMER}/face-profile/create`)}
-                onVerify={() => navigate(`${path.BASE_CUSTOMER}/face-profile/verify`)}
+                  onNotFound={() => navigate(`${path.BASE_CUSTOMER}/face-profile/create`)}
+                  onUpdate={() => navigate(`${path.BASE_CUSTOMER}/face-profile/create`)}
+                  onVerify={() => navigate(`${path.BASE_CUSTOMER}/face-profile/verify`)}
                 />
               )
             },
@@ -178,7 +183,7 @@ export default function useRouteElements() {
               path: '/customer/face-profile/create',
               element: (
                 <FaceProfileCreateUI
-                onSubmit={() => navigate(`${path.BASE_CUSTOMER}/face-profile`)}
+                  onSubmit={() => navigate(`${path.BASE_CUSTOMER}/face-profile`)}
                 />
               )
             },
@@ -186,8 +191,8 @@ export default function useRouteElements() {
               path: '/customer/face-profile/verify',
               element: (
                 <FaceVerificationPage
-                onSubmit={() => navigate(`${path.BASE_CUSTOMER}/face-profile`)}
-                onBack={() => navigate(`${path.BASE_CUSTOMER}/face-profile`)}
+                  onSubmit={() => navigate(`${path.BASE_CUSTOMER}/face-profile`)}
+                  onBack={() => navigate(`${path.BASE_CUSTOMER}/face-profile`)}
                 />
               )
             },
@@ -195,9 +200,9 @@ export default function useRouteElements() {
           ]
         },
         { path: 'chat/:rentalId', element: <CustomerChatPage /> },
-        { 
-          path: 'delivery/:rentalId', 
-          element: <CustomerDeliveryTrackingPage /> 
+        {
+          path: 'delivery/:rentalId',
+          element: <CustomerDeliveryTrackingPage />
         },
       ]
     },
@@ -210,28 +215,28 @@ export default function useRouteElements() {
         {
           element: <StaffProfile />,
           children: [
-            { path: 'dashboard', element: <DashboardContent /> },
+            { path: 'dashboard', element: <StaffDashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
-            { 
-              path: 'rental-requests', 
-              element: 
-              <StaffRentalRequestsContent
-                onView={(id) => navigate(`${path.BASE_STAFF}/share-rental-request/${id}`)}
-              /> 
+            {
+              path: 'rental-requests',
+              element:
+                <StaffRentalRequestsContent
+                  onView={(id) => navigate(`${path.BASE_STAFF}/share-rental-request/${id}`)}
+                />
             },
-            { 
-              path: 'contract-drafts', 
-              element: 
-              <StaffContractDrafts 
-                onView={(id) => navigate(`${path.BASE_STAFF}/contract-drafts/${id}`)}
-              /> 
+            {
+              path: 'contract-drafts',
+              element:
+                <StaffContractDrafts
+                  onView={(id) => navigate(`${path.BASE_STAFF}/contract-drafts/${id}`)}
+                />
             },
-            { 
-              path: 'contract-drafts/:draftId', 
-              element: 
-              <StaffDetailContractDraft 
-                onBack={() => navigate(`${path.BASE_STAFF}/contract-drafts`)}
-              /> 
+            {
+              path: 'contract-drafts/:draftId',
+              element:
+                <StaffDetailContractDraft
+                  onBack={() => navigate(`${path.BASE_STAFF}/contract-drafts`)}
+                />
             },
             {
               path: 'share-rental-request/:rentalId',
@@ -243,44 +248,44 @@ export default function useRouteElements() {
               )
             },
             { path: 'transactions', element: <TransactionsContent /> },
-            { 
-              path: 'rental/:id', 
-              element: 
-              <ShareRentalRequestDetail 
-                onBack={() => navigate(`${path.BASE_STAFF}/rental-requests`)} 
-              />
+            {
+              path: 'rental/:id',
+              element:
+                <ShareRentalRequestDetail
+                  onBack={() => navigate(`${path.BASE_STAFF}/rental-requests`)}
+                />
             },
             { path: 'deliveries', element: <DeliveryTrackingPage /> },
             { path: 'robot-group', element: <RobotGroupContent /> },
-            { 
-              path: 'schedule-board/:groupId', 
-              element: 
-              <ScheduleBoard
-                onBack={() => navigate(`${path.BASE_STAFF}/robot-group`)}
-              /> 
+            {
+              path: 'schedule-board/:groupId',
+              element:
+                <ScheduleBoard
+                  onBack={() => navigate(`${path.BASE_STAFF}/robot-group`)}
+                />
             },
-            { 
-              path: 'breach-reports', 
-              element: 
+            {
+              path: 'breach-reports',
+              element:
                 <StaffBreachReports
                   onView={(reportId) => navigate(`${path.BASE_STAFF}/breach-reports/${reportId}`)}
-                /> 
+                />
             },
-            { 
-              path: 'breach-reports/:reportId', 
-              element: 
+            {
+              path: 'breach-reports/:reportId',
+              element:
                 <StaffReportDetail
                   onBack={() => navigate(`${path.BASE_STAFF}/breach-reports`)}
-                /> 
+                />
             }
           ]
         },
         {
-          path: 'chat/:rentalId', 
-          element: 
-          <StaffChatPage
-          onViewContract={() => navigate(`${path.BASE_STAFF}/contract-drafts`)}
-           />
+          path: 'chat/:rentalId',
+          element:
+            <StaffChatPage
+              onViewContract={() => navigate(`${path.BASE_STAFF}/contract-drafts`)}
+            />
         },
       ]
     },
@@ -295,43 +300,57 @@ export default function useRouteElements() {
           children: [
             { path: 'dashboard', element: <DashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
-            { path: 'rental-requests', element: <ManagerRentalRequestsContent /> },
-            { path: 'quotes', element: <ManagerQuotesPage /> },
-            { 
-              path: 'contract-drafts', 
-              element: 
-              <ContractDrafts 
-                onView={(draftId) => navigate(`${path.BASE_MANAGER}/contract-drafts/${draftId}`)}
-              /> 
+            {
+              path: 'rental-requests',
+              element:
+                <ManagerRentalRequestsContent
+                  onView={(id) => navigate(`${path.BASE_MANAGER}/share-rental-request/${id}`)}
+                />
             },
-            { 
-              path: 'contract-drafts/:draftId', 
-              element: 
-              <DetailContractDraft 
-                onBack={() => navigate(`${path.BASE_MANAGER}/contract-drafts`)}
-              /> 
+            {
+              path: 'share-rental-request/:rentalId',
+              element: (
+                <ShareRentalRequestDetail
+                  onBack={() => navigate(`${path.BASE_MANAGER}/rental-requests`)}
+                />
+              )
+            },
+            { path: 'quotes', element: <ManagerQuotesPage /> },
+            {
+              path: 'contract-drafts',
+              element:
+                <ContractDrafts
+                  onView={(draftId) => navigate(`${path.BASE_MANAGER}/contract-drafts/${draftId}`)}
+                />
+            },
+            {
+              path: 'contract-drafts/:draftId',
+              element:
+                <DetailContractDraft
+                  onBack={() => navigate(`${path.BASE_MANAGER}/contract-drafts`)}
+                />
             },
             { path: 'contract-templates', element: <ContractTemplates /> },
             { path: 'templates-clauses', element: <Clauses /> },
-            { 
-              path: 'breach-reports', 
-              element: 
-                <BreachReports 
+            {
+              path: 'breach-reports',
+              element:
+                <BreachReports
                   onView={(reportId) => navigate(`${path.BASE_MANAGER}/breach-reports/${reportId}`)}
-                /> 
+                />
             },
-            { 
-              path: 'breach-reports/:reportId', 
-              element: 
-                <ReportDetail 
+            {
+              path: 'breach-reports/:reportId',
+              element:
+                <ReportDetail
                   onBack={() => navigate(`${path.BASE_MANAGER}/breach-reports`)}
-                /> 
+                />
             }
           ]
         },
-        { 
-          path: 'staff-assignment', 
-          element: <StaffAssignmentPage /> 
+        {
+          path: 'staff-assignment',
+          element: <StaffAssignmentPage />
         }
       ]
     },
@@ -340,10 +359,13 @@ export default function useRouteElements() {
       path: path.BASE_ADMIN,
       element: <ProtectedRoute allowedRoles={['admin']} />,
       children: [
+        { index: true, element: <Navigate to='dashboard' replace /> },
         {
-          path: 'quotes',
-          element: <ManagerQuotesPage />
-        }
+          element: <AdminProfile />,
+          children: [
+            { path: 'dashboard', element: <AdminDashboard /> }
+          ]
+        },
       ]
     }
   ])

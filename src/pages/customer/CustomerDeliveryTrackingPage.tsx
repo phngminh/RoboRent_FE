@@ -1,19 +1,19 @@
 // src/pages/customer/delivery/CustomerDeliveryTrackingPage.tsx
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { 
-  Truck, Package, CheckCircle2, Clock, MapPin, Phone, User, 
-  Calendar, ArrowLeft, Timer, MessageSquare, Building2, 
+import {
+  Truck, Package, CheckCircle2, Clock, MapPin, Phone, User,
+  Calendar, ArrowLeft, Timer, MessageSquare, Building2,
   RefreshCw
 } from 'lucide-react';
 import Header from '../../components/header';
 import { getDeliveryByRentalId } from '../../apis/delivery.api';
-import type { ActualDeliveryResponse, DeliveryStatus } from '../../types/delivery.types';
+import type { ActualDeliveryResponse, DeliveryStatus, DeliveryType } from '../../types/delivery.types';
 
 // === REUSE CONFIG TỪ STAFF (copy nguyên để không phụ thuộc) ===
-const STATUS_CONFIG: Record<DeliveryStatus, { 
-  color: string; 
-  bg: string; 
+const STATUS_CONFIG: Record<DeliveryStatus, {
+  color: string;
+  bg: string;
   border: string;
   gradient: string;
   icon: React.ReactNode;
@@ -26,6 +26,13 @@ const STATUS_CONFIG: Record<DeliveryStatus, {
 };
 
 const STATUS_ORDER: DeliveryStatus[] = ['Pending', 'Assigned', 'Delivering', 'Delivered'];
+
+// DeliveryType configuration
+const TYPE_CONFIG: Record<DeliveryType, { label: string; color: string; bg: string; emoji: string }> = {
+  FirstOfDay: { label: 'First of Day', color: 'text-sky-700', bg: 'bg-sky-100', emoji: '🌅' },
+  MidDay: { label: 'Mid-Day', color: 'text-slate-600', bg: 'bg-slate-100', emoji: '☀️' },
+  LastOfDay: { label: 'Last of Day', color: 'text-indigo-700', bg: 'bg-indigo-100', emoji: '🌆' },
+};
 
 // === REUSE HELPER FUNCTIONS ===
 const formatDateTime = (dateStr: string | null): string => {
@@ -83,7 +90,7 @@ const TimeComparison: React.FC<{
 }> = ({ label, scheduled, actual, icon }) => {
   const scheduledDate = scheduled ? new Date(scheduled) : null;
   const actualDate = actual ? new Date(actual) : null;
-  
+
   let comparison = null;
   if (scheduledDate && actualDate) {
     const diff = Math.round((actualDate.getTime() - scheduledDate.getTime()) / 60000);
@@ -189,6 +196,10 @@ export default function CustomerDeliveryTrackingPage() {
                     {config.icon} {delivery.status}
                   </span>
                   <span className="px-3 py-1 rounded-lg bg-white/20 text-sm">ID: #{delivery.id}</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/20 text-sm flex items-center gap-1.5">
+                    <span>{TYPE_CONFIG[delivery.type].emoji}</span>
+                    {TYPE_CONFIG[delivery.type].label}
+                  </span>
                 </div>
                 <h1 className="text-4xl font-extrabold mb-2">{delivery.rentalInfo.eventName}</h1>
                 <div className="flex items-center gap-2 text-white/80">

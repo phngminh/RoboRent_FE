@@ -7,7 +7,7 @@ export interface PaymentRecordResponse {
   amount: number;
   orderCode: number; // Dùng làm Ref ID
   paymentLinkId: string | null;
-  status: string; // 'Pending', 'Paid', 'Cancelled', 'Failed'
+  status: string; // 'Pending', 'Paid', 'Cancelled', 'Failed', 'Expired'
   createdAt: string;
   paidAt: string | null;
   checkoutUrl: string | null;

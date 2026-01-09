@@ -31,11 +31,13 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
   const [error, setError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editedTitle, setEditedTitle] = useState('')
+  const [errors, setErrors] = useState<{ title?: string; body?: string }>({});
 
   const fetchDraft = async () => {
     try {
       setLoading(true)
       const draftData = await getDraftById(draftId)
+      console.log('Fetched draft:', draftData)
       if (draftData) {
         setDraft(draftData)
         setEditedTitle(draftData.title)
@@ -86,11 +88,38 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
     if (isViewModalVisible && selectedClause) {
       setEditedClauseBody(selectedClause.body)
       setIsEditingClause(false)
+      setErrors((prev) => ({ ...prev, body: undefined }))
     }
   }, [isViewModalVisible, selectedClause])
 
+  const stripHtml = (html: string): string => {
+    const tmp = document.createElement('div')
+    tmp.innerHTML = html
+    return tmp.textContent || tmp.innerText || ''
+  }
+
+  const validateInput = (type: 'title' | 'body', value: string): boolean => {
+    const newErrors: { title?: string; body?: string } = {}
+
+    if (type === 'title') {
+      if (!value.trim()) {
+        newErrors.title = 'Title is required!'
+      } else if (value.trim().length > 100) {
+        newErrors.title = 'Title must not exceed 100 characters!'
+      }
+    } else if (type === 'body') {
+      const strippedBody = stripHtml(value)
+      if (!strippedBody.trim() || strippedBody.trim() === '' || value === '<p><br></p>') {
+        newErrors.body = 'Body is required!'
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, ...newErrors }))
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSaveClause = async () => {
-    if (!selectedClause) return
+    if (!selectedClause || !validateInput('body', editedClauseBody)) return
     try {
       const payload: UpdateDraftClausesPayload = {
         id: selectedClause.id,
@@ -125,7 +154,7 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
   }
 
   const handleSave = async () => {
-    if (!draft) return
+    if (!draft || !validateInput('title', editedTitle)) return
     try {
       const payload: ReviseContractDraftPayload = {
         id: draftId,
@@ -149,6 +178,10 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
     txt.innerHTML = html
     return txt.value
   }
+
+  const ErrorMessage = ({ message }: { message: string }) => (
+    <p className='text-sm text-destructive mt-1'>{message}</p>
+  )
 
   if (loading) {
     return (
@@ -192,7 +225,14 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
           <div className='flex justify-between items-center'>
             <CardTitle className='text-2xl font-semibold text-gray-900 text-left'>Contract Details</CardTitle>
             {!isEditing ? (
-              <Button onClick={() => setIsEditing(true)} variant='outline'><Edit3 size={18} />Edit</Button>
+              <Button 
+                onClick={() => setIsEditing(true)} 
+                disabled={draft.status !== 'ChangeRequested' && draft.status !== 'Draft' && draft.status !== 'Modified'}
+                variant='outline'
+              >
+                <Edit3 size={18} />
+                Edit
+              </Button>
             ) : (
               <div className='flex gap-2'>
                 <Button onClick={handleCancel} variant='outline'>Cancel</Button>
@@ -209,11 +249,15 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
                 {!isEditing ? (
                   <Input value={draft.title} readOnly className='bg-white border-gray-300' />
                 ) : (
-                  <Input
-                    value={editedTitle}
-                    onChange={(e) => setEditedTitle(e.target.value)}
-                    className='border-gray-300'
-                  />
+                  <>
+                    <Input
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
+                      className='border-gray-300'
+                    />
+
+                    {errors.title && <ErrorMessage message={errors.title} />}
+                  </>
                 )}
               </div>
               <div>
@@ -337,11 +381,14 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
           <div className='flex-1 overflow-y-auto overflow-x-visible pr-3 pl-3 space-y-6'>
             <div className='space-y-2'>
               {isEditingClause ? (
-                <FormInput
-                  value={editedClauseBody}
-                  onChange={(content) => setEditedClauseBody(content)}
-                  editorKey={selectedClause?.id}
-                />
+                <>
+                  <FormInput
+                    value={editedClauseBody}
+                    onChange={(content) => setEditedClauseBody(content)}
+                    editorKey={selectedClause?.id}
+                  />
+                  {errors.body && <ErrorMessage message={errors.body} />}
+                </>
               ) : (
                 <div
                   className='prose max-w-none prose-sm'
@@ -355,7 +402,8 @@ const StaffDetailContractDraft: React.FC<StaffDetailContractDraft> = ({ onBack }
               <>
                 <Button 
                   type='button' 
-                  variant='outline' 
+                  variant='outline'
+                  disabled={!selectedClause || selectedClause.templateClauseIsEditable === false || (draft.status !== 'ChangeRequested' && draft.status !== 'Draft' && draft.status !== 'Modified')}
                   onClick={() => setIsEditingClause(true)}
                 >
                   <Edit3 size={16} className='mr-2' />

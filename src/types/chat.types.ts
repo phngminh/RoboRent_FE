@@ -85,41 +85,43 @@ export interface UpdateMessageStatusRequest {
 export interface PriceQuoteResponse {
   id: number
   rentalId: number
-  delivery: number | null
-  deposit: number | null
-  complete: number | null
-  service: number | null
-  deliveryFee: number | null      
-  deliveryDistance: number | null 
-  total: number
+  // === DEPOSIT COMPONENTS (LOCKED) ===
+  rentalFee: number
+  staffFee: number
+  damageDeposit: number
+  // === ADJUSTABLE FEES ===
+  deliveryFee: number | null
+  deliveryDistance: number | null
+  customizationFee: number
+  // === COMPUTED TOTALS ===
+  totalDeposit: number   // 30% × (RentalFee + StaffFee) + DamageDeposit
+  totalPayment: number   // 70% × (RentalFee + StaffFee) + DeliveryFee + CustomizationFee
+  grandTotal: number     // TotalDeposit + TotalPayment
+  // === METADATA ===
   staffDescription: string | null
   managerFeedback: string | null
-  customerReason: string | null 
+  customerReason: string | null
   createdAt: string
   status: QuoteStatus
   quoteNumber: number
+  managerId: number | null
 }
 
 export interface CreatePriceQuoteRequest {
   rentalId: number
-  delivery?: number
-  deposit?: number
-  complete?: number
-  service?: number
+  customizationFee?: number    // Only adjustable field in Phase 1
   staffDescription?: string
-  managerFeedback?: string
-  deliveryDistance: number
+}
+
+export interface UpdatePriceQuoteRequest {
+  deliveryFee?: number         // Adjustable in Phase 2
+  customizationFee?: number    // Adjustable in Phase 2
+  staffDescription?: string
 }
 
 export interface RentalQuotesResponse {
   rentalId: number
-  quotes: {
-    id: number
-    quoteNumber: number
-    total: number
-    status: QuoteStatus
-    createdAt: string
-  }[]
+  quotes: PriceQuoteResponse[]  // Full quote objects now
   totalQuotes: number
   canCreateMore: boolean
 }
@@ -147,7 +149,7 @@ export interface ChatRoomListItem {
   packageName?: string
   eventDate?: string
   status?: string
-  rentalStatus?: string 
+  rentalStatus?: string
   lastMessage?: string
   lastMessageTime?: string
   unreadCount: number
@@ -163,6 +165,14 @@ export interface ChatRoomListResponse {
   hasPreviousPage: boolean
 }
 
+export interface DeliveryFeePreviewResponse {
+  rentalId: number
+  city: string
+  deliveryFee: number
+  distanceKm: number | null
+  description: string
+}
+
 export interface ManagerQuoteListItemResponse {
   id: number
   rentalId: number
@@ -170,13 +180,21 @@ export interface ManagerQuoteListItemResponse {
   customerName: string
   packageName: string
   eventDate: string
-  delivery: number | null
-  deposit: number | null
-  complete: number | null
-  service: number | null
-  total: number
+  // === DEPOSIT COMPONENTS (LOCKED) ===
+  rentalFee: number
+  staffFee: number
+  damageDeposit: number
+  // === ADJUSTABLE FEES ===
+  deliveryFee: number | null
+  deliveryDistance: number | null
+  customizationFee: number
+  // === COMPUTED TOTALS ===
+  totalDeposit: number
+  totalPayment: number
+  grandTotal: number
+  // === METADATA ===
   staffDescription: string | null
   managerFeedback: string | null
   status: QuoteStatus
-  createdAt: string | null  // ✅ nullable
+  createdAt: string | null
 }

@@ -10,7 +10,7 @@ import type {
   PendingDeliveriesResponse
 } from '../types/delivery.types'
 
-const API_URL = 'https://localhost:7249/api'
+const API_URL = `${import.meta.env.VITE_API_URL}`
 
 /**
  * GET /api/ActualDelivery/my-deliveries

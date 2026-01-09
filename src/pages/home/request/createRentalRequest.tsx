@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { getAllEventActivityAsync } from '../../../apis/eventactivity.api'
 import { getActivityTypeByEAIdAsync } from '../../../apis/activitytype.api'
 import { getAllProvincesAsync, getAllWardsAsync } from '../../../apis/address.api'
-import { customerCreateRentalAsync } from '../../../apis/rental.customer.api'
+import { customerCreateRentalAsync, customerUpdateRentalAsync, getRentalByIdAsync } from '../../../apis/rental.customer.api'
 import 'react-time-picker/dist/TimePicker.css'
 import 'react-clock/dist/Clock.css'
 import { useAuth } from '../../../contexts/AuthContext'
@@ -11,18 +10,23 @@ import BlockTimePicker from '../../../components/customer/BlockTimePicker'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import Layout from '../../../components/layout'
-
-interface EventActivity {
-  id: number
-  name: string
-  description: string
-  isDeleted: boolean
-}
+import { useParams } from 'react-router-dom'
 
 interface ActivityType {
   id: number
-  eventActivityId: number
+  code: string
   name: string
+  shortDescription: string
+  description: string
+  price: number
+  currency: string
+  includesOperator: boolean
+  operatorCount: number
+  hourlyRate: number
+  minimumMinutes: number
+  billingIncrementMinutes: number
+  technicalStaffFeePerHour: number
+  isActive: boolean
   isDeleted: boolean
 }
 
@@ -47,10 +51,9 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string[] }>({})
 
   const [eventName, setEventName] = useState('')
+  const { rentalId: rentalIdString } = useParams<{ rentalId: string }>()
+  const rentalId = rentalIdString ? parseInt(rentalIdString, 10) : 0
   const [eventDate, setEventDate] = useState<string>('')
-
-  const [eventActivities, setEventActivities] = useState<EventActivity[]>([])
-  const [selectedActivityId, setSelectedActivityId] = useState<number | ''>('')
 
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([])
   const [selectedTypeId, setSelectedTypeId] = useState<number | ''>('')
@@ -87,6 +90,18 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
     return null
   }
 
+  const parseAddress = (addr?: string) => {
+    if (!addr) return { street: '', wardName: '' }
+    const parts = addr
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+    if (parts.length <= 1) return { street: addr.trim(), wardName: '' }
+    const wardName = parts[parts.length - 1]
+    const street = parts.slice(0, -1).join(', ')
+    return { street, wardName }
+  }
+
   const FieldError = ({ name }: { name: string }) => {
     if (!fieldErrors[name]) return null
     return (
@@ -106,7 +121,6 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
     const fe: { [key: string]: string[] } = {}
 
     if (!eventName.trim()) fe.eventName = ['Event Name is required.']
-    if (!selectedActivityId) fe.selectedActivityId = ['Event Activity is required.']
     if (!selectedTypeId) fe.selectedTypeId = ['Activity Type is required.']
     if (!phoneNumber.trim()) fe.phoneNumber = ['Phone Number is required.']
     if (!email.trim()) fe.email = ['Email Address is required.']
@@ -127,6 +141,8 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
   const handleSaveDraft = async () => {
     if (!validateRequired()) return
 
+    const nowIso = new Date().toISOString()
+
     const body: any = {
       eventName,
       description,
@@ -137,18 +153,26 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
       eventDate: eventDate ? new Date(eventDate).toISOString() : null,
       startTime,
       endTime,
-      createdDate: new Date().toISOString(),
-      requestedDate: new Date().toISOString(),
-      updatedDate: new Date().toISOString(),
+      updatedDate: nowIso,
+      requestedDate: nowIso,
       status: 'Draft',
       isDeleted: false,
       accountId: user?.accountId,
-      eventActivityId: selectedActivityId,
-      activityTypeId: selectedTypeId
+      activityTypeId: Number(selectedTypeId)
+    }
+
+    if (!rentalId) {
+      body.createdDate = nowIso
+    }
+
+    if (rentalId) {
+      body.id = rentalId
     }
 
     try {
-      const res = await customerCreateRentalAsync(body)
+      let res
+      if (rentalId) res = await customerUpdateRentalAsync(body)
+      else res = await customerCreateRentalAsync(body)
 
       if (res?.success === false && res?.errors?.length > 0) {
         setErrors(res.errors)
@@ -156,7 +180,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
       }
 
       setErrors([])
-      return res?.id
+      return res?.id ?? rentalId
     } catch (err: any) {
       console.log("FE caught:", err?.response?.data)
 
@@ -188,9 +212,9 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
     onNextStep(id, Number(selectedTypeId))
   }
 
-  useEffect(() => {
-    (async () => {
-      setEventActivities(await getAllEventActivityAsync())
+  useEffect(() => {(async () => {
+      const types = await getActivityTypeByEAIdAsync()
+      setActivityTypes(types)
     })()
   }, [])
 
@@ -199,18 +223,6 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
       setProvinces(await getAllProvincesAsync())
     })()
   }, [])
-
-  useEffect(() => {
-    if (!selectedActivityId) {
-      setActivityTypes([])
-      return setSelectedTypeId('')
-    }
-
-    (async () => {
-      const res = await getActivityTypeByEAIdAsync(Number(selectedActivityId))
-      setActivityTypes(res)
-    })()
-  }, [selectedActivityId])
 
   useEffect(() => {
     if (!selectedProvinceId) {
@@ -224,15 +236,58 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
     })()
   }, [selectedProvinceId])
 
+  useEffect(() => {
+    if (!rentalId || provinces.length === 0) return
+
+    (async () => {
+      try {
+        const r = await getRentalByIdAsync(rentalId)
+
+        setEventName(r.eventName ?? '')
+        setPhoneNumber(r.phoneNumber ?? '')
+        setEmail(r.email ?? '')
+        setDescription(r.description ?? '')
+        setEventDate(r.eventDate ? String(r.eventDate).slice(0, 10) : '')
+        setStartTime((r.startTime || '').slice(0, 5))
+        setEndTime((r.endTime || '').slice(0, 5))
+
+        setSelectedTypeId(r.activityTypeId ?? '')
+
+        const { street, wardName } = parseAddress(r.address)
+        setStreetAddress(street)
+
+        const province = provinces.find(p => p.name === r.city)
+        if (!province) return
+
+        setSelectedProvinceId(province.code)
+
+        const allWards = await getAllWardsAsync()
+        setWards(allWards)
+
+        if (wardName) {
+          const matchedWard = allWards.find(
+            (w: Wards) => w.province_code === province.code && w.name === wardName
+          )
+          if (matchedWard) {
+            setSelectedWardId(matchedWard.code)
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load rental by id', e)
+      }
+    })()
+  }, [rentalId, provinces])
+
   return (
     <Layout>
-      <div className="max-w-5xl mx-auto my-8 bg-gradient-to-br from-white to-gray-50 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 w-full min-h-screen">
+      <div className="fixed inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 -z-10" />
+      <div className="max-w-5xl mx-auto my-20 relative z-10 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 w-full min-h-screen bg-white">
         <h2 className="text-3xl font-bold text-center mb-8 text-gray-800 bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
-          Create Your Rental Request
+          {rentalId ? 'Edit Rental Request' : 'Create Your Rental Request'}
         </h2>
 
         <div className="space-y-8">
-          <div className="p-8 border border-gray-200 rounded-2xl bg-white shadow-sm space-y-6">
+          <div className="p-8 border border-purple-300 rounded-2xl bg-white shadow-sm space-y-6">
             <div className="flex items-center gap-3">
               <CalendarDays className="text-purple-600" size={24} />
               <h3 className="font-bold text-xl text-gray-800">Event Information</h3>
@@ -253,31 +308,13 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Event Activity *</label>
-                  <select
-                    value={selectedActivityId}
-                    onChange={e => setSelectedActivityId(Number(e.target.value) || '')}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white"
-                  >
-                    <option value="">Select activity...</option>
-                    {eventActivities.map(ea => (
-                      <option key={ea.id} value={ea.id}>
-                        {ea.name}
-                      </option>
-                    ))}
-                  </select>
-                  <FieldError name="selectedActivityId" />
-                </div>
-
-                <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Activity Type *</label>
                   <select
                     value={selectedTypeId}
                     onChange={e => setSelectedTypeId(Number(e.target.value) || '')}
-                    disabled={!selectedActivityId}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white"
                   >
-                    <option value="">Select type...</option>
+                    <option value="">Select package...</option>
                     {activityTypes.map(a => (
                       <option key={a.id} value={a.id}>
                         {a.name}
@@ -300,7 +337,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
             </div>
           </div>
 
-          <div className="p-8 border border-gray-200 rounded-2xl bg-white shadow-sm space-y-6">
+          <div className="p-8 border border-purple-300 rounded-2xl bg-white shadow-sm space-y-6">
             <div className="flex items-center gap-3">
               <Home className="text-purple-600" size={24} />
               <h3 className="font-bold text-xl text-gray-800">Contact Information</h3>
@@ -333,7 +370,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <div className="p-8 border border-gray-200 rounded-2xl bg-white shadow-sm space-y-6">
+            <div className="p-8 border border-purple-300 rounded-2xl bg-white shadow-sm space-y-6">
               <div className="flex items-center gap-3">
                 <MapPin className="text-purple-600" size={24} />
                 <h3 className="font-bold text-xl text-gray-800">Event Location</h3>
@@ -341,7 +378,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Street & House Number *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Street *</label>
                   <input
                     value={streetAddress}
                     onChange={e => setStreetAddress(e.target.value)}
@@ -392,7 +429,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
               </div>
             </div>
 
-            <div className="p-8 border border-gray-200 rounded-2xl bg-white shadow-sm space-y-6">
+            <div className="p-8 border border-purple-300 rounded-2xl bg-white shadow-sm space-y-6">
               <div className="flex items-center gap-3">
                 <Clock className="text-purple-600" size={24} />
                 <h3 className="font-bold text-xl text-gray-800">Event Time</h3>
@@ -413,11 +450,11 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col">
-                    <BlockTimePicker label="Start Time *" value={startTime} onChange={setStartTime} />
+                    <BlockTimePicker label="Start Time" value={startTime} onChange={setStartTime} />
                     <FieldError name="startTime" />
                   </div>
                   <div className="flex flex-col">
-                    <BlockTimePicker label="End Time *" value={endTime} onChange={setEndTime} />
+                    <BlockTimePicker label="End Time" value={endTime} onChange={setEndTime} />
                     <FieldError name="endTime" />
                   </div>
                 </div>

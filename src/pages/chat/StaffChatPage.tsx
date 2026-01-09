@@ -4,16 +4,15 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Send, Paperclip, DollarSign, FileText, Calendar, MapPin, Package, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { signalRService } from '../../utils/signalr'
-import { 
-  getChatMessages, 
+import {
+  getChatMessages,
   sendMessage,
-  getStaffChatRooms,
-  getMyChatRooms
+  getMyChatRooms,
+  markRentalAsRead
 } from '../../apis/chat.api'
 import { getQuotesByRentalId } from '../../apis/priceQuote.api'
-import type { 
-  ChatMessageResponse, 
-  RentalDetailsPlaceholder,
+import type {
+  ChatMessageResponse,
   RentalQuotesResponse,
 } from '../../types/chat.types'
 import { MessageType, QuoteStatus, DemoStatus } from '../../types/chat.types'
@@ -25,7 +24,12 @@ import UpdateQuoteModal from '../../components/chat/UpdateQuoteModal'
 import Header from '../../components/header'
 import { toast } from 'react-toastify'
 import { formatDistanceToNow } from 'date-fns'
-import { getRentalByIdAsync } from '../../apis/rental.staff.api'
+import { formatMoney } from '../../utils/format'
+import { getRentalByIdAsync, getUpdatedStatusAsync, rejectActiveQuotesForRentalAsync } from '../../apis/rental.staff.api'
+import { getRentalDetailsByRentalIdAsync } from '../../apis/rentaldetail.api'
+import { Eye } from "lucide-react"
+import RentalDetailModal from '../../components/staff/RentalDetailModal'
+
 
 // Interface for customer chat list
 interface CustomerChat {
@@ -38,13 +42,42 @@ interface CustomerChat {
   lastMessage: string
   timestamp: string
   unread: number
+  lastMessageTime?: string  // For sorting - ISO date string
 }
 
 interface StaffChatPageProps {
   onViewContract: () => void
 }
 
-const StaffChatPage: React.FC<StaffChatPageProps> = ({onViewContract}) => {
+const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
+  const [showRentalDetailModal, setShowRentalDetailModal] = useState(false)
+type ApiResponse<T> = { success: boolean; data: T }
+
+type RentalDetailResponse = {
+  id: number
+  isDeleted: boolean
+  status: string
+  rentalId: number
+  roboTypeId: number
+  robotAbilityId: number | null
+  script: string
+  branding: string
+  scenario: string
+  robotTypeName: string
+  robotTypeDescription: string
+  robotAbilityValueResponses: Array<{
+    id: number
+    rentalDetailId: number
+    robotAbilityId: number
+    valueText: string | null
+    valueJson: string | null
+    updatedAt: string
+    isUpdated: boolean
+  }>
+}
+
+const [rentalDetails, setRentalDetails] = useState<RentalDetailResponse[]>([])
+  const [isLoadingRentalDetails, setIsLoadingRentalDetails] = useState(false)
   const { rentalId } = useParams<{ rentalId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -79,18 +112,33 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({onViewContract}) => {
   })
 
   useEffect(() => {
-  const loadRentalInfo = async () => {
-    if (!rentalId) return
-    try {
-      const data = await getRentalByIdAsync(parseInt(rentalId))
-      setRentalInfo(data)
-    } catch (error) {
-      console.error("Failed to load rental info:", error)
+    const loadRentalInfo = async () => {
+      if (!rentalId) return
+      try {
+        const data = await getRentalByIdAsync(parseInt(rentalId))
+        setRentalInfo(data)
+      } catch (error) {
+        console.error("Failed to load rental info:", error)
+      }
     }
-  }
 
-  loadRentalInfo()
-}, [rentalId])
+    loadRentalInfo()
+  }, [rentalId])
+
+const loadRentalDetails = async () => {
+  if (!rentalId) return
+  setIsLoadingRentalDetails(true)
+  try {
+    const res = await getRentalDetailsByRentalIdAsync(parseInt(rentalId)) as ApiResponse<RentalDetailResponse[]>
+    setRentalDetails(res.data) // ✅ FIX
+  } catch (e) {
+    console.error("Failed to load rental details:", e)
+    toast.error("Failed to load rental details")
+  } finally {
+    setIsLoadingRentalDetails(false)
+  }
+}
+
 
   // ✅ Persist sidebar states to localStorage
   useEffect(() => {
@@ -112,17 +160,17 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({onViewContract}) => {
         if (e.key === '[') {
           e.preventDefault()
           setIsSidebarOpen((prev: boolean) => !prev)
-          toast.info(isSidebarOpen ? 'Left sidebar hidden' : 'Left sidebar shown', { 
+          toast.info(isSidebarOpen ? 'Left sidebar hidden' : 'Left sidebar shown', {
             position: 'bottom-left',
-            autoClose: 1000 
+            autoClose: 1000
           })
         }
         if (e.key === ']') {
           e.preventDefault()
           setIsRightSidebarOpen((prev: boolean) => !prev)
-          toast.info(isRightSidebarOpen ? 'Right sidebar hidden' : 'Right sidebar shown', { 
+          toast.info(isRightSidebarOpen ? 'Right sidebar hidden' : 'Right sidebar shown', {
             position: 'bottom-right',
-            autoClose: 1000 
+            autoClose: 1000
           })
         }
       }
@@ -156,35 +204,67 @@ const StaffChatPage: React.FC<StaffChatPageProps> = ({onViewContract}) => {
   const hasPendingDemo = messages.some(
     msg => msg.messageType === MessageType.Demo && msg.status === DemoStatus.Pending
   )
-  
+
   const hasDemoAccepted = messages.some(
     msg => msg.messageType === MessageType.Demo && msg.status === DemoStatus.Accepted
   )
 
   // Send Demo button
-const isSendDemoDisabled = 
-  !(rentalStatus === 'Scheduled' || rentalStatus === 'DeniedDemo') 
-  || hasPendingDemo
-const sendDemoDisabledReason =
-  !(rentalStatus === 'Scheduled' || rentalStatus === 'DeniedDemo')
-    ? 'Rental status must be "Scheduled" or "DeniedDemo"'
-    : 'A demo is already pending customer review'
+  const isSendDemoDisabled =
+    !(rentalStatus === 'Scheduled' || rentalStatus === 'DeniedDemo')
+    || hasPendingDemo
+  const sendDemoDisabledReason =
+    !(rentalStatus === 'Scheduled' || rentalStatus === 'DeniedDemo')
+      ? 'Rental status must be "Scheduled" or "DeniedDemo"'
+      : 'A demo is already pending customer review'
 
 
-  // Create Quote button
-  const isCreateQuoteDisabled = !hasDemoAccepted || quotesData?.canCreateMore === false
-  const createQuoteDisabledReason = 
-    !hasDemoAccepted 
-      ? 'Customer must accept a demo first' 
-      : 'Maximum 3 quotes reached'
+  // Create Quote button - allow when status is Received or RejectedPriceQuote (matching BE validation)
+  const allowedQuoteStatuses = ['Received', 'RejectedPriceQuote']
+  const isCreateQuoteDisabled = !allowedQuoteStatuses.includes(rentalStatus) || quotesData?.canCreateMore === false
+  const createQuoteDisabledReason =
+    !allowedQuoteStatuses.includes(rentalStatus)
+      ? `Rental status must be "Received" or "RejectedPriceQuote" to create quote (current: ${rentalStatus})`
+      : 'Maximum 3 quotes reached or active quote exists'
 
-  // Send Contract button
-  const hasApprovedQuote = quotesData?.quotes.some(q => q.status === QuoteStatus.Approved)
-  const isSendContractDisabled = !hasApprovedQuote
-  const sendContractDisabledReason = 'Customer must approve a quote first'
+  // Send Contract button - only after demo accepted
+  const isSendContractDisabled = rentalStatus !== 'AcceptedDemo'
+  const sendContractDisabledReason =
+    rentalStatus === 'AcceptedPriceQuote'
+      ? 'Cần xếp lịch (Schedule) trước khi gửi Contract'
+      : rentalStatus === 'Scheduled' || rentalStatus === 'PendingDemo' || rentalStatus === 'DeniedDemo'
+        ? 'Cần customer chấp nhận Demo trước'
+        : `Rental status phải là "AcceptedDemo" (hiện tại: ${rentalStatus})`
+
+  // Status guidance for staff
+  const getStatusGuidance = () => {
+    switch (rentalStatus) {
+      case 'Received':
+      case 'PendingPriceQuote':
+      case 'RejectedPriceQuote':
+        return { icon: '💰', message: 'Tạo báo giá cho khách hàng', color: 'blue' }
+      case 'AcceptedPriceQuote':
+        return { icon: '📅', message: 'Quote approved! Bước tiếp:', linkText: 'Xếp lịch', linkUrl: '/staff/robot-group', color: 'green' }
+      case 'Scheduled':
+        return { icon: '🎬', message: 'Đã xếp lịch! Bước tiếp: Gửi video Demo', color: 'purple' }
+      case 'PendingDemo':
+        return { icon: '⏳', message: 'Demo đang chờ khách duyệt...', color: 'yellow' }
+      case 'DeniedDemo':
+        return { icon: '🔄', message: 'Khách từ chối demo. Gửi demo mới!', color: 'orange' }
+      case 'AcceptedDemo':
+        return { icon: '📝', message: 'Demo accepted! Bước tiếp: Tạo và gửi hợp đồng', color: 'indigo' }
+      case 'PendingContract':
+        return { icon: '✍️', message: 'Hợp đồng đang chờ ký...', color: 'violet' }
+      case 'PendingDeposit':
+        return { icon: '💳', message: 'Chờ khách đóng tiền cọc...', color: 'emerald' }
+      default:
+        return null
+    }
+  }
+  const statusGuidance = getStatusGuidance()
 
   // Filter chats based on search
-  const filteredChats = customerChats.filter(chat => 
+  const filteredChats = customerChats.filter(chat =>
     chat.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     chat.rentalId.toString().includes(searchQuery) ||
     chat.packageName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -195,62 +275,49 @@ const sendDemoDisabledReason =
   }
 
   // Load customer chats from API
-useEffect(() => {
-  const loadChats = async () => {
-    if (!user?.accountId) return
-    
-    setIsLoadingChats(true)
-    try {
-      const response = await getMyChatRooms(1, 50)
+  useEffect(() => {
+    const loadChats = async () => {
+      if (!user?.accountId) return
 
-      console.log("=== DEBUG: getMyChatRooms RESPONSE ===")
-      console.log(JSON.stringify(response, null, 2))
+      setIsLoadingChats(true)
+      try {
+        const response = await getMyChatRooms(1, 50)
 
-      const mappedChats: CustomerChat[] = response.rooms.map(room => ({
-        id: room.id,
-        rentalId: room.rentalId,
-        customerName: room.customerName || 'Unknown Customer',
-        packageName: room.packageName || 'Unknown Package',
-        eventDate: room.eventDate || 'TBD',
-        status: room.status || 'Unknown',
-        lastMessage: room.lastMessage || 'No messages',
-        timestamp: room.lastMessageTime 
-          ? formatDistanceToNow(new Date(room.lastMessageTime), { addSuffix: true })
-          : 'No messages',
-        unread: room.unreadCount
-      }))
-      setCustomerChats(mappedChats)
+        const mappedChats: CustomerChat[] = response.rooms.map(room => ({
+          id: room.id,
+          rentalId: room.rentalId,
+          customerName: room.customerName || 'Unknown Customer',
+          packageName: room.packageName || 'Unknown Package',
+          eventDate: room.eventDate || 'TBD',
+          status: room.status || 'Unknown',
+          lastMessage: room.lastMessage || 'No messages',
+          timestamp: room.lastMessageTime
+            ? formatDistanceToNow(new Date(room.lastMessageTime), { addSuffix: true })
+            : 'No messages',
+          unread: room.unreadCount
+        }))
+        setCustomerChats(mappedChats)
 
-      // Set rental status
-      const selectedRentalId = parseInt(rentalId || '0')
+        // Set rental status
+        const selectedRentalId = parseInt(rentalId || '0')
+        const currentChat = response.rooms.find(r => r.rentalId === selectedRentalId)
+        if (currentChat?.rentalStatus) {
+          setRentalStatus(currentChat.rentalStatus)
+        }
 
-      console.log("=== DEBUG: Selected rentalId ===", selectedRentalId)
-
-      const currentChat = response.rooms.find(r => r.rentalId === selectedRentalId)
-
-      console.log("=== DEBUG: currentChat FOUND ===")
-      console.log(currentChat)
-
-      console.log("=== DEBUG: currentChat.rentalStatus ===")
-      console.log(currentChat?.rentalStatus)
-
-      if (currentChat?.rentalStatus) {
-        setRentalStatus(currentChat.rentalStatus)
+      } catch (error) {
+        console.error('Failed to load chats:', error)
+        toast.error('Failed to load chat list')
+      } finally {
+        setIsLoadingChats(false)
       }
-
-    } catch (error) {
-      console.error('Failed to load chats:', error)
-      toast.error('Failed to load chat list')
-    } finally {
-      setIsLoadingChats(false)
     }
-  }
 
-  loadChats()
-}, [user?.id, rentalId])
+    loadChats()
+  }, [user?.accountId, rentalId])
 
 
-  // Load messages
+  // Load messages and mark as read
   useEffect(() => {
     if (!rentalId) return
 
@@ -258,6 +325,21 @@ useEffect(() => {
       try {
         const response = await getChatMessages(parseInt(rentalId), 1, 50)
         setMessages(response.messages)
+
+        // Mark messages as read after loading
+        try {
+          await markRentalAsRead(parseInt(rentalId))
+
+          // Immediately update the unread count in sidebar to 0
+          setCustomerChats(prev => prev.map(chat =>
+            chat.rentalId === parseInt(rentalId)
+              ? { ...chat, unread: 0 }
+              : chat
+          ))
+        } catch (error) {
+          console.error('Failed to mark messages as read:', error)
+          // Don't show error to user, this is not critical
+        }
       } catch (error) {
         console.error('Failed to load messages:', error)
         toast.error('Failed to load chat messages')
@@ -283,6 +365,44 @@ useEffect(() => {
     fetchQuotes(parseInt(rentalId))
   }, [rentalId])
 
+  // Check updated status and auto reject quotes if needed
+  useEffect(() => {
+    if (!rentalId) return
+
+    const checkAndRejectQuotes = async () => {
+      try {
+        const response = await getUpdatedStatusAsync(parseInt(rentalId))
+        
+        if (response.success && response.data) {
+          const { rentalIsUpdated, rentalDetailIsUpdated } = response.data
+          
+          if (rentalIsUpdated === true || rentalDetailIsUpdated === true) {
+            // Auto reject active quotes
+            try {
+              await rejectActiveQuotesForRentalAsync(parseInt(rentalId))
+              
+              // Refresh quotes list
+              await fetchQuotes(parseInt(rentalId))
+              
+              // Show notification
+              toast.info("Rental information has been updated. Quotes have been rejected for update.", {
+                autoClose: 5000
+              })
+            } catch (error) {
+              console.error("Failed to reject active quotes:", error)
+              toast.error("Failed to reject quotes after rental update")
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check updated status:", error)
+        // Don't show error to user, this is not critical
+      }
+    }
+
+    checkAndRejectQuotes()
+  }, [rentalId])
+
   // SignalR setup
   useEffect(() => {
     if (!rentalId) return
@@ -294,38 +414,126 @@ useEffect(() => {
         await signalRService.connect()
         await signalRService.joinRentalChat(parseInt(rentalId))
 
-        const handleReceiveMessage = (message: ChatMessageResponse) => {
+        const handleReceiveMessage = async (message: ChatMessageResponse) => {
           if (!isSubscribed) return
           setMessages(prev => {
             if (prev.some(m => m.id === message.id)) return prev
             return [...prev, message]
           })
           scrollToBottom()
+
+          // 🎯 Auto-mark as read since user is in the chat room
+          try {
+            await markRentalAsRead(parseInt(rentalId))
+            setCustomerChats(prev => prev.map(chat =>
+              chat.rentalId === parseInt(rentalId)
+                ? { ...chat, unread: 0 }
+                : chat
+            ))
+          } catch (error) {
+            console.error('Failed to auto-mark as read:', error)
+          }
         }
 
         const handleDemoStatusChanged = (messageId: number, status: string) => {
           if (!isSubscribed) return
-          setMessages(prev => prev.map(msg => 
+          setMessages(prev => prev.map(msg =>
             msg.id === messageId ? { ...msg, status: status as DemoStatus } : msg
           ))
         }
 
-        const handleQuoteStatusChanged = async (data: { 
+        const handleQuoteStatusChanged = async (data: {
           QuoteId: number
           Status: string
           QuoteNumber: number
-          Total: number 
+          Total: number
         }) => {
           if (!isSubscribed) return
-          console.log('📢 Quote status changed:', data)
           if (rentalId) {
             await fetchQuotes(parseInt(rentalId))
           }
         }
 
+        // 🎯 NEW: Handle quote rejected by customer
+        const handleQuoteRejected = (data: {
+          QuoteId: number
+          QuoteNumber: number
+          Reason: string
+        }) => {
+          if (!isSubscribed) return
+          toast.warning(`Customer đã từ chối báo giá #${data.QuoteNumber}. Lý do: ${data.Reason}`)
+          if (rentalId) {
+            fetchQuotes(parseInt(rentalId))
+          }
+        }
+
+        // 🎯 NEW: Handle contract activated (customer signed)
+        const handleContractActivated = (data: {
+          ContractId: number
+          RentalId: number
+          Message: string
+        }) => {
+          if (!isSubscribed) return
+          toast.success(`🎉 ${data.Message}`)
+        }
+
+        // 🎯 NEW: Handle contract change requested by customer
+        const handleContractChangeRequested = (data: {
+          ContractId: number
+          RentalId: number
+          Message: string
+          ChangeRequest: string
+        }) => {
+          if (!isSubscribed) return
+          toast.info(`Customer yêu cầu sửa hợp đồng: ${data.ChangeRequest}`)
+        }
+
+        // 🎯 NEW: Facebook-like sidebar update when message comes to a different room
+        // NOTE: SignalR auto-converts PascalCase to camelCase
+        const handleNewMessageInRoom = (data: {
+          rentalId: number
+          senderId: number
+          senderName: string
+          preview: string
+          timestamp: string
+        }) => {
+          if (!isSubscribed) return
+
+          // Update sidebar: increase unread count, update last message, and SORT to top
+          setCustomerChats(prev => {
+            const updated = prev.map(chat =>
+              chat.rentalId === data.rentalId
+                ? {
+                  ...chat,
+                  unread: chat.rentalId !== parseInt(rentalId || '0') ? chat.unread + 1 : 0,
+                  lastMessage: data.preview,
+                  timestamp: 'just now',
+                  lastMessageTime: new Date().toISOString()
+                }
+                : chat
+            )
+            // Sort by lastMessageTime descending (newest first)
+            return updated.sort((a, b) => {
+              const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0
+              const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0
+              return timeB - timeA
+            })
+          })
+        }
+
+        // Empty handlers to prevent console warnings
+        const handleUserJoined = (_connectionId: string) => { }
+        const handleUserLeft = (_connectionId: string) => { }
+
+        signalRService.onUserJoined(handleUserJoined)
+        signalRService.onUserLeft(handleUserLeft)
         signalRService.onReceiveMessage(handleReceiveMessage)
         signalRService.onDemoStatusChanged(handleDemoStatusChanged)
         signalRService.onQuoteStatusChanged(handleQuoteStatusChanged)
+        signalRService.onQuoteRejected(handleQuoteRejected)
+        signalRService.onContractActivated(handleContractActivated)
+        signalRService.onContractChangeRequested(handleContractChangeRequested)
+        signalRService.onNewMessageInRoom(handleNewMessageInRoom)
 
       } catch (error) {
         console.error('SignalR setup failed:', error)
@@ -338,12 +546,18 @@ useEffect(() => {
       isSubscribed = false
       if (rentalId) {
         signalRService.leaveRentalChat(parseInt(rentalId))
+        signalRService.offUserJoined()
+        signalRService.offUserLeft()
         signalRService.offReceiveMessage()
         signalRService.offDemoStatusChanged()
         signalRService.offQuoteStatusChanged()
+        signalRService.offQuoteRejected()
+        signalRService.offContractActivated()
+        signalRService.offContractChangeRequested()
+        signalRService.offNewMessageInRoom()
       }
     }
-  }, [rentalId])
+  }, [rentalId, user?.accountId])
 
   useEffect(() => {
     scrollToBottom()
@@ -355,7 +569,7 @@ useEffect(() => {
 
     setIsSending(true)
     const messageContent = inputMessage.trim()
-    
+
     try {
       await sendMessage({
         rentalId: parseInt(rentalId),
@@ -363,6 +577,26 @@ useEffect(() => {
         content: messageContent
       })
       setInputMessage('')
+
+      // 🎯 Update sender's own sidebar (NewMessageInRoom only goes to recipient)
+      setCustomerChats(prev => {
+        const updated = prev.map(chat =>
+          chat.rentalId === parseInt(rentalId)
+            ? {
+              ...chat,
+              lastMessage: messageContent.length > 50 ? messageContent.substring(0, 50) + '...' : messageContent,
+              timestamp: 'just now',
+              lastMessageTime: new Date().toISOString()
+            }
+            : chat
+        )
+        // Sort by lastMessageTime descending (newest first)
+        return updated.sort((a, b) => {
+          const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0
+          const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0
+          return timeB - timeA
+        })
+      })
     } catch (error: any) {
       console.error('Failed to send message:', error)
       toast.error(error.response?.data?.error || 'Failed to send message')
@@ -409,10 +643,10 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="pt-16 h-screen flex">
         {/* Left Sidebar - Customer List */}
-        <div 
+        <div
           style={{ width: isSidebarOpen ? `${sidebarWidth}px` : '0px' }}
           className="border-r border-gray-200 bg-white flex flex-col relative overflow-hidden transition-all duration-300 ease-in-out"
         >
@@ -448,9 +682,8 @@ useEffect(() => {
                 <div
                   key={chat.id}
                   onClick={() => handleChatClick(chat.rentalId)}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    chat.rentalId.toString() === rentalId ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-                  }`}
+                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${chat.rentalId.toString() === rentalId ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-1">
                     <div className="flex items-center gap-2">
@@ -495,58 +728,68 @@ useEffect(() => {
 
         {/* Center - Chat Area */}
         <div className="flex-1 flex flex-col bg-white">
-{/* Chat Header */}
-<div className="border-b border-gray-200 p-4 bg-white">
-  <div className="flex items-center justify-between">
-    <div className="flex items-center gap-3">
-      <button
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        title={isSidebarOpen ? "Hide sidebar (Cmd/Ctrl + [)" : "Show sidebar (Cmd/Ctrl + [)"}
-      >
-        {isSidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-      </button>
+          {/* Chat Header */}
+          <div className="border-b border-gray-200 p-4 bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title={isSidebarOpen ? "Hide sidebar (Cmd/Ctrl + [)" : "Show sidebar (Cmd/Ctrl + [)"}
+                >
+                  {isSidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+                </button>
 
-      {/* Safe avatar */}
-      <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-        {rentalInfo?.customerName?.charAt(0) || "?"}
-      </div>
+                {/* Safe avatar */}
+                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                  {rentalInfo?.customerName?.charAt(0) || "?"}
+                </div>
 
-      <div>
-        {/* Customer Name */}
-        <h1 className="text-lg font-bold text-gray-900">
-          {rentalInfo?.customerName || "Loading..."}
-        </h1>
+                <div>
+                  {/* Customer Name */}
+                  <h1 className="text-lg font-bold text-gray-900">
+                    {rentalInfo?.customerName || "Loading..."}
+                  </h1>
 
-        {/* Rental ID + Package */}
-        <p className="text-sm text-gray-500">
-          #{rentalId} • {rentalInfo?.eventName || "Loading..."} •{" "}
-          <span className="text-green-600">Online</span>
-        </p>
-      </div>
-    </div>
-
-    <button
-      onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-      title={isRightSidebarOpen ? "Hide details (Cmd/Ctrl + ])" : "Show details (Cmd/Ctrl + ])"}
-    >
-      {isRightSidebarOpen ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-    </button>
-  </div>
-</div>
+                  {/* Rental ID + Package */}
+                  <p className="text-sm text-gray-500">
+                    #{rentalId} • {rentalInfo?.eventName || "Loading..."} •{" "}
+                    <span className="text-green-600">Online</span>
+                  </p>
+                </div>
+              </div>
+  <button
+    onClick={async () => {
+      await loadRentalDetails()
+      setShowRentalDetailModal(true)
+    }}
+    className="px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium flex items-center gap-2"
+    title="View rental detail"
+  >
+    <Eye className="w-4 h-4 text-gray-700" />
+    View Details
+  </button>
+              <button
+                onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title={isRightSidebarOpen ? "Hide details (Cmd/Ctrl + ])" : "Show details (Cmd/Ctrl + ])"}
+              >
+                {isRightSidebarOpen ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+              </button>
+            </div>
+          </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {messages.map((message) => (
               <div key={message.id}>
                 {message.messageType === MessageType.Demo ? (
-                  <DemoVideoCard 
-                    message={message} 
+                  <DemoVideoCard
+                    message={message}
                     isCustomer={false}
                   />
                 ) : (
-                  <ChatMessage 
+                  <ChatMessage
                     message={message}
                     isOwnMessage={
                       message.senderRole === 'Staff' || message.senderId === user?.id
@@ -558,11 +801,39 @@ useEffect(() => {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Status Guidance Banner */}
+          {statusGuidance && (
+            <div className={`px-6 py-2 flex items-center gap-2 text-sm border-b border-gray-100 ${statusGuidance.color === 'blue' ? 'bg-blue-50 text-blue-700' :
+              statusGuidance.color === 'green' ? 'bg-green-50 text-green-700' :
+                statusGuidance.color === 'purple' ? 'bg-purple-50 text-purple-700' :
+                  statusGuidance.color === 'yellow' ? 'bg-yellow-50 text-yellow-700' :
+                    statusGuidance.color === 'orange' ? 'bg-orange-50 text-orange-700' :
+                      statusGuidance.color === 'indigo' ? 'bg-indigo-50 text-indigo-700' :
+                        statusGuidance.color === 'violet' ? 'bg-violet-50 text-violet-700' :
+                          statusGuidance.color === 'emerald' ? 'bg-emerald-50 text-emerald-700' :
+                            'bg-gray-50 text-gray-700'
+              }`}>
+              <span className="text-lg">{statusGuidance.icon}</span>
+              <span className="font-medium">
+                {statusGuidance.message}
+                {statusGuidance.linkText && statusGuidance.linkUrl && (
+                  <span
+                    onClick={() => navigate(statusGuidance.linkUrl!)}
+                    className="ml-1 underline cursor-pointer hover:opacity-80"
+                  >
+                    {statusGuidance.linkText}
+                  </span>
+                )}
+              </span>
+              <span className="ml-auto text-xs opacity-70">Status: {rentalStatus}</span>
+            </div>
+          )}
+
           {/* Action Buttons - ✅ All visible, disabled when not available */}
           <div className="border-t border-gray-100 px-6 py-3 bg-gray-50">
             <div className="flex gap-2">
               {/* Send Demo Button */}
-              <DemoUploadButton 
+              <DemoUploadButton
                 onUploadSuccess={handleDemoUploadSuccess}
                 rentalId={parseInt(rentalId || '0')}
                 disabled={isSendDemoDisabled}
@@ -574,11 +845,10 @@ useEffect(() => {
                 <button
                   onClick={() => !isCreateQuoteDisabled && setShowCreateQuoteModal(true)}
                   disabled={isCreateQuoteDisabled}
-                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors text-sm ${
-                    isCreateQuoteDisabled
-                      ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-900'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors text-sm ${isCreateQuoteDisabled
+                    ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-900'
+                    }`}
                 >
                   <DollarSign size={16} className={isCreateQuoteDisabled ? 'text-gray-400' : 'text-green-600'} />
                   Create Quote
@@ -598,11 +868,10 @@ useEffect(() => {
                 <button
                   disabled={isSendContractDisabled}
                   onClick={onViewContract}
-                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors text-sm ${
-                    isSendContractDisabled
-                      ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-900'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors text-sm ${isSendContractDisabled
+                    ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-900'
+                    }`}
                 >
                   <FileText size={16} className={isSendContractDisabled ? 'text-gray-400' : 'text-purple-600'} />
                   Send Contract
@@ -645,76 +914,87 @@ useEffect(() => {
         </div>
 
         {/* Right Sidebar - Rental Details */}
-        <div 
+        <div
           style={{ width: isRightSidebarOpen ? '384px' : '0px' }}
           className="border-l border-gray-200 bg-gray-50 overflow-hidden transition-all duration-300 ease-in-out"
         >
           <div className="w-96 overflow-y-auto h-full">
-{/* Rental Info */}
-<div className="p-6 bg-white border-b border-gray-200">
-  <h2 className="text-lg font-bold text-gray-900 mb-4">Rental Information</h2>
+            {/* Rental Info */}
+            <div className="p-6 bg-white border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Rental Information</h2>
 
-  {!rentalInfo ? (
-    <p className="text-gray-500 text-sm">Loading...</p>
-  ) : (
-    <div className="space-y-4">
+              {/* Schedule Button - ONLY show when AcceptedPriceQuote */}
+              {rentalStatus === 'AcceptedPriceQuote' && (
+                <button
+                  onClick={() => navigate('/staff/robot-group')}
+                  className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                >
+                  <Calendar size={18} />
+                  Go to Schedule
+                </button>
+              )}
 
-      {/* DATE + TIME */}
-      <div className="flex items-start gap-3">
-        <Calendar className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            {new Date(rentalInfo.eventDate).toLocaleDateString("en-US", {
-              month: "long",
-              day: "numeric",
-              year: "numeric"
-            })}
-          </p>
+              {!rentalInfo ? (
+                <p className="text-gray-500 text-sm">Loading...</p>
+              ) : (
+                <div className="space-y-4">
 
-          <p className="text-xs text-gray-600">
-            {rentalInfo.startTime?.substring(0,5)} – {rentalInfo.endTime?.substring(0,5)}
-          </p>
-        </div>
-      </div>
+                  {/* DATE + TIME */}
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {new Date(rentalInfo.eventDate).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric"
+                        })}
+                      </p>
 
-      {/* LOCATION */}
-      <div className="flex items-start gap-3">
-        <MapPin className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm text-gray-900">{rentalInfo.address}</p>
-          <p className="text-xs text-gray-600">{rentalInfo.city}</p>
-        </div>
-      </div>
+                      <p className="text-xs text-gray-600">
+                        {rentalInfo.startTime?.substring(0, 5)} – {rentalInfo.endTime?.substring(0, 5)}
+                      </p>
+                    </div>
+                  </div>
 
-      {/* PACKAGE */}
-      <div className="flex items-start gap-3">
-        <Package className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-gray-900">{rentalInfo.eventActivityName}</p>
-          <p className="text-xs text-gray-600">{rentalInfo.activityTypeName}</p>
-        </div>
-      </div>
+                  {/* LOCATION */}
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-900">{rentalInfo.address}</p>
+                      <p className="text-xs text-gray-600">{rentalInfo.city}</p>
+                    </div>
+                  </div>
 
-      {/* CUSTOMER NAME */}
-      <div className="flex items-start gap-3">
-        <div className="w-5 h-5 mt-0.5 flex-shrink-0 text-blue-600 font-bold">👤</div>
-        <div>
-          <p className="text-sm font-medium text-gray-900">{rentalInfo.customerName}</p>
-          <p className="text-xs text-gray-600">{rentalInfo.phoneNumber}</p>
-          <p className="text-xs text-gray-600">{rentalInfo.email}</p>
-        </div>
-      </div>
+                  {/* PACKAGE */}
+                  <div className="flex items-start gap-3">
+                    <Package className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{rentalInfo.eventActivityName}</p>
+                      <p className="text-xs text-gray-600">{rentalInfo.activityTypeName}</p>
+                    </div>
+                  </div>
 
-    </div>
-  )}
-</div>
+                  {/* CUSTOMER NAME */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-5 h-5 mt-0.5 flex-shrink-0 text-blue-600 font-bold">👤</div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{rentalInfo.customerName}</p>
+                      <p className="text-xs text-gray-600">{rentalInfo.phoneNumber}</p>
+                      <p className="text-xs text-gray-600">{rentalInfo.email}</p>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+            </div>
 
             {/* Quick Actions */}
             <div className="p-6">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Actions</h3>
               <div className="space-y-2">
                 {/* Send Demo Button */}
-                <DemoUploadButton 
+                <DemoUploadButton
                   onUploadSuccess={handleDemoUploadSuccess}
                   rentalId={parseInt(rentalId || '0')}
                   disabled={isSendDemoDisabled}
@@ -723,14 +1003,13 @@ useEffect(() => {
 
                 {/* Create Quote Button */}
                 <div className="relative group">
-                  <button 
+                  <button
                     onClick={() => !isCreateQuoteDisabled && setShowCreateQuoteModal(true)}
                     disabled={isCreateQuoteDisabled}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors font-medium ${
-                      isCreateQuoteDisabled
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-green-600 text-white hover:bg-green-700'
-                    }`}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors font-medium ${isCreateQuoteDisabled
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                      }`}
                   >
                     <DollarSign size={18} />
                     Create Quote
@@ -740,6 +1019,29 @@ useEffect(() => {
                   {isCreateQuoteDisabled && (
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                       {createQuoteDisabledReason}
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Send Contract Button */}
+                <div className="relative group">
+                  <button
+                    disabled={isSendContractDisabled}
+                    onClick={onViewContract}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors font-medium ${isSendContractDisabled
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-purple-600 text-white hover:bg-purple-700'
+                      }`}
+                  >
+                    <FileText size={18} />
+                    Send Contract
+                  </button>
+
+                  {/* Tooltip */}
+                  {isSendContractDisabled && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                      {sendContractDisabledReason}
                       <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                     </div>
                   )}
@@ -758,7 +1060,7 @@ useEffect(() => {
 
               <div className="space-y-2">
                 {quotesData?.quotes.map((quote) => (
-                  <div 
+                  <div
                     key={quote.id}
                     className="p-3 bg-gray-50 rounded-lg"
                   >
@@ -767,21 +1069,20 @@ useEffect(() => {
                         <p className="text-sm font-medium text-gray-900">
                           Quote #{quote.quoteNumber}
                         </p>
-                        <p className="text-xs text-gray-600">${quote.total.toLocaleString()}</p>
+                        <p className="text-xs text-gray-600">{formatMoney(quote.grandTotal)}</p>
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        quote.status === QuoteStatus.PendingManager ? 'bg-yellow-100 text-yellow-700' :
+                      <span className={`text-xs px-2 py-1 rounded-full ${quote.status === QuoteStatus.PendingManager ? 'bg-yellow-100 text-yellow-700' :
                         quote.status === QuoteStatus.PendingCustomer ? 'bg-blue-100 text-blue-700' :
-                        quote.status === QuoteStatus.Approved ? 'bg-green-100 text-green-700' :
-                        quote.status === QuoteStatus.RejectedManager ? 'bg-orange-100 text-orange-700' :
-                        quote.status === QuoteStatus.RejectedCustomer ? 'bg-red-100 text-red-700' :
-                        quote.status === QuoteStatus.Expired ? 'bg-gray-100 text-gray-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
+                          quote.status === QuoteStatus.Approved ? 'bg-green-100 text-green-700' :
+                            quote.status === QuoteStatus.RejectedManager ? 'bg-orange-100 text-orange-700' :
+                              quote.status === QuoteStatus.RejectedCustomer ? 'bg-red-100 text-red-700' :
+                                quote.status === QuoteStatus.Expired ? 'bg-gray-100 text-gray-700' :
+                                  'bg-gray-100 text-gray-700'
+                        }`}>
                         {quote.status}
                       </span>
                     </div>
-                    
+
                     {/* Update Button for Rejected Quotes */}
                     {quote.status === QuoteStatus.RejectedManager && (
                       <button
@@ -812,6 +1113,15 @@ useEffect(() => {
           isOpen={showCreateQuoteModal}
           rentalId={parseInt(rentalId)}
           currentQuoteCount={quotesData?.totalQuotes || 0}
+          rentalInfo={rentalInfo}
+          rejectedQuotes={quotesData?.quotes
+            .filter(q => q.status === QuoteStatus.RejectedCustomer)
+            .map(q => ({
+              quoteNumber: q.quoteNumber,
+              customerReason: q.customerReason,
+              status: q.status
+            })) || []
+          }
           onClose={() => setShowCreateQuoteModal(false)}
           onSuccess={() => {
             fetchQuotes(parseInt(rentalId))
@@ -835,6 +1145,15 @@ useEffect(() => {
           }}
         />
       )}
+
+      <RentalDetailModal
+  isOpen={showRentalDetailModal}
+  onClose={() => setShowRentalDetailModal(false)}
+  rentalInfo={rentalInfo}
+  rentalDetails={rentalDetails}
+  isLoading={isLoadingRentalDetails}
+/>
+
     </div>
   )
 }

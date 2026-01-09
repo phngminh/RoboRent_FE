@@ -1,4 +1,5 @@
-const API_URL = 'https://localhost:7249/api/Auth'
+const API_URL =`${import.meta.env.VITE_API_URL}/Auth`
+
 import http from '../utils/http'
 
 export const googleLogin = () => {

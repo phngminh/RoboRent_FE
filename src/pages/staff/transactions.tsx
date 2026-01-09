@@ -9,22 +9,22 @@ const TransactionsContent: React.FC = () => {
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Date From</label>
-            <input 
+            <input
               type='date'
               placeholder='YYYY-MM-DD'
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             />
           </div>
-          
+
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Date To</label>
-            <input 
+            <input
               type='date'
               placeholder='YYYY-MM-DD'
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             />
           </div>
-          
+
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Type</label>
             <select className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
@@ -35,7 +35,7 @@ const TransactionsContent: React.FC = () => {
               <option>Withdrawal</option>
             </select>
           </div>
-          
+
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Status</label>
             <select className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
@@ -45,11 +45,11 @@ const TransactionsContent: React.FC = () => {
               <option>Failed</option>
             </select>
           </div>
-          
+
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Amount Range: $0 - $2000</label>
             <div className='relative'>
-              <input 
+              <input
                 type='range'
                 min='0'
                 max='2000'
@@ -61,12 +61,12 @@ const TransactionsContent: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Search</label>
             <div className='relative'>
               <Search size={16} className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
-              <input 
+              <input
                 type='text'
                 placeholder='Order Code or Description'
                 className='w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -90,7 +90,7 @@ const TransactionsContent: React.FC = () => {
         <div className='p-6 border-b border-gray-100'>
           <h2 className='text-xl font-semibold text-gray-800'>Latest Transactions</h2>
         </div>
-        
+
         <div className='overflow-x-auto'>
           <table className='w-full'>
             <thead className='bg-gray-50'>
@@ -104,73 +104,73 @@ const TransactionsContent: React.FC = () => {
             </thead>
             <tbody className='bg-white divide-y divide-gray-200'>
               {[
-                { 
-                  code: 'TXN12345678', 
-                  description: 'Online purchase at TechStore', 
-                  amount: '$120.50', 
+                {
+                  code: 'TXN12345678',
+                  description: 'Online purchase at TechStore',
+                  amount: '$120.50',
                   status: 'Completed',
                   date: '2024-07-20 10:30 AM',
                   statusColor: 'bg-green-100 text-green-800',
                   statusIcon: CheckCircle
                 },
-                { 
-                  code: 'TXN12345679', 
-                  description: 'Subscription renewal for CloudService', 
-                  amount: '$50.00', 
+                {
+                  code: 'TXN12345679',
+                  description: 'Subscription renewal for CloudService',
+                  amount: '$50.00',
                   status: 'Pending',
                   date: '2024-07-19 03:15 PM',
                   statusColor: 'bg-yellow-100 text-yellow-800',
                   statusIcon: Clock
                 },
-                { 
-                  code: 'TXN12345680', 
-                  description: 'Refund for returned item (Gadget)', 
-                  amount: '$75.25', 
+                {
+                  code: 'TXN12345680',
+                  description: 'Refund for returned item (Gadget)',
+                  amount: '$75.25',
                   status: 'Completed',
                   date: '2024-07-18 11:00 AM',
                   statusColor: 'bg-green-100 text-green-800',
                   statusIcon: CheckCircle
                 },
-                { 
-                  code: 'TXN12345681', 
-                  description: 'International money transfer', 
-                  amount: '$500.00', 
+                {
+                  code: 'TXN12345681',
+                  description: 'International money transfer',
+                  amount: '$500.00',
                   status: 'Failed',
                   date: '2024-07-17 08:45 AM',
                   statusColor: 'bg-red-100 text-red-800',
                   statusIcon: XCircle
                 },
-                { 
-                  code: 'TXN12345682', 
-                  description: 'Utility bill payment', 
-                  amount: '$85.70', 
+                {
+                  code: 'TXN12345682',
+                  description: 'Utility bill payment',
+                  amount: '$85.70',
                   status: 'Completed',
                   date: '2024-07-16 02:00 PM',
                   statusColor: 'bg-green-100 text-green-800',
                   statusIcon: CheckCircle
                 },
-                { 
-                  code: 'TXN12345683', 
-                  description: 'Mobile data top-up', 
-                  amount: '$15.00', 
+                {
+                  code: 'TXN12345683',
+                  description: 'Mobile data top-up',
+                  amount: '$15.00',
                   status: 'Completed',
                   date: '2024-07-15 09:00 AM',
                   statusColor: 'bg-green-100 text-green-800',
                   statusIcon: CheckCircle
                 },
-                { 
-                  code: 'TXN12345684', 
-                  description: 'Restaurant bill', 
-                  amount: '$65.40', 
+                {
+                  code: 'TXN12345684',
+                  description: 'Restaurant bill',
+                  amount: '$65.40',
                   status: 'Completed',
                   date: '2024-07-14 07:00 PM',
                   statusColor: 'bg-green-100 text-green-800',
                   statusIcon: CheckCircle
                 },
-                { 
-                  code: 'TXN12345685', 
-                  description: 'Cash withdrawal ATM', 
-                  amount: '$100.00', 
+                {
+                  code: 'TXN12345685',
+                  description: 'Cash withdrawal ATM',
+                  amount: '$100.00',
                   status: 'Completed',
                   date: '2024-07-13 01:00 PM',
                   statusColor: 'bg-green-100 text-green-800',
@@ -198,7 +198,7 @@ const TransactionsContent: React.FC = () => {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination */}
         <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
           <div className='flex space-x-2'>

@@ -9,7 +9,7 @@ const DashboardContent: React.FC = () => {
           <h3 className='text-sm font-medium text-gray-600 mb-2'>Total Requests</h3>
           <p className='text-3xl font-bold text-blue-600'>12</p>
         </div>
-        
+
         <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
           <h3 className='text-sm font-medium text-gray-600 mb-2'>Upcoming Payments</h3>
           <p className='text-3xl font-bold text-blue-600 mb-3'>$750</p>
@@ -17,7 +17,7 @@ const DashboardContent: React.FC = () => {
             Make Payment
           </button>
         </div>
-        
+
         <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-100'>
           <h3 className='text-sm font-medium text-gray-600 mb-2'>Total Deposits</h3>
           <p className='text-3xl font-bold text-blue-600'>$3,200</p>
@@ -30,7 +30,7 @@ const DashboardContent: React.FC = () => {
           <h2 className='text-xl font-semibold text-gray-800'>Completed Rental Requests</h2>
           <p className='text-gray-600 mt-1'>Review the details of your past rental agreements and manage contracts.</p>
         </div>
-        
+
         <div className='overflow-x-auto'>
           <table className='w-full'>
             <thead className='bg-gray-50'>
@@ -81,7 +81,7 @@ const DashboardContent: React.FC = () => {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination */}
         <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
           <div className='flex space-x-2'>

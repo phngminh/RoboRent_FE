@@ -1,10 +1,8 @@
-// src/pages/manager/StaffAssignmentPage.tsx
-
 import React, { useState, useEffect, useMemo } from 'react'
 import { 
   Users, UserPlus, Calendar, Search, ChevronDown, X, 
   AlertTriangle, CheckCircle2, RefreshCw, User, Package, 
-  ChevronRight, ArrowUpDown, Zap, MapPin, Clock, Phone,
+  ChevronRight, ArrowUpDown, Zap, MapPin, Phone,
   ArrowLeft
 } from 'lucide-react'
 import { toast } from 'react-toastify'
@@ -18,7 +16,6 @@ import type {
   ActualDeliveryResponse, 
   StaffListItemResponse 
 } from '../../types/delivery.types'
-import Header from '../../components/header'
 import { useNavigate } from 'react-router-dom'
 
 // Helper functions
@@ -429,7 +426,7 @@ export default function StaffAssignmentPage() {
     return { total: deliveries.length, urgent: urgent.length }
   }, [deliveries])
 
-  const handleAssign = (deliveryId: number, staffId: number, staffName: string) => {
+  const handleAssign = (deliveryId: number, _staffId: number, staffName: string) => {
     setDeliveries(prev => prev.filter(d => d.id !== deliveryId))
     setSelectedId(null)
     toast.success(`Successfully assigned to ${staffName}`)

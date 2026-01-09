@@ -1,12 +1,12 @@
 // src/pages/chat/CustomerChatPage.tsx
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Send, Calendar, MapPin, Package, CheckCircle2, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Send, Calendar, MapPin, Package, CheckCircle2, Search, ChevronLeft, ChevronRight, Circle, XCircle, Loader2, Truck, Video, FileText, CreditCard, PartyPopper, Bot } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { signalRService } from '../../utils/signalr'
-import { getChatMessages, sendMessage, getCustomerChatRooms, getMyChatRooms } from '../../apis/chat.api'
+import { getChatMessages, sendMessage, getMyChatRooms, markRentalAsRead } from '../../apis/chat.api'
 import { getQuotesByRentalId, customerAction, getPriceQuoteById } from '../../apis/priceQuote.api'
-import type { ChatMessageResponse, RentalDetailsPlaceholder, RentalQuotesResponse, PriceQuoteResponse } from '../../types/chat.types'
+import type { ChatMessageResponse, RentalQuotesResponse, PriceQuoteResponse } from '../../types/chat.types'
 import { MessageType, DemoStatus, QuoteStatus } from '../../types/chat.types'
 import ChatMessage from '../../components/chat/ChatMessage'
 import DemoVideoCard from '../../components/chat/DemoVideoCard'
@@ -16,6 +16,7 @@ import { toast } from 'react-toastify'
 import { formatDistanceToNow } from 'date-fns'
 import Header from '../../components/header'
 import { getRentalByIdAsync } from '../../apis/rental.customer.api'
+import { formatMoney } from '../../utils/format'
 
 // Interface cho rental trong sidebar
 interface CustomerRental {
@@ -27,9 +28,10 @@ interface CustomerRental {
   lastMessage: string
   timestamp: string
   unread: number
+  lastMessageTime?: string  // For sorting - ISO date string
 }
 
-export default function CustomerChatPage() {
+const CustomerChatPage: React.FC = () => {
   const { rentalId } = useParams<{ rentalId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -44,16 +46,16 @@ export default function CustomerChatPage() {
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const [customerRentals, setCustomerRentals] = useState<CustomerRental[]>([])
   const [isLoadingRentals, setIsLoadingRentals] = useState(false)
-  const [rentalStatus, setRentalStatus] = useState<string>('')
+  const [, setRentalStatus] = useState<string>('')
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [sidebarWidth, setSidebarWidth] = useState(320)
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true)
   const [lastViewedQuoteTime, setLastViewedQuoteTime] = useState<Date | null>(null)
   const [rentalInfo, setRentalInfo] = useState<any | null>(null)
 
-  const hasPendingDemo = messages.some(
-    msg => msg.messageType === MessageType.Demo && msg.status === DemoStatus.Pending
-  )
+  // const hasPendingDemo = messages.some(
+  //   msg => msg.messageType === MessageType.Demo && msg.status === DemoStatus.Pending
+  // )
 
   // Add resize handler
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -77,7 +79,7 @@ export default function CustomerChatPage() {
   }
 
   // Filter rentals based on search
-  const filteredRentals = customerRentals.filter(rental => 
+  const filteredRentals = customerRentals.filter(rental =>
     rental.packageName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     rental.rentalId.toString().includes(searchQuery) ||
     rental.eventDate.toLowerCase().includes(searchQuery.toLowerCase())
@@ -88,8 +90,8 @@ export default function CustomerChatPage() {
   }
 
   useEffect(() => {
-  const loadRentalInfo = async () => {
-    if (!rentalId) return
+    const loadRentalInfo = async () => {
+      if (!rentalId) return
       try {
         const data = await getRentalByIdAsync(parseInt(rentalId))
         setRentalInfo(data)
@@ -101,7 +103,7 @@ export default function CustomerChatPage() {
     loadRentalInfo()
   }, [rentalId])
 
-  // Load messages
+  // Load messages and mark as read
   useEffect(() => {
     if (!rentalId) return
 
@@ -109,6 +111,21 @@ export default function CustomerChatPage() {
       try {
         const response = await getChatMessages(parseInt(rentalId), 1, 50)
         setMessages(response.messages)
+
+        // Mark messages as read after loading
+        try {
+          await markRentalAsRead(parseInt(rentalId))
+
+          // Immediately update the unread count in sidebar to 0
+          setCustomerRentals(prev => prev.map(rental =>
+            rental.rentalId === parseInt(rentalId)
+              ? { ...rental, unread: 0 }
+              : rental
+          ))
+        } catch (error) {
+          console.error('Failed to mark messages as read:', error)
+          // Don't show error to user, this is not critical
+        }
       } catch (error) {
         console.error('Failed to load messages:', error)
         toast.error('Failed to load chat messages')
@@ -118,17 +135,23 @@ export default function CustomerChatPage() {
     loadMessages()
   }, [rentalId])
 
-  // Load quotes
+  // Load quotes - only show Manager-approved ones to customer
   const loadQuotes = async () => {
     if (!rentalId) return
     try {
       const quotes = await getQuotesByRentalId(parseInt(rentalId))
       setQuotesData(quotes)
-      
+
+      // Only show quotes that Manager has approved (PendingCustomer, RejectedCustomer, Approved)
+      // Exclude: PendingManager, RejectedManager
+      const approvedByManager = quotes.quotes.filter(q =>
+        q.status === QuoteStatus.PendingCustomer ||
+        q.status === QuoteStatus.RejectedCustomer ||
+        q.status === QuoteStatus.Approved
+      )
+
       const fullQuoteDetails = await Promise.all(
-        quotes.quotes
-          .filter(q => q.status !== QuoteStatus.PendingManager)
-          .map(q => getPriceQuoteById(q.id))
+        approvedByManager.map(q => getPriceQuoteById(q.id))
       )
       setFullQuotes(fullQuoteDetails)
     } catch (error) {
@@ -157,8 +180,8 @@ export default function CustomerChatPage() {
   // Load rentals from API
   useEffect(() => {
     const loadRentals = async () => {
-      if (!user?.id) return
-      
+      if (!user?.accountId) return
+
       setIsLoadingRentals(true)
       try {
         const response = await getMyChatRooms(1, 50)
@@ -169,13 +192,13 @@ export default function CustomerChatPage() {
           eventDate: room.eventDate || 'TBD',
           status: room.status || 'Unknown',
           lastMessage: room.lastMessage || 'No messages',
-          timestamp: room.lastMessageTime 
+          timestamp: room.lastMessageTime
             ? formatDistanceToNow(new Date(room.lastMessageTime), { addSuffix: true })
             : 'No messages',
           unread: room.unreadCount
         }))
         setCustomerRentals(mappedRentals)
-        
+
         const currentRental = response.rooms.find(r => r.rentalId === parseInt(rentalId || '0'))
         if (currentRental?.rentalStatus) {
           setRentalStatus(currentRental.rentalStatus)
@@ -189,7 +212,7 @@ export default function CustomerChatPage() {
     }
 
     loadRentals()
-  }, [user?.id, rentalId])
+  }, [user?.accountId, rentalId])
 
   // SignalR setup
   useEffect(() => {
@@ -202,9 +225,9 @@ export default function CustomerChatPage() {
         await signalRService.connect()
         await signalRService.joinRentalChat(parseInt(rentalId))
 
-        const handleReceiveMessage = (message: ChatMessageResponse) => {
+        const handleReceiveMessage = async (message: ChatMessageResponse) => {
           if (!isSubscribed) return
-          
+
           setMessages(prev => {
             if (prev.some(m => m.id === message.id)) {
               console.warn('⚠️ Duplicate message ignored:', message.id)
@@ -214,78 +237,113 @@ export default function CustomerChatPage() {
           })
 
           scrollToBottom()
+
+          // 🎯 Auto-mark as read since user is in the chat room
+          try {
+            await markRentalAsRead(parseInt(rentalId))
+            setCustomerRentals(prev => prev.map(rental =>
+              rental.rentalId === parseInt(rentalId)
+                ? { ...rental, unread: 0 }
+                : rental
+            ))
+          } catch (error) {
+            console.error('Failed to auto-mark as read:', error)
+          }
         }
 
         const handleDemoStatusChanged = (messageId: number, status: string) => {
           if (!isSubscribed) return
 
-          setMessages(prev => prev.map(msg => 
+          setMessages(prev => prev.map(msg =>
             msg.id === messageId ? { ...msg, status: status as DemoStatus } : msg
           ))
         }
 
         const handleQuoteAccepted = async (quoteId: number) => {
           if (!isSubscribed) return
-          
-          console.log('📢 Quote accepted event received:', quoteId)
           await loadQuotes()
         }
 
-        const handleQuoteStatusChanged = async (data: { 
+        const handleQuoteStatusChanged = async (data: {
           QuoteId: number
           Status: string
           QuoteNumber: number
-          Total: number 
+          Total: number
         }) => {
           if (!isSubscribed) return
-          console.log('📢 Quote status changed:', data)
           await loadQuotes()
         }
-        
+
         const handleQuoteCreated = async (data: {
           QuoteId: number
           QuoteNumber: number
           Total: number
         }) => {
           if (!isSubscribed) return
-          console.log('📢 New quote created:', data)
-          toast.info(`New quote #${data.QuoteNumber} received! Total: $${data.Total.toLocaleString()}`)
+          toast.info(`New quote #${data.QuoteNumber} received! Total: ${formatMoney(data.Total)}`)
           await loadQuotes()
         }
 
-        const handleSidebarUpdate = async () => {
-          if (!isSubscribed || !user?.id) return
-          try {
-            const response = await getCustomerChatRooms(user.id, 1, 50)
-            const mappedRentals: CustomerRental[] = response.rooms.map(room => ({
-              id: room.id,
-              rentalId: room.rentalId,
-              packageName: room.packageName || 'Unknown Package',
-              eventDate: room.eventDate || 'TBD',
-              status: room.status || 'Unknown',
-              lastMessage: room.lastMessage || 'No messages',
-              timestamp: room.lastMessageTime 
-                ? formatDistanceToNow(new Date(room.lastMessageTime), { addSuffix: true })
-                : 'No messages',
-              unread: room.unreadCount
-            }))
-            setCustomerRentals(mappedRentals)
-          } catch (error) {
-            console.error('Failed to reload rentals:', error)
-          }
+        // 🎯 NEW: Handle contract pending customer signature (Manager signed)
+        const handleContractPendingSignature = (data: {
+          ContractId: number
+          RentalId: number
+          Message: string
+        }) => {
+          if (!isSubscribed) return
+          toast.info(`📝 ${data.Message}`)
         }
 
-        const originalReceiveMessage = handleReceiveMessage
-        const wrappedReceiveMessage = (message: ChatMessageResponse) => {
-          originalReceiveMessage(message)
-          handleSidebarUpdate()
+        // 🎯 NEW: Facebook-like sidebar update when message comes to a different room
+        // NOTE: SignalR auto-converts PascalCase to camelCase
+        const handleNewMessageInRoom = (data: {
+          rentalId: number
+          senderId: number
+          senderName: string
+          preview: string
+          timestamp: string
+        }) => {
+          if (!isSubscribed) return
+
+          // Update sidebar: increase unread count, update last message, and SORT to top
+          setCustomerRentals(prev => {
+            const matchingRental = prev.find(r => r.rentalId === data.rentalId)
+            if (!matchingRental) return prev
+
+            const updated = prev.map(rental =>
+              rental.rentalId === data.rentalId
+                ? {
+                  ...rental,
+                  unread: rental.rentalId !== parseInt(rentalId || '0') ? rental.unread + 1 : 0,
+                  lastMessage: data.preview,
+                  timestamp: 'just now',
+                  lastMessageTime: new Date().toISOString()
+                }
+                : rental
+            )
+
+            // Sort by lastMessageTime descending (newest first)
+            return updated.sort((a, b) => {
+              const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0
+              const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0
+              return timeB - timeA
+            })
+          })
         }
-        
-        signalRService.onReceiveMessage(wrappedReceiveMessage)
+
+        // Empty handlers to prevent console warnings
+        const handleUserJoined = (_connectionId: string) => { }
+        const handleUserLeft = (_connectionId: string) => { }
+
+        signalRService.onUserJoined(handleUserJoined)
+        signalRService.onUserLeft(handleUserLeft)
+        signalRService.onReceiveMessage(handleReceiveMessage)
         signalRService.onDemoStatusChanged(handleDemoStatusChanged)
         signalRService.onQuoteAccepted(handleQuoteAccepted)
         signalRService.onQuoteStatusChanged(handleQuoteStatusChanged)
         signalRService.onQuoteCreated(handleQuoteCreated)
+        signalRService.onContractPendingCustomerSignature(handleContractPendingSignature)
+        signalRService.onNewMessageInRoom(handleNewMessageInRoom)
 
       } catch (error) {
         console.error('SignalR setup failed:', error)
@@ -299,14 +357,18 @@ export default function CustomerChatPage() {
 
       if (rentalId) {
         signalRService.leaveRentalChat(parseInt(rentalId))
+        signalRService.offUserJoined()
+        signalRService.offUserLeft()
         signalRService.offReceiveMessage()
         signalRService.offDemoStatusChanged()
         signalRService.offQuoteAccepted()
         signalRService.offQuoteStatusChanged()
         signalRService.offQuoteCreated()
+        signalRService.offContractPendingCustomerSignature()
+        signalRService.offNewMessageInRoom()
       }
     }
-  }, [rentalId, user?.id])
+  }, [rentalId, user?.accountId])
 
   useEffect(() => {
     scrollToBottom()
@@ -324,8 +386,46 @@ export default function CustomerChatPage() {
         content
       })
       setInputMessage('')
+
+      // 🎯 Update sender's own sidebar (NewMessageInRoom only goes to recipient)
+      setCustomerRentals(prev => {
+        const updated = prev.map(rental =>
+          rental.rentalId === parseInt(rentalId)
+            ? {
+              ...rental,
+              lastMessage: content.length > 50 ? content.substring(0, 50) + '...' : content,
+              timestamp: 'just now',
+              lastMessageTime: new Date().toISOString()
+            }
+            : rental
+        )
+        // Sort by lastMessageTime descending (newest first)
+        return updated.sort((a, b) => {
+          const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0
+          const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0
+          return timeB - timeA
+        })
+      })
     } catch (error) {
       console.error('Failed to send message:', error)
+      toast.error('Failed to send message')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const handleQuickReply = async (reply: string) => {
+    if (!rentalId || isSending) return
+
+    setIsSending(true)
+    try {
+      await sendMessage({
+        rentalId: parseInt(rentalId),
+        messageType: MessageType.Text,
+        content: reply
+      })
+    } catch (error) {
+      console.error('Failed to send quick reply:', error)
       toast.error('Failed to send message')
     } finally {
       setIsSending(false)
@@ -337,20 +437,20 @@ export default function CustomerChatPage() {
       const result = await customerAction(quoteId, 'approve')
       toast.success(result.message || 'Quote accepted successfully!')
       setSelectedQuote(null)
-      
+
       await loadQuotes()
     } catch (error: any) {
       console.error('Failed to accept quote:', error)
       toast.error(error.response?.data?.error || 'Failed to accept quote')
     }
   }
-  
+
   const handleRejectQuote = async (quoteId: number, reason: string) => {
     try {
       const result = await customerAction(quoteId, 'reject', reason)
       toast.success(result.message || 'Quote rejected successfully!')
       setSelectedQuote(null)
-      
+
       await loadQuotes()
     } catch (error: any) {
       console.error('Failed to reject quote:', error)
@@ -384,14 +484,165 @@ export default function CustomerChatPage() {
     }
   }
 
+  // Helper function to determine progress steps
+  type StepStatus = 'completed' | 'in-progress' | 'pending' | 'failed'
+
+  interface ProgressStep {
+    id: string
+    label: string
+    status: StepStatus
+    icon: React.ReactNode
+    substatus: string
+  }
+
+  const getProgressSteps = (): ProgressStep[] => {
+    const status = rentalInfo?.status || ''
+    const steps: ProgressStep[] = []
+
+    // CORRECT FLOW: PriceQuote → Schedule → Demo → Contract → Deposit → Delivery → Completed
+
+    // Step 1: Price Quote (FIRST!)
+    const quoteStatus: StepStatus =
+      ['AcceptedPriceQuote', 'Scheduled', 'PendingDemo', 'AcceptedDemo', 'DeniedDemo', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
+        ? 'completed'
+        : status === 'Received' || status === 'PendingPriceQuote' || status === 'RejectedPriceQuote' || fullQuotes.some(q => q.status === 'PendingCustomer')
+          ? 'in-progress'
+          : 'pending'
+
+    steps.push({
+      id: 'quote',
+      label: 'Price Quote',
+      status: quoteStatus,
+      icon: <FileText className="w-5 h-5" />,
+      substatus:
+        quoteStatus === 'completed' ? 'Quote approved ✓' :
+          quoteStatus === 'in-progress' ? `Reviewing quote #${quotesData?.totalQuotes || 1}` :
+            'Waiting for price quote'
+    })
+
+    // Step 2: Robot Scheduling (after quote approved)
+    const scheduleStatus: StepStatus =
+      ['Scheduled', 'PendingDemo', 'AcceptedDemo', 'DeniedDemo', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
+        ? 'completed'
+        : status === 'AcceptedPriceQuote'
+          ? 'in-progress'
+          : 'pending'
+
+    steps.push({
+      id: 'schedule',
+      label: 'Robot Scheduling',
+      status: scheduleStatus,
+      icon: <Bot className="w-5 h-5" />,
+      substatus:
+        scheduleStatus === 'completed' ? 'Robots scheduled ✓' :
+          scheduleStatus === 'in-progress' ? 'Staff is scheduling robots...' :
+            'Waiting for quote approval'
+    })
+
+    // Step 3: Demo Review
+    const demoStatus: StepStatus =
+      ['AcceptedDemo', 'PendingContract', 'PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
+        ? 'completed'
+        : status === 'PendingDemo'
+          ? 'in-progress'
+          : status === 'DeniedDemo'
+            ? 'failed'
+            : 'pending'
+
+    steps.push({
+      id: 'demo',
+      label: 'Demo Review',
+      status: demoStatus,
+      icon: <Video className="w-5 h-5" />,
+      substatus:
+        demoStatus === 'completed' ? 'Demo approved ✓' :
+          demoStatus === 'in-progress' ? 'Review demo video...' :
+            demoStatus === 'failed' ? 'Demo rejected - awaiting new demo' :
+              'Waiting for staff to send demo'
+    })
+
+    // Step 4: Contract Signing
+    const contractStatus: StepStatus =
+      ['PendingDeposit', 'DeliveryScheduled', 'Completed'].includes(status)
+        ? 'completed'
+        : status === 'PendingContract'
+          ? 'in-progress'
+          : 'pending'
+
+    steps.push({
+      id: 'contract',
+      label: 'Contract Signing',
+      status: contractStatus,
+      icon: <FileText className="w-5 h-5" />,
+      substatus:
+        contractStatus === 'completed' ? 'Contract signed ✓' :
+          contractStatus === 'in-progress' ? 'Review and sign contract' :
+            'Waiting for contract'
+    })
+
+    // Step 5: Deposit Payment
+    const depositStatus: StepStatus =
+      ['DeliveryScheduled', 'Completed'].includes(status)
+        ? 'completed'
+        : status === 'PendingDeposit'
+          ? 'in-progress'
+          : 'pending'
+
+    steps.push({
+      id: 'deposit',
+      label: 'Deposit Payment',
+      status: depositStatus,
+      icon: <CreditCard className="w-5 h-5" />,
+      substatus:
+        depositStatus === 'completed' ? 'Deposit paid ✓' :
+          depositStatus === 'in-progress' ? 'Pay deposit to confirm' :
+            'Waiting for deposit payment'
+    })
+
+    // Step 6: Delivery Scheduled
+    const deliveryStatus: StepStatus =
+      status === 'Completed'
+        ? 'completed'
+        : status === 'DeliveryScheduled'
+          ? 'in-progress'
+          : 'pending'
+
+    steps.push({
+      id: 'delivery',
+      label: 'Delivery Scheduled',
+      status: deliveryStatus,
+      icon: <Truck className="w-5 h-5" />,
+      substatus:
+        deliveryStatus === 'completed' ? 'Robots delivered ✓' :
+          deliveryStatus === 'in-progress' ? 'Delivery scheduled' :
+            'Waiting for delivery schedule'
+    })
+
+    // Step 7: Event Completed
+    const completedStatus: StepStatus =
+      status === 'Completed' ? 'completed' : 'pending'
+
+    steps.push({
+      id: 'completed',
+      label: 'Event Completed',
+      status: completedStatus,
+      icon: <PartyPopper className="w-5 h-5" />,
+      substatus:
+        completedStatus === 'completed' ? 'Event completed successfully! ✓' :
+          'Awaiting event day'
+    })
+
+    return steps
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="pt-16 h-screen flex">
         {/* Left Sidebar - Rental List */}
         {isSidebarOpen && (
-          <div 
+          <div
             style={{ width: `${sidebarWidth}px` }}
             className="border-r border-gray-200 bg-white flex flex-col relative"
           >
@@ -425,9 +676,8 @@ export default function CustomerChatPage() {
                   <div
                     key={rental.id}
                     onClick={() => handleRentalClick(rental.rentalId)}
-                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      rental.rentalId.toString() === rentalId ? 'bg-orange-50 border-l-4 border-l-orange-500' : ''
-                    }`}
+                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${rental.rentalId.toString() === rentalId ? 'bg-orange-50 border-l-4 border-l-orange-500' : ''
+                      }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
@@ -447,7 +697,7 @@ export default function CustomerChatPage() {
                         </span>
                       )}
                     </div>
-                    
+
                     <div className="ml-6 space-y-1">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-3 h-3 text-gray-400" />
@@ -506,28 +756,83 @@ export default function CustomerChatPage() {
           </div>
 
           {/* Messages */}
-          <div 
+          <div
             ref={chatContainerRef}
             className="flex-1 overflow-y-auto p-6 space-y-4"
           >
             {messages.map((message) => (
               <div key={message.id}>
                 {message.messageType === MessageType.Demo ? (
-                  <DemoVideoCard 
-                    message={message} 
+                  <DemoVideoCard
+                    message={message}
                     isCustomer={true}
-                    onStatusUpdate={() => {}}
+                    onStatusUpdate={() => { }}
                   />
                 ) : (
-                  <ChatMessage 
+                  <ChatMessage
                     message={message}
                     isOwnMessage={
-                      message.senderRole === 'Customer' || message.senderId === user?.id
+                      message.senderRole === 'Customer' || message.senderId === user?.accountId
                     }
                   />
                 )}
               </div>
             ))}
+
+            {/* Inline Status Guidance Card */}
+            {rentalInfo?.status && ['AcceptedPriceQuote', 'Scheduled', 'PendingDemo', 'AcceptedDemo', 'DeniedDemo', 'PendingContract', 'PendingDeposit'].includes(rentalInfo.status) && (
+              <div className="flex justify-center">
+                <div className={`max-w-md w-full p-4 rounded-xl border-2 ${rentalInfo.status === 'AcceptedPriceQuote'
+                  ? 'bg-green-50 border-green-200 text-green-800'
+                  : rentalInfo.status === 'Scheduled'
+                    ? 'bg-purple-50 border-purple-200 text-purple-800'
+                    : rentalInfo.status === 'PendingDemo'
+                      ? 'bg-blue-50 border-blue-200 text-blue-800'
+                      : rentalInfo.status === 'AcceptedDemo'
+                        ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                        : rentalInfo.status === 'DeniedDemo'
+                          ? 'bg-orange-50 border-orange-200 text-orange-800'
+                          : rentalInfo.status === 'PendingContract'
+                            ? 'bg-violet-50 border-violet-200 text-violet-800'
+                            : rentalInfo.status === 'PendingDeposit'
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                              : 'bg-gray-50 border-gray-200 text-gray-700'
+                  }`}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">
+                      {rentalInfo.status === 'AcceptedPriceQuote' && '✅'}
+                      {rentalInfo.status === 'Scheduled' && '📅'}
+                      {rentalInfo.status === 'PendingDemo' && '🎬'}
+                      {rentalInfo.status === 'AcceptedDemo' && '📝'}
+                      {rentalInfo.status === 'DeniedDemo' && '🔄'}
+                      {rentalInfo.status === 'PendingContract' && '✍️'}
+                      {rentalInfo.status === 'PendingDeposit' && '💳'}
+                    </span>
+                    <div>
+                      <p className="font-semibold text-sm">
+                        {rentalInfo.status === 'AcceptedPriceQuote' && 'Bạn đã chấp nhận báo giá!'}
+                        {rentalInfo.status === 'Scheduled' && 'Đã xếp lịch!'}
+                        {rentalInfo.status === 'PendingDemo' && 'Demo đang chờ bạn duyệt'}
+                        {rentalInfo.status === 'AcceptedDemo' && 'Demo đã được duyệt!'}
+                        {rentalInfo.status === 'DeniedDemo' && 'Bạn đã từ chối demo'}
+                        {rentalInfo.status === 'PendingContract' && 'Hợp đồng đang chờ ký'}
+                        {rentalInfo.status === 'PendingDeposit' && 'Chờ đóng tiền cọc'}
+                      </p>
+                      <p className="text-xs mt-1 opacity-80">
+                        {rentalInfo.status === 'AcceptedPriceQuote' && 'Vui lòng chờ nhân viên xếp lịch và gửi video demo cho bạn xem.'}
+                        {rentalInfo.status === 'Scheduled' && 'Nhân viên sẽ gửi video demo robot sớm nhất có thể.'}
+                        {rentalInfo.status === 'PendingDemo' && 'Xem video demo bên phải và chấp nhận nếu hài lòng.'}
+                        {rentalInfo.status === 'AcceptedDemo' && 'Nhân viên sẽ gửi hợp đồng để bạn ký.'}
+                        {rentalInfo.status === 'DeniedDemo' && 'Nhân viên sẽ gửi video demo mới sớm nhất có thể.'}
+                        {rentalInfo.status === 'PendingContract' && 'Vui lòng ký hợp đồng ở trang Contract.'}
+                        {rentalInfo.status === 'PendingDeposit' && 'Thanh toán tiền cọc để xác nhận đặt chỗ.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -537,8 +842,9 @@ export default function CustomerChatPage() {
               {quickReplies.map((reply) => (
                 <button
                   key={reply}
-                  onClick={() => setInputMessage(reply)}
-                  className="px-4 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full text-sm hover:bg-orange-100 transition-colors"
+                  onClick={() => handleQuickReply(reply)}
+                  disabled={isSending}
+                  className="px-4 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full text-sm hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {reply}
                 </button>
@@ -571,64 +877,64 @@ export default function CustomerChatPage() {
         {/* Right Sidebar */}
         {isRightSidebarOpen && (
           <div className="w-96 border-l border-gray-200 bg-gray-50 overflow-y-auto">
-{/* Rental Request Info */}
-<div className="p-6 bg-white border-b border-gray-200">
-  <h2 className="text-lg font-bold text-gray-900 mb-4">
-    Your Rental Request
-  </h2>
+            {/* Rental Request Info */}
+            <div className="p-6 bg-white border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">
+                Your Rental Request
+              </h2>
 
-  {!rentalInfo ? (
-    <p className="text-gray-500 text-sm">Loading...</p>
-  ) : (
-    <div className="space-y-4">
+              {!rentalInfo ? (
+                <p className="text-gray-500 text-sm">Loading...</p>
+              ) : (
+                <div className="space-y-4">
 
-      {/* DATE + TIME */}
-      <div className="flex items-start gap-3">
-        <Calendar className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            {new Date(rentalInfo.eventDate).toLocaleDateString("en-US", {
-              month: "long",
-              day: "numeric",
-              year: "numeric"
-            })}
-          </p>
+                  {/* DATE + TIME */}
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {new Date(rentalInfo.eventDate).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric"
+                        })}
+                      </p>
 
-          <p className="text-xs text-gray-600">
-            {rentalInfo.startTime?.substring(0,5)} - {rentalInfo.endTime?.substring(0,5)}
-          </p>
-        </div>
-      </div>
+                      <p className="text-xs text-gray-600">
+                        {rentalInfo.startTime?.substring(0, 5)} - {rentalInfo.endTime?.substring(0, 5)}
+                      </p>
+                    </div>
+                  </div>
 
-      {/* LOCATION */}
-      <div className="flex items-start gap-3">
-        <MapPin className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm text-gray-900">
-            {rentalInfo.address}
-          </p>
-          <p className="text-xs text-gray-600">
-            {rentalInfo.city}
-          </p>
-        </div>
-      </div>
+                  {/* LOCATION */}
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-900">
+                        {rentalInfo.address}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {rentalInfo.city}
+                      </p>
+                    </div>
+                  </div>
 
-      {/* PACKAGE */}
-      <div className="flex items-start gap-3">
-        <Package className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            {rentalInfo.eventActivityName}
-          </p>
-          <p className="text-xs text-gray-600">
-            {rentalInfo.activityTypeName}
-          </p>
-        </div>
-      </div>
+                  {/* PACKAGE */}
+                  <div className="flex items-start gap-3">
+                    <Package className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {rentalInfo.eventActivityName}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {rentalInfo.activityTypeName}
+                      </p>
+                    </div>
+                  </div>
 
-    </div>
-  )}
-</div>
+                </div>
+              )}
+            </div>
             {/* Quotes Received */}
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -642,10 +948,9 @@ export default function CustomerChatPage() {
 
               <div className="space-y-3">
                 {fullQuotes.map((quote) => {
-                  // Check if quote is new (created after last viewed time)
-                  const isNew = lastViewedQuoteTime 
-                    ? new Date(quote.createdAt) > lastViewedQuoteTime
-                    : false
+                  // The latest quote (highest quoteNumber) is always new
+                  const maxQuoteNumber = Math.max(...fullQuotes.map(q => q.quoteNumber))
+                  const isNew = quote.quoteNumber === maxQuoteNumber
 
                   return (
                     <QuoteCard
@@ -665,25 +970,87 @@ export default function CustomerChatPage() {
               </div>
             </div>
 
-            {/* Next Steps */}
-            <div className="p-6 bg-white border-t border-gray-200">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Next Steps</h2>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span className="text-sm text-gray-600">Demo approved</span>
+            {/* Progress Timeline */}
+            <div className="p-6 bg-gradient-to-br from-white to-gray-50 border-t border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-6">Progress Timeline</h2>
+
+              {(rentalInfo?.status === 'Canceled' || rentalInfo?.status === 'ForceCancelled') ? (
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+                  <p className="text-red-700 font-medium flex items-center gap-2">
+                    <XCircle className="w-5 h-5" />
+                    This rental has been cancelled
+                  </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full border-2 border-blue-500 flex items-center justify-center flex-shrink-0">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                  </div>
-                  <span className="text-sm text-gray-900 font-medium">Reviewing quote #{quotesData?.totalQuotes || 1}</span>
+              ) : (
+                <div className="relative space-y-0">
+                  {/* Vertical gradient line */}
+                  <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-green-300 via-blue-300 to-gray-200" />
+
+                  {getProgressSteps().map((step, index) => {
+                    const isLast = index === getProgressSteps().length - 1
+                    const statusColors = {
+                      completed: {
+                        bg: 'bg-green-50',
+                        border: 'border-green-500',
+                        text: 'text-green-700',
+                        icon: 'text-green-600'
+                      },
+                      'in-progress': {
+                        bg: 'bg-blue-50',
+                        border: 'border-blue-500',
+                        text: 'text-blue-900',
+                        icon: 'text-blue-600'
+                      },
+                      failed: {
+                        bg: 'bg-red-50',
+                        border: 'border-red-500',
+                        text: 'text-red-700',
+                        icon: 'text-red-600'
+                      },
+                      pending: {
+                        bg: 'bg-gray-50',
+                        border: 'border-gray-300',
+                        text: 'text-gray-400',
+                        icon: 'text-gray-400'
+                      }
+                    }
+
+                    const colors = statusColors[step.status]
+
+                    return (
+                      <div key={step.id} className={`relative flex items-start gap-3 pb-6 ${isLast ? 'pb-0' : ''}`}>
+                        {/* Icon circle */}
+                        <div className={`relative z-10 flex items-center justify-center w-6 h-6 rounded-full border-2 ${colors.border} ${colors.bg} ${colors.icon} flex-shrink-0 transition-all duration-300 ${step.status === 'in-progress' ? 'shadow-lg' : ''}`}>
+                          {step.status === 'completed' ? (
+                            <CheckCircle2 className="w-4 h-4" />
+                          ) : step.status === 'in-progress' ? (
+                            <div className="w-3 h-3 bg-blue-600 rounded-full animate-pulse" />
+                          ) : step.status === 'failed' ? (
+                            <XCircle className="w-4 h-4" />
+                          ) : (
+                            <Circle className="w-3 h-3" />
+                          )}
+                        </div>
+
+                        {/* Step content */}
+                        <div className={`flex-1 ${step.status === 'in-progress' ? 'transform scale-105' : ''} transition-all duration-300`}>
+                          <div className={`flex items-center gap-2 mb-1 ${colors.text}`}>
+                            <span className={`${colors.icon}`}>
+                              {step.icon}
+                            </span>
+                            <span className={`text-sm font-semibold ${step.status === 'in-progress' ? 'text-blue-900' : step.status === 'completed' ? 'text-gray-700' : colors.text}`}>
+                              {step.label}
+                            </span>
+                          </div>
+                          <p className={`text-xs ml-7 ${step.status === 'in-progress' ? 'text-blue-700 font-medium' : step.status === 'completed' ? 'text-gray-600' : colors.text}`}>
+                            {step.substatus}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex-shrink-0" />
-                  <span className="text-sm text-gray-400">Waiting for contract</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
@@ -702,3 +1069,5 @@ export default function CustomerChatPage() {
     </div>
   )
 }
+
+export default CustomerChatPage

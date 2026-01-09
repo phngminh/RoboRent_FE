@@ -1,5 +1,5 @@
 import http from '../utils/http'
-const API_URL = 'https://localhost:7249/api/Rental'
+const API_URL = `${import.meta.env.VITE_API_URL}/Rental`
 
 export const getPendingRentalAsync = async () => {
     try {
@@ -49,4 +49,25 @@ export const staffRequestUpdateRentalAsync = async (rentalId: number) => {
         console.error('Error fetching rental infor:', error)
         throw error
     }
-} 
+}
+
+export const getUpdatedStatusAsync = async (rentalId: number) => {
+    try {
+        const response = await http.get(`${API_URL}/get/updated/status/${rentalId}`)
+        return response.data
+    } catch (error: any) {
+        console.error('Error fetching updated status:', error)
+        throw error
+    }
+}
+
+export const rejectActiveQuotesForRentalAsync = async (rentalId: number) => {
+    try {
+        const PRICE_QUOTE_API_URL = `${import.meta.env.VITE_API_URL}/PriceQuotes`
+        const response = await http.post(`${PRICE_QUOTE_API_URL}/reject-active-for-rental/${rentalId}`)
+        return response.data
+    } catch (error: any) {
+        console.error('Error rejecting active quotes:', error)
+        throw error
+    }
+}

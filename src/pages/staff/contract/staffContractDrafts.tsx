@@ -9,6 +9,7 @@ import { getDraftsByStaff, sendDraftToManager, type ContractDraftResponse } from
 import { useAuth } from '../../../contexts/AuthContext'
 import CreateContractDraft from './createContractDraft'
 import { toast } from 'react-toastify'
+import { signalRService } from '../../../utils/signalr'
 
 interface ContractDraftsProps {
   onView: (draftId: number) => void
@@ -67,6 +68,38 @@ const StaffContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
 
   useEffect(() => {
     fetchDrafts()
+  }, [])
+
+  // 🎯 SignalR: Auto-refresh when contract status changes
+  useEffect(() => {
+    const handleContractActivated = (data: {
+      ContractId: number
+      RentalId: number
+      Message: string
+    }) => {
+      toast.success(`🎉 ${data.Message}`)
+      fetchDrafts()
+    }
+
+    const handleContractChangeRequested = (data: {
+      ContractId: number
+      RentalId: number
+      Message: string
+      ChangeRequest: string
+    }) => {
+      toast.info(`📋 Customer yêu cầu sửa hợp đồng: ${data.ChangeRequest}`)
+      fetchDrafts()
+    }
+
+    signalRService.connect().then(() => {
+      signalRService.onContractActivated(handleContractActivated)
+      signalRService.onContractChangeRequested(handleContractChangeRequested)
+    })
+
+    return () => {
+      signalRService.offContractActivated()
+      signalRService.offContractChangeRequested()
+    }
   }, [])
 
   useEffect(() => {
@@ -322,9 +355,9 @@ const StaffContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
                                 {draft.status}
                               </span>
                             } else if (column.key === 'createdAt' || column.key === 'updatedAt') {
-                                  content = draft[column.key as 'createdAt' | 'updatedAt'] 
-                                      ? new Date(draft[column.key as 'createdAt' | 'updatedAt']).toLocaleDateString()
-                                      : 'N/A'
+                              content = draft[column.key as 'createdAt' | 'updatedAt']
+                                ? new Date(draft[column.key as 'createdAt' | 'updatedAt']).toLocaleDateString()
+                                : 'N/A'
                             } else if (column.key === 'actions') {
                               content = (
                                 <div className='flex items-center justify-center space-x-2 text-sm'>

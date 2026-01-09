@@ -1,6 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, ChevronRight, User, Truck, Group, ChartColumn } from 'lucide-react'
+import { LayoutDashboard, Calendar, ChevronRight, User, Truck, Group, ChartColumn, LogOut } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 import path from '../../constants/path'
 
 interface ProfileSidebarProps {
@@ -9,17 +10,22 @@ interface ProfileSidebarProps {
 
 const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   const navigate = useNavigate()
+  const { logout } = useAuth()
 
   const menuItems = [
     { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_STAFF },
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.STAFF_REQUESTS },
     { id: 'contract-drafts', label: 'Contract Drafts', icon: Calendar, path: path.STAFF_CONTRACT_DRAFTS },
     { id: 'deliveries', label: 'Delivery Tracking', icon: Truck, path: path.STAFF_DELIVERIES },
-    // { id: 'transactions', label: 'Transactions', icon: CreditCard, path: '/staff/transactions' },
     { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.STAFF_REPORTS },
     { id: 'robot-group', label: 'Robot Groups', icon: Group, path: path.STAFF_ROBOT_GROUP },
     { id: 'account', label: 'Account', icon: User, path: path.STAFF_ACCOUNT },
+    { id: 'logout', label: 'Logout', icon: LogOut, path: undefined }
   ]
+
+  const handleLogout = () => {
+    logout()
+  }
 
   return (
     <div className='w-64 bg-white shadow-lg h-full'>
@@ -27,12 +33,27 @@ const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
         <nav className='space-y-2'>
           {menuItems.map((item) => {
             const Icon = item.icon
-            const isActive = activeTab === item.id
+            const isActive = activeTab === item.id && item.id !== 'logout'
+
+            if (item.id === 'logout') {
+              return (
+                <button
+                  key={item.id}
+                  onClick={handleLogout}
+                  className='w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors duration-200 text-red-500 hover:bg-red-50 hover:text-red-600'
+                >
+                  <div className='flex items-center space-x-3'>
+                    <Icon size={20} className='shrink-0' />
+                    <span className='font-medium whitespace-nowrap'>{item.label}</span>
+                  </div>
+                </button>
+              )
+            }
 
             return (
               <button
                 key={item.id}
-                onClick={() => navigate(item.path)}
+                onClick={() => navigate(item.path!)}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors duration-200 ${
                   isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                 }`}
