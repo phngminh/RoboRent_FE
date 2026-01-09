@@ -7,7 +7,7 @@ import CustomerChatPage from '../pages/chat/CustomerChatPage'
 import StaffChatPage from '../pages/chat/StaffChatPage'
 import ManagerQuotesPage from '../pages/manager/ManagerQuotesPage'
 import AuthCallback from '../pages/auth/callback'
-import DashboardContent from '../pages/customer/dashboard'
+import CustomerDashboard from '../pages/customer/dashboard'
 import ManagerDashboard from '../pages/manager/ManagerDashboard'
 import CustomerRentalRequestsContent from '../pages/customer/RentalRequest/rentalRequest'
 import StaffRentalRequestsContent from '../pages/staff/rentalRequest'
@@ -47,6 +47,8 @@ import AdminProfile from '../pages/admin/profile'
 import StaffDashboardContent from '../pages/staff/dashboard'
 import ManagerDashboardContent from '../pages/manager/dashboard'
 import AdminDashboard from '../pages/admin/AdminDashboard'
+import PackageDisplay from '../pages/home/product/packageSection'
+import OurProblems from '../pages/home/homePage/ourProblems'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -82,6 +84,8 @@ export default function useRouteElements() {
         }
       ]
     },
+    { path: path.products, element: <PackageDisplay /> },
+    { path: path.aboutUs, element: <OurProblems /> },
     { path: path.callback, element: <AuthCallback /> },
     //================ Customer routes ================
     {
@@ -92,7 +96,7 @@ export default function useRouteElements() {
         {
           element: <CustomerProfile />,
           children: [
-            { path: 'dashboard', element: <ManagerDashboard /> },
+            { path: 'dashboard', element: <CustomerDashboard /> },
             { path: 'account', element: <AccountProfile /> },
             {
               path: 'rental-requests',
@@ -298,7 +302,7 @@ export default function useRouteElements() {
         {
           element: <ManagerProfile />,
           children: [
-            { path: 'dashboard', element: <DashboardContent /> },
+            { path: 'dashboard', element: <ManagerDashboard /> },
             { path: 'account', element: <AccountProfile /> },
             {
               path: 'rental-requests',

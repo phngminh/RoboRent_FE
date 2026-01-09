@@ -183,12 +183,11 @@ const CustomerContractDraft: React.FC<CustomerContractDraftProps> = ({ onBack })
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `Contract_${draft.id}_${new Date().toISOString().slice(0, 10)}.pdf`
+      link.download = `Contract_${draft.title}_${new Date().toISOString().slice(0, 10)}.pdf`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-      toast.success('PDF downloaded successfully!')
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to download PDF.'
       toast.error(errorMessage)

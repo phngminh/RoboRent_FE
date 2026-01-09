@@ -283,7 +283,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
       )
     }
 
-    filtered.sort((a, b) => a.id - b.id)
+    filtered.sort((a, b) => b.id - a.id)
     setFilteredRentals(filtered)
     setCurrentPage(1)
   }

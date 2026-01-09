@@ -1,8 +1,14 @@
 import { DollarSign, Phone, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
+import Layout from '../../../components/layout'
+import path from '../../../constants/path'
+import { useLocation } from 'react-router-dom'
 
 const OurProblems = () => {
   const [activeTab, setActiveTab] = useState('platform')
+  const location = useLocation()
+  const isAboutUsPage = location.pathname === path.aboutUs
+
   const tabs = [
     {
       id: 'platform',
@@ -45,11 +51,11 @@ const OurProblems = () => {
     }
   ]
 
-  return (
+  const content = (
     <div className='relative bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 px-6 overflow-hidden'>
       <div className='max-w-7xl mx-auto p-8 py-10 mt-4'>
         <div className='mb-6 text-center' data-aos='fade-down'>
-          <p className='inline-block text-lg font-medium text-emerald-400 tracking-wide mb-4 border border-emerald-500 rounded-full px-4 py-1 bg-gray-800'>
+          <p className='inline-block text-lg font-medium text-emerald-200 tracking-wide mb-4 border border-emerald-500 rounded-full px-4 py-1 bg-gray-800'>
             ABOUT US
           </p>
         </div>
@@ -91,7 +97,7 @@ const OurProblems = () => {
             <h1 className='font-bold mb-5 leading-[1.1]' data-aos='fade-right'>
               <span className='text-emerald-400 text-3xl ml-4'>OUR SOLUTION:</span>
               <br />
-                <span className='text-emerald-300 text-[3rem] ml-14'>ROBORENT</span>
+                <span className='bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-[3rem] ml-14'>ROBORENT</span>
             </h1>
 
             <p className='text-lg text-gray-300 mb-8 leading-relaxed text-left max-w-[38rem] ml-[6rem]' data-aos='fade-right' data-aos-delay='100'>
@@ -127,13 +133,19 @@ const OurProblems = () => {
             <img
               src={currentTab?.img}
               alt={currentTab?.label}
-              className='w-full h-full object-cover rounded-3xl'
+              className='w-full h-full object-cover rounded-3xl transition-opacity duration-300'
             />
           </div>
         </div>
       </div>
     </div>
   )
+
+  if (isAboutUsPage) {
+    return <Layout>{content}</Layout>
+  }
+
+  return content
 }
 
 export default OurProblems

@@ -66,8 +66,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
       )
     }
 
-    filtered.sort((a, b) => a.id - b.id)
-
+    filtered.sort((a, b) => b.id - a.id)
     setFilteredRentals(filtered)
     setPage(1)
   }
@@ -183,7 +182,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onView })
 
       <Card className='rounded-xl shadow-sm border border-gray-300'>
         <CardHeader className='p-6 border-b border-gray-100'>
-          <h2 className='text-xl font-semibold text-gray-800'>All Rental Requests</h2>
+          <h2 className='text-xl font-semibold text-gray-800 text-center'>All Rental Requests</h2>
         </CardHeader>
         <CardContent className='p-0'>
           <div className='overflow-x-auto'>
