@@ -42,6 +42,10 @@ import CustomerDeliveryTrackingPage from '../pages/customer/CustomerDeliveryTrac
 import CreateRentalRequestHome from '../pages/home/request/createRentalRequest'
 import CreateRentalDetailHome from '../pages/home/request/createRentalRequestDetail'
 import { toast } from 'react-toastify'
+import TechnicalStaffProfile from '../pages/technicalStaff/profile'
+import ActualDeliveryManagement from '../pages/technicalStaff/ActualDeliveryManagement'
+import DeliveryChecklistPage from '../pages/technicalStaff/DeliveryChecklistPage'
+import CustomerChecklistAcceptPage from '../pages/customer/checklist/CustomerChecklistAcceptPage'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -199,6 +203,7 @@ export default function useRouteElements() {
           path: 'delivery/:rentalId', 
           element: <CustomerDeliveryTrackingPage /> 
         },
+        { path: 'delivery/:rentalId/checklist', element: <CustomerChecklistAcceptPage /> },
       ]
     },
     //================ Staff routes ================
@@ -357,6 +362,21 @@ export default function useRouteElements() {
         {
           path: 'quotes',
           element: <ManagerQuotesPage />
+        }
+      ]
+    },
+    //================ TechnicalStaff routes ================
+    {
+      path: path.BASE_TECH_STAFF, // '/techstaff'
+      element: <ProtectedRoute allowedRoles={['technicalstaff']} />,
+      children: [
+        { index: true, element: <Navigate to='rental-requests' replace /> },
+        {
+          element: <TechnicalStaffProfile />,
+          children: [
+            { path: 'rental-requests', element: <ActualDeliveryManagement /> },
+            { path: 'deliveries/:actualDeliveryId/checklist', element: <DeliveryChecklistPage /> }
+          ]
         }
       ]
     }

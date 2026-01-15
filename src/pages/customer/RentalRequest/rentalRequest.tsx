@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { Eye, Flag, MessageCircle, Plus, Search, Truck, X, Upload } from 'lucide-react'
+import { Eye, Flag, MessageCircle, Plus, Search, Truck, X, Upload, ClipboardCheck } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '../../../components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
 import { Input } from '../../../components/ui/input'
@@ -666,15 +666,23 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                               </button>
                             )}
 
-                            {(request.status === 'Accepted' || request.status === 'AcceptedDemo' || request.status === 'Completed' || request.status === 'DeliveryScheduled') && (
-                              <button
-                                onClick={() => navigate(path.CUSTOMER_DELIVERY.replace(':rentalId', String(request.id)))}
-                                className='flex items-center space-x-1 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 px-2 py-1 rounded whitespace-nowrap'
-                              >
-                                <Truck size={14} />
-                                <span>Theo dõi</span>
-                              </button>
-                            )}
+                              <>
+                                <button
+                                  onClick={() => navigate(path.CUSTOMER_CHECKLIST_ACCEPT.replace(':rentalId', String(request.id)))}
+                                  className='flex items-center space-x-1 bg-indigo-100 text-indigo-800 hover:bg-indigo-200 px-2 py-1 rounded whitespace-nowrap'
+                                >
+                                  <ClipboardCheck size={14} />
+                                  <span>Checklist</span>
+                                </button>
+
+                                <button
+                                  onClick={() => navigate(path.CUSTOMER_DELIVERY.replace(':rentalId', String(request.id)))}
+                                  className='flex items-center space-x-1 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 px-2 py-1 rounded whitespace-nowrap'
+                                >
+                                  <Truck size={14} />
+                                  <span>Theo dõi</span>
+                                </button>
+                              </>
 
                             {canReport && (
                               <button

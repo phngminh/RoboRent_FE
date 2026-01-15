@@ -21,7 +21,8 @@ const roleRedirectMap: Record<string, string> = {
   staff: '/staff',
   manager: '/manager',
   admin: '/admin',
-}
+  technicalstaff: '/technicalstaff/rental-requests',
+} 
 
 const AuthCallback = () => {
   const navigate = useNavigate()
