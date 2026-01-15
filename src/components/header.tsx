@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { X, LogOut, Bell, Menu } from 'lucide-react'
+import { X, LogOut, Menu } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { googleLogin } from '../apis/auth.api'
 import { getMyChatRooms } from '../apis/chat.api'
@@ -18,6 +18,12 @@ const roleRedirectMap: Record<string, string> = {
   technicalstaff: path.BASE_TECH_STAFF,
 }
 
+const sectionToPath: Record<string, string> = {
+  home: path.home,
+  'our-services': path.products,
+  'about-us': path.aboutUs,
+}
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -26,9 +32,15 @@ const Header = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const [currentSection, setCurrentSection] = useState('home')
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [, setUnreadCount] = useState(0)
 
-  const isTransparentHeaderPage = location.pathname === path.home || location.pathname === path.create_request
+  const isTransparentHeaderPage =
+    location.pathname === path.home ||
+    location.pathname === path.create_request ||
+    location.pathname === path.aboutUs ||
+    location.pathname === path.products
+  const isDashboardPage = Object.values(roleRedirectMap).some(basePath => location.pathname.startsWith(basePath))
+  const showNav = !isDashboardPage
 
   const handleLogout = () => {
     logout()
@@ -57,17 +69,25 @@ const Header = () => {
   }, [])
 
   useEffect(() => {
-    if (!isTransparentHeaderPage) return
+    if (isTransparentHeaderPage) {
+      const handleHashChange = () => {
+        const hash = window.location.hash.slice(1)
+        setCurrentSection(hash || 'home')
+      }
 
-    const handleHashChange = () => {
-      const hash = window.location.hash.slice(1)
-      setCurrentSection(hash || 'home')
+      handleHashChange()
+      window.addEventListener('hashchange', handleHashChange)
+      return () => window.removeEventListener('hashchange', handleHashChange)
+    } else if (showNav) {
+      if (location.pathname === path.products) {
+        setCurrentSection('our-services')
+      } else if (location.pathname === path.aboutUs) {
+        setCurrentSection('about-us')
+      } else {
+        setCurrentSection('home')
+      }
     }
-
-    handleHashChange()
-    window.addEventListener('hashchange', handleHashChange)
-    return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [isTransparentHeaderPage])
+  }, [location.pathname, isTransparentHeaderPage, showNav])
 
   useEffect(() => {
     if (!user?.id) return
@@ -106,8 +126,35 @@ const Header = () => {
     return () => clearInterval(interval)
   }, [user?.id, user?.role])
 
-  const isHeaderWhite = !isTransparentHeaderPage || isScrolled || isMenuOpen
-  const textColor = isHeaderWhite ? 'text-gray-700' : 'text-white'
+  const isHeaderBlack = !isTransparentHeaderPage && !isDashboardPage || isScrolled || isMenuOpen
+  const headerBg = isDashboardPage 
+    ? 'bg-white shadow-sm border-b border-gray-200' 
+    : isHeaderBlack
+    ? 'bg-black/75 backdrop-blur-sm shadow-sm border-b border-emerald-800'
+    : 'bg-transparent'
+  const textColor = isDashboardPage 
+    ? 'text-emerald-500' 
+    : isHeaderBlack 
+    ? 'text-emerald-400' 
+    : 'text-white'
+  const logoShadow = isDashboardPage 
+    ? 'filter drop-shadow-[0_0_2px_#374151]' 
+    : isHeaderBlack 
+    ? 'filter drop-shadow-[0_0_2px_#10b981]' 
+    : 'filter drop-shadow-[0_0_2px_#ffffff]'
+  const logoTextColor = isDashboardPage 
+    ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent animate-pulse' 
+    : isHeaderBlack 
+    ? 'bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse' 
+    : 'text-white'
+
+  const navTextColor = isDashboardPage 
+    ? 'text-emerald-400 hover:text-emerald-600 after:bg-emerald-400' 
+    : isHeaderBlack 
+    ? 'text-emerald-400 hover:text-emerald-600 after:bg-emerald-400' 
+    : 'text-white hover:text-gray-200 after:bg-white'
+
+  const nameColor = 'bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent'
 
   const scrollToSection = (sectionId: string) => {
     setIsMenuOpen(false)
@@ -117,22 +164,57 @@ const Header = () => {
     }
   }
 
-  const handleNavClick = (sectionId: string, route?: string) => {
-    if (isTransparentHeaderPage) {
+  const displayName = user?.name || user?.userName
+  const capitalizedRole = user?.role.charAt(0).toUpperCase() + user?.role.slice(1)
+  const linkText = `Welcome, ${capitalizedRole} ${displayName}`
+
+  const userDisplay = isDashboardPage ? (
+    <Link
+      to={roleRedirectMap[user?.role]}
+      className={`text-lg transition-colors duration-200 ${textColor} whitespace-nowrap`}
+      title={linkText}
+    >
+      Welcome, {capitalizedRole}{' '}
+      <span className={nameColor}>{displayName}</span>
+    </Link>
+  ) : (
+    <Link
+      to={roleRedirectMap[user?.role]}
+      className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'
+    >
+      <div className='h-8 w-8 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent flex items-center justify-center'>
+        <img
+          src={user?.picture}
+          alt='User Avatar'
+          className='h-7 w-7 rounded-full object-cover'
+        />
+      </div>
+      <span
+        className={`text-lg transition-colors duration-200 ${textColor} max-w-[150px] truncate block`}
+        title={displayName}
+      >
+        {displayName}
+      </span>
+    </Link>
+  )
+
+  const handleNavClick = (e: React.MouseEvent, sectionId: string) => {
+    e.preventDefault()
+    if (location.pathname === path.home) {
       scrollToSection(sectionId)
-    } else if (route) {
-      navigate(route)
+    } else {
+      const targetPath = sectionToPath[sectionId] || path.home
+      navigate(targetPath)
     }
-    setIsMenuOpen(false)
+    if (isMenuOpen) {
+      setIsMenuOpen(false)
+    }
   }
 
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 w-full transition-colors duration-300 ${isHeaderWhite
-            ? 'bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-100'
-            : 'bg-transparent'
-          }`}
+        className={`fixed top-0 left-0 right-0 z-50 w-full transition-colors duration-300 ${headerBg}`}
       >
         <div className='w-full px-4 sm:px-6 lg:px-8 font-extrabold font-orbitron'>
           <div className='grid grid-cols-3 items-center h-16'>
@@ -140,59 +222,37 @@ const Header = () => {
               <img
                 src={logo}
                 alt='logo'
-                className={`w-8 h-7 mr-3 mb-1 transition-all duration-200 ${isHeaderWhite ? 'filter drop-shadow-[0_0_2px_black]' : ''
-                  }`}
+                className={`w-8 h-7 mr-3 mb-1 transition-all duration-200 ${logoShadow}`}
               />
               <Link
                 to={path.home}
-                className={`font-orbitron text-2xl tracking-widest transition-colors duration-300 ${isHeaderWhite
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent'
-                    : 'text-white'
-                  }`}
+                className={`font-orbitron text-2xl tracking-widest transition-colors ${logoTextColor}`}
               >
                 ROBORENT
               </Link>
             </div>
 
             <div className='flex justify-center'>
-              {isTransparentHeaderPage && (
+              {showNav && (
                 <nav className='hidden md:flex justify-center space-x-8 tracking-wide text-lg'>
                   <a
                     href='#home'
-                    onClick={(e) => {
-                      e.preventDefault()
-                      handleNavClick('home')
-                    }}
-                    className={`transition-colors duration-200 relative pb-1 ${isHeaderWhite
-                        ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
-                        : 'text-white hover:text-gray-200 after:bg-white'
-                      }`}
+                    onClick={(e) => handleNavClick(e, 'home')}
+                    className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
                     HOME
                   </a>
                   <a
-                    href='#our-products'
-                    onClick={(e) => {
-                      e.preventDefault()
-                      handleNavClick('our-products')
-                    }}
-                    className={`transition-colors duration-200 relative pb-1 ${isHeaderWhite
-                        ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
-                        : 'text-white hover:text-gray-200 after:bg-white'
-                      }`}
+                    href='#our-services'
+                    onClick={(e) => handleNavClick(e, 'our-services')}
+                    className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
                     SERVICES
                   </a>
                   <a
                     href='#about-us'
-                    onClick={(e) => {
-                      e.preventDefault()
-                      handleNavClick('about-us')
-                    }}
-                    className={`transition-colors duration-200 relative pb-1 ${isHeaderWhite
-                        ? 'text-gray-700 hover:text-gray-900 after:bg-gray-700'
-                        : 'text-white hover:text-gray-200 after:bg-white'
-                      }`}
+                    onClick={(e) => handleNavClick(e, 'about-us')}
+                    className={`transition-colors duration-200 relative pb-1 ${navTextColor}`}
                   >
                     ABOUT US
                   </a>
@@ -211,38 +271,28 @@ const Header = () => {
                 {isAuthenticated ? (
                   <div className='flex items-center space-x-4'>
                     <NotificationCenter textColor={textColor} />
-                    <Link
-                      to={roleRedirectMap[user?.role]}
-                      className='flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200'
-                    >
-                      <div className='h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center'>
-                        <img
-                          src={user?.picture}
-                          alt='User Avatar'
-                          className='h-7 w-7 rounded-full object-cover'
-                        />
+                    {isDashboardPage ? (
+                      <div className='flex items-center space-x-2 flex-nowrap'>
+                        {userDisplay}
                       </div>
-                      <span
-                        className={`text-lg transition-colors duration-200 ${textColor} max-w-[150px] truncate block`}
-                        title={user?.name || user?.userName}
-                      >
-                        {user?.userName}
-                      </span>
-                    </Link>
-
-                    <button
-                      onClick={handleLogout}
-                      className={`flex items-center space-x-1 transition-colors duration-200 ${textColor} hover:text-gray-900`}
-                      title='Logout'
-                    >
-                      <LogOut size={18} />
-                      <span className='text-lg'>Logout</span>
-                    </button>
+                    ) : (
+                      <div className='flex items-center space-x-4'>
+                        {userDisplay}
+                        <button
+                          onClick={handleLogout}
+                          className={`flex items-center space-x-1 transition-colors duration-200 ${textColor} hover:text-emerald-600`}
+                          title='Logout'
+                        >
+                          <LogOut size={18} />
+                          <span className='text-lg'>Logout</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <button
                     onClick={openLoginModal}
-                    className='bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-bold whitespace-nowrap'
+                    className='bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg font-bold whitespace-nowrap'
                   >
                     Get Started
                   </button>
@@ -251,38 +301,29 @@ const Header = () => {
             </div>
           </div>
 
-          {isMenuOpen && (
-            <div className='md:hidden absolute top-16 left-0 right-0 bg-white/95 shadow-lg animate-in slide-in-from-top-2 duration-200'>
+          {isMenuOpen && showNav && (
+            <div className='md:hidden absolute top-16 left-0 right-0 bg-black/95 shadow-lg animate-in slide-in-from-top-2 duration-200'>
               <nav className='px-4 py-4 space-y-2'>
                 <a
                   href='#home'
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handleNavClick('home')
-                  }}
-                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${currentSection === 'home' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                  onClick={(e) => handleNavClick(e, 'home')}
+                  className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'home' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}
                 >
                   Home
                 </a>
                 <a
-                  href='#our-products'
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handleNavClick('our-products')
-                  }}
-                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${currentSection === 'our-products' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                  href='#our-services'
+                  onClick={(e) => handleNavClick(e, 'our-services')}
+                  className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'our-services' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}
                 >
                   Products
                 </a>
                 <a
                   href='#about-us'
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handleNavClick('about-us')
-                  }}
-                  className={`block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative ${currentSection === 'about-us' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-blue-600 after:to-purple-600' : ''
+                  onClick={(e) => handleNavClick(e, 'about-us')}
+                  className={`block px-3 py-2 text-emerald-400 hover:text-emerald-600 hover:bg-gray-800 rounded-md transition-colors relative ${currentSection === 'about-us' ? 'font-bold after:absolute after:bottom-2 after:left-3 after:right-3 after:h-[2px] after:bg-gradient-to-r after:from-emerald-400 after:to-emerald-600' : ''
                     }`}
                 >
                   About Us
@@ -295,22 +336,22 @@ const Header = () => {
 
       {isLoginModalOpen && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100] animate-in fade-in duration-300'>
-          <div className='bg-slate-100 rounded-2xl shadow-2xl max-w-4xl w-full h-[500px] grid md:grid-cols-2 overflow-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300'>
+          <div className='bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full h-[500px] grid md:grid-cols-2 overflow-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300'>
             <button
               onClick={() => setIsLoginModalOpen(false)}
-              className='absolute top-4 right-4 z-10 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700 transition-colors'
+              className='absolute top-4 right-4 z-10 bg-emerald-500 text-white rounded-full p-2 hover:bg-emerald-400 transition-colors'
             >
               <X size={20} />
             </button>
 
             <div className='p-8 md:p-10 flex flex-col justify-center font-medium ml-6'>
-              <h2 className='text-4xl font-orbitron font-bold text-gray-700 mb-10 animate-in slide-in-from-left duration-500'>
+              <h2 className='text-4xl font-orbitron font-bold text-emerald-300 mb-10 animate-in slide-in-from-left duration-500'>
                 Login or signup to get started
               </h2>
 
               <button
                 onClick={googleLoginWithClose}
-                className='w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all text-lg mb-2 animate-in slide-in-from-left duration-500 delay-100'
+                className='w-80 flex items-center justify-center gap-3 bg-gray-800 border-2 border-emerald-600 text-gray-200 px-6 py-3 rounded-lg hover:bg-gray-700 hover:border-emerald-500 transition-all text-lg mb-2 animate-in slide-in-from-left duration-500 delay-100'
               >
                 <svg className='w-5 h-5' viewBox='0 0 24 24'>
                   <path
@@ -333,13 +374,13 @@ const Header = () => {
                 Continue with Google
               </button>
 
-              <p className='text-base text-gray-600 mt-2 animate-in slide-in-from-left duration-500 delay-200'>
-                By continuing, you agree to RoboRent's{' '}
-                <a href='#' className='text-gray-800 font-bold hover:underline'>
-                  Terms of Use
+              <p className='w-80 text-base text-gray-200 mt-2 animate-in slide-in-from-left duration-500 delay-200'>
+                By continuing, you agree to our{' '}
+                <a href='#' className='text-emerald-300 font-bold hover:underline'>
+                  Terms of Use{' '}
                 </a>
-                . Read our{' '}
-                <a href='#' className='text-gray-800 font-bold hover:underline'>
+                and {' '}
+                <a href='#' className='text-emerald-300 font-bold hover:underline'>
                   Privacy Policy
                 </a>
                 .

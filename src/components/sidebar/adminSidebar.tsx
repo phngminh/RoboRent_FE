@@ -8,18 +8,12 @@ interface ProfileSidebarProps {
   activeTab: string
 }
 
-const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
+const AdminSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   const navigate = useNavigate()
   const { logout } = useAuth()
 
   const menuItems = [
-    { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_STAFF },
-    { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.STAFF_REQUESTS },
-    { id: 'contract-drafts', label: 'Contract Drafts', icon: Calendar, path: path.STAFF_CONTRACT_DRAFTS },
-    { id: 'deliveries', label: 'Delivery Tracking', icon: Truck, path: path.STAFF_DELIVERIES },
-    { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.STAFF_REPORTS },
-    // { id: 'robot-group', label: 'Robot Groups', icon: Group, path: path.STAFF_ROBOT_GROUP },
-    { id: 'account', label: 'Account', icon: User, path: path.STAFF_ACCOUNT },
+    { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_ADMIN },
     { id: 'logout', label: 'Logout', icon: LogOut, path: undefined }
   ]
 
@@ -72,4 +66,4 @@ const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   )
 }
 
-export default StaffSidebar
+export default AdminSidebar
