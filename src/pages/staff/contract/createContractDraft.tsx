@@ -183,7 +183,7 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
     if (user?.accountId) {
       try {
         const rentalsData = await getReceivedRentalByStaffIdAsync(user.accountId)
-        const filteredRentals = rentalsData.data.filter((rental: RentalRequestResponse) => rental.status === 'AcceptedDemo' || rental.status === 'PendingContract')
+        const filteredRentals = rentalsData.data.filter((rental: RentalRequestResponse) => rental.status === 'AcceptedPriceQuote' || rental.status === 'PendingContract' || rental.status === 'AcceptedDemo')
         setRentals(filteredRentals)
         const templatesData = await getAllTemplates()
         const filteredTemplates = templatesData.filter(t =>t.status === 'Updated' || t.status === 'Initiated')

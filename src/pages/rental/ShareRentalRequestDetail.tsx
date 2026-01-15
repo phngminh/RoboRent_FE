@@ -1354,7 +1354,7 @@ export default function ShareRentalRequestDetail({
               >
                 View Details
               </button>
-
+{/* 
               <button
                 onClick={async () => {
                   setViewMode("schedule");
@@ -1364,7 +1364,7 @@ export default function ShareRentalRequestDetail({
                 className="w-full bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700"
               >
                 View Schedules
-              </button>
+              </button> */}
 
               {userRole === "staff" && (rental.status === "Received" || rental.status === "PendingPriceQuote") && (
                 <button

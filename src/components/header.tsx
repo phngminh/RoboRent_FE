@@ -15,6 +15,7 @@ const roleRedirectMap: Record<string, string> = {
   staff: path.BASE_STAFF,
   manager: path.BASE_MANAGER,
   admin: path.BASE_ADMIN,
+  technicalstaff: path.BASE_TECH_STAFF,
 }
 
 const sectionToPath: Record<string, string> = {
@@ -94,7 +95,7 @@ const Header = () => {
     const countUnread = async () => {
       try {
         let totalUnread = 0
-        const isStaff = user.role === 'Staff'
+        const isStaff = user.role === 'staff'
 
         const response = await getMyChatRooms(1, 50)
         totalUnread = response.rooms.reduce((sum, room) => sum + room.unreadCount, 0)
