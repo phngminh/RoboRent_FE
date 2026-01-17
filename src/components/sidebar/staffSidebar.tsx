@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, ChevronRight, User, Truck, Group, ChartColumn, LogOut } from 'lucide-react'
+import { LayoutDashboard, Calendar, ChevronRight, User, Truck, ChartColumn, LogOut } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import path from '../../constants/path'
 

@@ -41,7 +41,6 @@ import StaffAssignmentPage from '../pages/manager/StaffAssignmentPage'
 import CustomerDeliveryTrackingPage from '../pages/customer/CustomerDeliveryTrackingPage'
 import CreateRentalRequestHome from '../pages/home/request/createRentalRequest'
 import CreateRentalDetailHome from '../pages/home/request/createRentalRequestDetail'
-import { toast } from 'react-toastify'
 import TechnicalStaffProfile from '../pages/technicalStaff/profile'
 import ActualDeliveryManagement from '../pages/technicalStaff/ActualDeliveryManagement'
 import DeliveryChecklistPage from '../pages/technicalStaff/DeliveryChecklistPage'
@@ -52,6 +51,7 @@ import ManagerDashboardContent from '../pages/manager/dashboard'
 import AdminDashboardContent from '../pages/admin/dashboard'
 import PackageDisplay from '../pages/home/product/packageSection'
 import OurProblems from '../pages/home/homePage/ourProblems'
+import { toast } from 'react-toastify'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -367,12 +367,13 @@ export default function useRouteElements() {
       path: path.BASE_ADMIN,
       element: <ProtectedRoute allowedRoles={['admin']} />,
       children: [
+        { index: true, element: <Navigate to='dashboard' replace /> },
         {
           element: <AdminProfile />,
           children: [
-            { path: 'dashboard', element: <AdminDashboardContent /> }
+            { path: 'dashboard', element: <AdminDashboardContent /> },
           ]
-        },
+        }
       ]
     },
     //================ TechnicalStaff routes ================

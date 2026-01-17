@@ -53,6 +53,7 @@ const path = {
   //============= Admin ============
   BASE_ADMIN: '/admin',
   DASHBOARD_ADMIN: '/admin/dashboard',
+  ADMIN_ACCOUNTS: '/admin/accounts',
 
   //============= Technical Staff ============
   BASE_TECH_STAFF: '/technicalstaff',
