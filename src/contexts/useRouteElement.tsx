@@ -42,11 +42,17 @@ import StaffAssignmentPage from '../pages/manager/StaffAssignmentPage'
 import CustomerDeliveryTrackingPage from '../pages/customer/CustomerDeliveryTrackingPage'
 import CreateRentalRequestHome from '../pages/home/request/createRentalRequest'
 import CreateRentalDetailHome from '../pages/home/request/createRentalRequestDetail'
-import { toast } from 'react-toastify'
+import TechnicalStaffProfile from '../pages/technicalStaff/profile'
+import ActualDeliveryManagement from '../pages/technicalStaff/ActualDeliveryManagement'
+import DeliveryChecklistPage from '../pages/technicalStaff/DeliveryChecklistPage'
+import CustomerChecklistAcceptPage from '../pages/customer/checklist/CustomerChecklistAcceptPage'
 import AdminProfile from '../pages/admin/profile'
 import StaffDashboardContent from '../pages/staff/dashboard'
 import ManagerDashboardContent from '../pages/manager/dashboard'
 import AdminDashboard from '../pages/admin/AdminDashboard'
+import PackageDisplay from '../pages/home/product/packageSection'
+import OurProblems from '../pages/home/homePage/ourProblems'
+import { toast } from 'react-toastify'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -82,6 +88,8 @@ export default function useRouteElements() {
         }
       ]
     },
+    { path: path.products, element: <PackageDisplay /> },
+    { path: path.aboutUs, element: <OurProblems /> },
     { path: path.callback, element: <AuthCallback /> },
     //================ Customer routes ================
     {
@@ -204,6 +212,7 @@ export default function useRouteElements() {
           path: 'delivery/:rentalId',
           element: <CustomerDeliveryTrackingPage />
         },
+        { path: 'delivery/:rentalId/checklist', element: <CustomerChecklistAcceptPage /> },
       ]
     },
     //================ Staff routes ================
@@ -363,9 +372,24 @@ export default function useRouteElements() {
         {
           element: <AdminProfile />,
           children: [
-            { path: 'dashboard', element: <AdminDashboard /> }
+            { path: 'dashboard', element: <AdminDashboard /> },
           ]
-        },
+        }
+      ]
+    },
+    //================ TechnicalStaff routes ================
+    {
+      path: path.BASE_TECH_STAFF, // '/techstaff'
+      element: <ProtectedRoute allowedRoles={['technicalstaff']} />,
+      children: [
+        { index: true, element: <Navigate to='rental-requests' replace /> },
+        {
+          element: <TechnicalStaffProfile />,
+          children: [
+            { path: 'rental-requests', element: <ActualDeliveryManagement /> },
+            { path: 'deliveries/:actualDeliveryId/checklist', element: <DeliveryChecklistPage /> }
+          ]
+        }
       ]
     }
   ])

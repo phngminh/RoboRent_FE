@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext'
 
 interface ProtectedRouteProps {
   children?: React.ReactNode
-  allowedRoles?: ('admin' | 'staff' | 'manager' | 'customer')[]
+  allowedRoles?: ('admin' | 'staff' | 'manager' | 'customer' | 'technicalstaff')[]
   redirectTo?: string
 }
 
@@ -28,7 +28,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={redirectTo} state={{ from: location }} replace />
   }
 
-  if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
+  if (allowedRoles.length > 0 && user && !allowedRoles.map(r => r.toLowerCase()).includes((user.role || '').toLowerCase())) {
     return <Navigate to='/' replace />
   }
 

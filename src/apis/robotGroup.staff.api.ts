@@ -11,3 +11,12 @@ export const getAllActivityTypeGroupAsync = async () => {
     }
 }
 
+export const getAllGroupByActivityTypeIdAsync = async (id: number) => {
+    try {
+        const response = await http.get(`${API_URL}/staff/get/all/group/ActivityTypeGroup/${id}`)
+        return response.data
+    } catch (error: any){
+        console.error('Error fetching group list:', error)
+        throw error
+    }
+}

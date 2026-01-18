@@ -1,7 +1,7 @@
 const path = {
   //============= Public ==============
   home: '/',
-  products: '/our-products',
+  products: '/our-services',
   aboutUs: '/about-us',
   create_request: '/create-request',
   create_request_detail: '/create-request-detail',
@@ -22,6 +22,7 @@ const path = {
   FACE_PROFILE_CREATE: '/customer/face-profile/create',
   FACE_PROFILE_VERIFY: '/customer/face-profile/verify',
   CUSTOMER_DELIVERY: '/customer/delivery/:rentalId',
+  CUSTOMER_CHECKLIST_ACCEPT: '/customer/delivery/:rentalId/checklist',
 
   //============= Staff ============
   BASE_STAFF: '/staff',
@@ -52,5 +53,10 @@ const path = {
   //============= Admin ============
   BASE_ADMIN: '/admin',
   DASHBOARD_ADMIN: '/admin/dashboard',
+  ADMIN_ACCOUNTS: '/admin/accounts',
+
+  //============= Technical Staff ============
+  BASE_TECH_STAFF: '/technicalstaff',
+  TECH_STAFF_REQUESTS: '/technicalstaff/rental-requests',
 }
 export default path

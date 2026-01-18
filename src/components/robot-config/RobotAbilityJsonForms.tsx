@@ -1,490 +1,1710 @@
-import React, { useEffect, useMemo, useState } from "react"
-import { X, Calendar, MapPin, Package, User, Phone, Mail } from "lucide-react"
-import { formatMoney } from "../../utils/format"
+import React from "react";
 
-import { getRobotTypesOfActivityAsync } from "../../apis/robottypeofactivity.api"
-import type { RobotAbility } from "../../components/robot-config/AbilityField"
+/**
+ * RoboRent - JSON Ability Forms
+ * ------------------------------------------------------------
+ * These forms let normal users input structured config without typing raw JSON.
+ * FE will keep values as JS objects/arrays, and your existing toAbilityValuePayload()
+ * can JSON.stringify(value) into valueJson before sending to BE.
+ *
+ * Exports:
+ * - 20+ forms matching your JSON abilities
+ * - Small, dependency-free UI primitives: Input, Textarea, Checkbox, Select, Button, TagInput, Grid
+ */
 
-type RentalInfo = any
+export type JsonValue = any;
 
-// ✅ NEW response
-type RentalChangeLog = {
-  id: number
-  rentalId: number
-  fieldName: string
-  oldValue: string | null
-  newValue: string | null
-  changedAtUtc: string
-  changedByAccountId: number
+/* ----------------------------- UI Primitives ----------------------------- */
+
+export function Grid({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{children}</div>;
 }
 
-type UpdatedAbilityValue = {
-  id: number
-  rentalDetailId: number
-  robotAbilityId: number
-  valueText: string | null
-  valueJson: string | null
-  updatedAt: string
-  isUpdated: boolean
-}
-
-type UpdateApiResponseData = {
-  rentalIsUpdated: boolean
-  rentalDetailIsUpdated: boolean
-  rentalChangeLogResponses: RentalChangeLog[]
-  robotAbilityValueResponses: UpdatedAbilityValue[]
-}
-
-// Your existing detail (tabs)
-type RentalDetail = {
-  id: number
-  status: string
-  rentalId: number
-  roboTypeId: number
-  robotTypeName: string
-  robotTypeDescription: string
-}
-
-const safeJsonParse = (text?: string | null) => {
-  if (!text) return null
-  try {
-    return JSON.parse(text)
-  } catch {
-    return null
-  }
-}
-
-const prettyAny = (v: any) => {
-  if (v === null || v === undefined) return ""
-  if (typeof v === "string") return v
-  try {
-    return JSON.stringify(v, null, 2)
-  } catch {
-    return String(v)
-  }
-}
-
-// same parse logic as CreateRentalDetailContent (but simplified)
-const parseValueForDisplay = (ability: RobotAbility | undefined, av: UpdatedAbilityValue) => {
-  const dt = (ability?.dataType || "").toLowerCase()
-  const ui = (ability?.uiControl || "").toLowerCase()
-
-  // valueJson first
-  if (av.valueJson != null && av.valueJson !== "") {
-    const parsed = safeJsonParse(av.valueJson)
-
-    if (dt === "enum[]" || ui === "multiselect") return Array.isArray(parsed) ? parsed : []
-    if (dt === "json" || ui === "jsoneditor") return parsed ?? null
-
-    return parsed ?? av.valueJson
-  }
-
-  // valueText
-  if (av.valueText == null) return null
-
-  if (dt === "bool" || ui === "switch") {
-    const t = av.valueText.trim().toLowerCase()
-    return t === "true" || t === "1" || t === "yes"
-  }
-
-  if (dt === "number" || dt === "int" || dt === "integer") {
-    const n = Number(av.valueText)
-    return Number.isFinite(n) ? n : av.valueText
-  }
-
-  return av.valueText
-}
-
-function UpdatedBadge() {
-  return (
-    <span className="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-blue-600 text-white">
-      UPDATED
-    </span>
-  )
-}
-
-export default function RentalDetailModal({
-  isOpen,
-  onClose,
-  rentalInfo,
-  rentalDetails,
-  updateData, // ✅ NEW: pass data.data from your JSON
-  isLoading,
+/**
+ * ✅ UPDATED VERSION
+ * - Added `isUpdated?: boolean`
+ * - Shows UPDATED badge on the right
+ */
+export function FieldLabel({
+  label,
+  required,
+  hint,
+  isUpdated,
 }: {
-  isOpen: boolean
-  onClose: () => void
-  rentalInfo: RentalInfo | null
-  rentalDetails: RentalDetail[]
-  updateData?: UpdateApiResponseData | null
-  isLoading?: boolean
+  label: string;
+  required?: boolean;
+  hint?: string;
+  isUpdated?: boolean;
 }) {
-  const [activeTab, setActiveTab] = useState(0)
+  return (
+    <div className="mb-1 flex items-start justify-between gap-3">
+      <div>
+        <div className="text-sm font-medium text-gray-900">
+          {label} {required ? <span className="text-red-500">*</span> : null}
+        </div>
+        {hint ? <div className="text-xs text-gray-500">{hint}</div> : null}
+      </div>
 
-  // schema abilities
-  const [abilitiesByType, setAbilitiesByType] = useState<Record<number, RobotAbility[]>>({})
-  const [schemaLoading, setSchemaLoading] = useState(false)
+      {isUpdated ? (
+        <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-600 text-white">
+          UPDATED
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
-  const tabs = useMemo(() => rentalDetails || [], [rentalDetails])
-  const active = tabs[activeTab]
+export function Input({
+  label,
+  hint,
+  required,
+  className,
+  isUpdated,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  label: string;
+  hint?: string;
+  required?: boolean;
+  isUpdated?: boolean;
+}) {
+  return (
+    <div className={className}>
+      <FieldLabel label={label} hint={hint} required={required} isUpdated={isUpdated} />
+      <input
+        {...props}
+        className={[
+          "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900",
+          "focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300",
+        ].join(" ")}
+      />
+    </div>
+  );
+}
 
-  useEffect(() => {
-    if (activeTab >= tabs.length) setActiveTab(0)
-  }, [tabs.length, activeTab])
+export function Textarea({
+  label,
+  hint,
+  required,
+  className,
+  isUpdated,
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  label: string;
+  hint?: string;
+  required?: boolean;
+  isUpdated?: boolean;
+}) {
+  return (
+    <div className={className}>
+      <FieldLabel label={label} hint={hint} required={required} isUpdated={isUpdated} />
+      <textarea
+        {...props}
+        className={[
+          "w-full min-h-[92px] rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900",
+          "focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300",
+        ].join(" ")}
+      />
+    </div>
+  );
+}
 
-  // ✅ load schema by activityTypeId
-  useEffect(() => {
-    const activityTypeId =
-      rentalInfo?.activityTypeId ??
-      rentalInfo?.activityTypeResponse?.id ??
-      rentalInfo?.activityType?.id
+export function Checkbox({
+  label,
+  checked,
+  onChange,
+  hint,
+  isUpdated,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  hint?: string;
+  isUpdated?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => onChange(!!e.target.checked)}
+            className="mt-1 h-4 w-4"
+          />
+          <div>
+            <div className="text-sm font-medium text-gray-900">{label}</div>
+            {hint ? <div className="text-xs text-gray-500">{hint}</div> : null}
+          </div>
+        </div>
 
-    if (!isOpen || !activityTypeId) return
+        {isUpdated ? (
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-600 text-white">
+            UPDATED
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
-    let mounted = true
-    ;(async () => {
-      try {
-        setSchemaLoading(true)
-        const mapping = await getRobotTypesOfActivityAsync(Number(activityTypeId))
-        const dict: Record<number, RobotAbility[]> = {}
-        ;(mapping || []).forEach((m: any) => {
-          dict[m.roboTypeId] = (m.robotAbilityResponses || []) as RobotAbility[]
-        })
-        if (mounted) setAbilitiesByType(dict)
-      } catch (e) {
-        console.warn("Failed to load robot ability schema:", e)
-        if (mounted) setAbilitiesByType({})
-      } finally {
-        if (mounted) setSchemaLoading(false)
-      }
-    })()
+export function Select({
+  label,
+  value,
+  options,
+  onChange,
+  hint,
+  required,
+  isUpdated,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  hint?: string;
+  required?: boolean;
+  isUpdated?: boolean;
+}) {
+  return (
+    <div>
+      <FieldLabel label={label} hint={hint} required={required} isUpdated={isUpdated} />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={[
+          "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900",
+          "focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300",
+        ].join(" ")}
+      >
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
-    return () => {
-      mounted = false
-    }
-  }, [isOpen, rentalInfo?.activityTypeId])
-
-  // ✅ map abilityId -> ability (for active tab only)
-  const abilityById = useMemo(() => {
-    const map = new Map<number, RobotAbility>()
-    if (!active) return map
-    const list = abilitiesByType[active.roboTypeId] || []
-    list.forEach((a) => map.set(a.id, a))
-    return map
-  }, [active, abilitiesByType])
-
-  // ✅ Filter updated ability values for active rentalDetailId
-  const updatedValuesForActive = useMemo(() => {
-    if (!active || !updateData?.robotAbilityValueResponses) return []
-    return updateData.robotAbilityValueResponses
-      .filter((x) => Number(x.rentalDetailId) === Number(active.id))
-      // optional sort by updatedAt desc
-      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
-  }, [active, updateData])
-
-  // ✅ Rental field changelog
-  const rentalFieldLogs = useMemo(() => {
-    return (updateData?.rentalChangeLogResponses || []).slice().sort((a, b) => {
-      return a.changedAtUtc < b.changedAtUtc ? 1 : -1
-    })
-  }, [updateData])
-
-  if (!isOpen) return null
+export function Button({
+  children,
+  variant = "primary",
+  onClick,
+  type = "button",
+  disabled,
+}: {
+  children: React.ReactNode;
+  variant?: "primary" | "secondary" | "danger";
+  onClick?: () => void;
+  type?: "button" | "submit";
+  disabled?: boolean;
+}) {
+  const base =
+    "inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-medium transition";
+  const styles =
+    variant === "primary"
+      ? "bg-blue-600 text-white hover:bg-blue-700"
+      : variant === "danger"
+      ? "bg-red-600 text-white hover:bg-red-700"
+      : "border border-gray-200 bg-white text-gray-900 hover:bg-gray-50";
 
   return (
-    <div className="fixed inset-0 z-[9999]">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+    <button
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      className={[base, styles, disabled ? "opacity-60 cursor-not-allowed" : ""].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
 
-      <div className="absolute left-1/2 top-1/2 w-[min(1100px,92vw)] -translate-x-1/2 -translate-y-1/2">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">Rental Details</h2>
-              <p className="text-xs text-gray-500">
-                {rentalInfo?.eventName ? `Event: ${rentalInfo.eventName}` : "—"}
-                {rentalInfo?.id ? ` • Rental #${rentalInfo.id}` : ""}
+/**
+ * Simple tag input:
+ * - User types a tag then presses Enter or clicks Add
+ * - Can remove tags via ✕
+ */
+export function TagInput({
+  label,
+  hint,
+  tags,
+  onChange,
+  placeholder = "Type and press Enter...",
+  isUpdated,
+}: {
+  label: string;
+  hint?: string;
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  placeholder?: string;
+  isUpdated?: boolean;
+}) {
+  const [draft, setDraft] = React.useState("");
 
-                {updateData?.rentalIsUpdated ? (
-                  <span className="ml-2 inline-flex items-center text-[11px] px-2 py-0.5 rounded-full bg-blue-600 text-white">
-                    Rental UPDATED
-                  </span>
-                ) : null}
+  const addTag = () => {
+    const t = draft.trim();
+    if (!t) return;
+    if (tags.includes(t)) {
+      setDraft("");
+      return;
+    }
+    onChange([...tags, t]);
+    setDraft("");
+  };
 
-                {updateData?.rentalDetailIsUpdated ? (
-                  <span className="ml-2 inline-flex items-center text-[11px] px-2 py-0.5 rounded-full bg-blue-600 text-white">
-                    Details UPDATED
-                  </span>
-                ) : null}
-              </p>
-            </div>
-
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              aria-label="Close"
+  return (
+    <div>
+      <FieldLabel label={label} hint={hint} isUpdated={isUpdated} />
+      <div className="rounded-xl border border-gray-200 bg-white p-3">
+        <div className="flex flex-wrap gap-2">
+          {tags.map((t) => (
+            <span
+              key={t}
+              className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-800"
             >
-              <X className="w-5 h-5 text-gray-700" />
-            </button>
-          </div>
+              {t}
+              <button
+                type="button"
+                className="text-gray-500 hover:text-gray-900"
+                onClick={() => onChange(tags.filter((x) => x !== t))}
+                aria-label={`Remove ${t}`}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
 
-          {/* Body */}
-          <div className="max-h-[78vh] overflow-y-auto">
-            <div className="p-6 grid grid-cols-12 gap-6">
-              {/* LEFT */}
-              <div className="col-span-12 lg:col-span-4 space-y-4">
-                {/* Rental Information */}
-                <div className="border border-gray-200 rounded-2xl p-5 bg-white">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Rental Information</h3>
-
-                  {isLoading && !rentalInfo ? (
-                    <p className="text-sm text-gray-500">Loading...</p>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <Calendar className="w-5 h-5 text-blue-600 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {rentalInfo?.eventDate
-                              ? new Date(rentalInfo.eventDate).toLocaleDateString("en-US", {
-                                  month: "long",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })
-                              : "—"}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            {rentalInfo?.startTime?.substring(0, 5) || "--:--"} –{" "}
-                            {rentalInfo?.endTime?.substring(0, 5) || "--:--"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <MapPin className="w-5 h-5 text-blue-600 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-900">{rentalInfo?.address || "—"}</p>
-                          <p className="text-xs text-gray-600">{rentalInfo?.city || ""}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Package className="w-5 h-5 text-blue-600 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {rentalInfo?.activityTypeName || rentalInfo?.eventActivityName || "—"}
-                          </p>
-                          <p className="text-xs text-gray-600">{rentalInfo?.status || ""}</p>
-
-                          {typeof rentalInfo?.activityTypeResponse?.price === "number" && (
-                            <p className="text-xs text-gray-700 mt-1">
-                              Package price:{" "}
-                              <span className="font-semibold">
-                                {formatMoney(rentalInfo.activityTypeResponse.price)}
-                              </span>
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <User className="w-5 h-5 text-blue-600 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {rentalInfo?.customerName || "—"}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Phone className="w-4 h-4 text-gray-500" />
-                            <p className="text-xs text-gray-600">{rentalInfo?.phoneNumber || "—"}</p>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Mail className="w-4 h-4 text-gray-500" />
-                            <p className="text-xs text-gray-600">{rentalInfo?.email || "—"}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {schemaLoading ? (
-                        <div className="text-xs text-gray-500">Loading robot ability schema...</div>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
-
-                {/* ✅ Rental Change Logs */}
-                <div className="border border-gray-200 rounded-2xl p-5 bg-white">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-900">Rental Change Logs</h3>
-                    {rentalFieldLogs.length > 0 ? <UpdatedBadge /> : null}
-                  </div>
-
-                  {rentalFieldLogs.length === 0 ? (
-                    <p className="text-sm text-gray-500 mt-3">No rental field changes.</p>
-                  ) : (
-                    <div className="mt-3 space-y-2">
-                      {rentalFieldLogs.map((log) => (
-                        <div
-                          key={log.id}
-                          className="rounded-xl border border-blue-200 bg-blue-50 p-3"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="text-sm font-semibold text-gray-900">
-                              {log.fieldName}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {new Date(log.changedAtUtc).toLocaleString()}
-                            </div>
-                          </div>
-
-                          <div className="mt-2 text-xs text-gray-700 space-y-1">
-                            <div>
-                              <span className="font-semibold">Old:</span>{" "}
-                              <span className="text-gray-600">{log.oldValue ?? "—"}</span>
-                            </div>
-                            <div>
-                              <span className="font-semibold">New:</span>{" "}
-                              <span className="text-gray-900">{log.newValue ?? "—"}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* RIGHT */}
-              <div className="col-span-12 lg:col-span-8">
-                <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
-                  <div className="px-5 pt-4">
-                    <h3 className="text-sm font-semibold text-gray-900">Robot Configuration</h3>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Showing ONLY updated abilities from API:{" "}
-                      <code className="px-1 py-0.5 bg-gray-100 rounded">
-                        data.robotAbilityValueResponses
-                      </code>
-                    </p>
-
-                    {/* Tabs */}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {tabs.map((t, idx) => (
-                        <button
-                          key={t.id}
-                          onClick={() => setActiveTab(idx)}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                            idx === activeTab
-                              ? "bg-blue-600 text-white border-blue-600"
-                              : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                          }`}
-                        >
-                          {t.robotTypeName}
-                        </button>
-                      ))}
-                      {tabs.length === 0 && (
-                        <span className="text-sm text-gray-500">No robot details.</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="px-5 pb-5 pt-4 border-t border-gray-200">
-                    {isLoading && tabs.length === 0 ? (
-                      <p className="text-sm text-gray-500">Loading robot details...</p>
-                    ) : !active ? (
-                      <p className="text-sm text-gray-500">No data.</p>
-                    ) : (
-                      <div>
-                        <div className="mb-4">
-                          <h4 className="text-base font-bold text-gray-900">{active.robotTypeName}</h4>
-                          <p className="text-sm text-gray-600 mt-1">{active.robotTypeDescription}</p>
-                        </div>
-
-                        {/* ✅ Updated ability list for this RentalDetailId */}
-                        {updatedValuesForActive.length === 0 ? (
-                          <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
-                            No updated abilities for this robot.
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {updatedValuesForActive.map((v) => {
-                              const ability = abilityById.get(v.robotAbilityId)
-                              const displayValue = parseValueForDisplay(ability, v)
-                              const isJson =
-                                (ability?.dataType || "").toLowerCase() === "json" ||
-                                (ability?.uiControl || "").toLowerCase() === "jsoneditor" ||
-                                Array.isArray(displayValue) ||
-                                (typeof displayValue === "object" && displayValue !== null)
-
-                              const title = ability?.label
-                                ? ability.label
-                                : `Ability #${v.robotAbilityId}`
-
-                              const subtitle = ability?.key ? `${ability.key}` : ""
-
-                              return (
-                                <div
-                                  key={v.id}
-                                  className={`rounded-xl border p-3 ${
-                                    v.isUpdated
-                                      ? "border-blue-200 bg-blue-50"
-                                      : "border-gray-200 bg-white"
-                                  }`}
-                                >
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                      <p className="text-sm font-semibold text-gray-900">
-                                        {title}
-                                        {v.isUpdated ? <UpdatedBadge /> : null}
-                                      </p>
-
-                                      <p className="text-xs text-gray-500 mt-0.5">
-                                        {subtitle ? (
-                                          <>
-                                            <span className="font-semibold text-gray-700">{subtitle}</span>
-                                            {" • "}
-                                          </>
-                                        ) : null}
-                                        UpdatedAt: {new Date(v.updatedAt).toLocaleString()}
-                                        {ability?.abilityGroup ? ` • Group: ${ability.abilityGroup}` : ""}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="mt-2">
-                                    {displayValue === null || displayValue === "" ? (
-                                      <p className="text-sm text-gray-400 italic">No value</p>
-                                    ) : isJson ? (
-                                      <pre className="text-xs bg-gray-900 text-gray-100 rounded-lg p-3 overflow-x-auto">
-                                        {prettyAny(displayValue)}
-                                      </pre>
-                                    ) : (
-                                      <p className="text-sm text-gray-800 whitespace-pre-wrap">
-                                        {String(displayValue)}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4 flex justify-end gap-2">
-                  <button
-                    onClick={onClose}
-                    className="px-4 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-sm font-medium"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* End body */}
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={placeholder}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addTag();
+              }
+            }}
+            className={[
+              "flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900",
+              "focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300",
+            ].join(" ")}
+          />
+          <Button variant="secondary" onClick={addTag}>
+            Add
+          </Button>
         </div>
       </div>
     </div>
-  )
+  );
+}
+
+/* ----------------------------- Helper utils ----------------------------- */
+
+function normalizeCommaList(text: string): string[] {
+  return text
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function ensureNumber(v: any, fallback?: number) {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/* =========================================================================
+ *  22 JSON FORMS (matching your RobotAbility json schemas)
+ * ========================================================================= */
+
+/** 1) themeAssets: { bannerUrl, backgroundUrl, primaryColor, secondaryColor } */
+export function ThemeAssetsForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: { bannerUrl?: string; backgroundUrl?: string; primaryColor?: string; secondaryColor?: string } | null;
+  onChange: (v: any) => void;
+  isUpdated?: boolean;
+}) {
+  const v = value || {};
+  return (
+    <div className="space-y-3">
+      <Input
+        label="Banner URL"
+        type="url"
+        value={v.bannerUrl || ""}
+        onChange={(e) => onChange({ ...v, bannerUrl: e.target.value })}
+        placeholder="https://..."
+        isUpdated={isUpdated}
+      />
+      <Input
+        label="Background URL"
+        type="url"
+        value={v.backgroundUrl || ""}
+        onChange={(e) => onChange({ ...v, backgroundUrl: e.target.value })}
+        placeholder="https://..."
+        isUpdated={isUpdated}
+      />
+      <Grid>
+        <Input
+          label="Primary Color"
+          type="color"
+          value={v.primaryColor || "#000000"}
+          onChange={(e) => onChange({ ...v, primaryColor: e.target.value })}
+          isUpdated={isUpdated}
+        />
+        <Input
+          label="Secondary Color"
+          type="color"
+          value={v.secondaryColor || "#ffffff"}
+          onChange={(e) => onChange({ ...v, secondaryColor: e.target.value })}
+          isUpdated={isUpdated}
+        />
+      </Grid>
+    </div>
+  );
+}
+
+/** 2) sponsorAssets: string[] (asset URLs) */
+export function SponsorAssetsForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: string[] | null;
+  onChange: (v: string[]) => void;
+  isUpdated?: boolean;
+}) {
+  const list = Array.isArray(value) ? value : [];
+  const [draft, setDraft] = React.useState("");
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel
+        label="Sponsor Assets"
+        hint="Add sponsor image/video URLs. Displayed in rotation."
+        isUpdated={isUpdated}
+      />
+
+      <div className="rounded-xl border border-gray-200 bg-white p-3">
+        <div className="space-y-2">
+          {list.map((url, idx) => (
+            <div key={`${url}-${idx}`} className="flex items-center gap-2">
+              <input
+                value={url}
+                onChange={(e) => {
+                  const next = [...list];
+                  next[idx] = e.target.value;
+                  onChange(next);
+                }}
+                className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                placeholder="https://..."
+              />
+              <Button variant="danger" onClick={() => onChange(list.filter((_, i) => i !== idx))}>
+                Remove
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm"
+            placeholder="https://..."
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const t = draft.trim();
+                if (!t) return;
+                onChange([...list, t]);
+                setDraft("");
+              }
+            }}
+          />
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const t = draft.trim();
+              if (!t) return;
+              onChange([...list, t]);
+              setDraft("");
+            }}
+          >
+            Add URL
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 3) voiceProfile: { voiceName, rate, pitch, volume } */
+export function VoiceProfileForm({
+  value,
+  onChange,
+  title = "Voice Profile",
+  isUpdated,
+}: {
+  value: { voiceName?: string; rate?: number; pitch?: number; volume?: number } | null;
+  onChange: (v: any) => void;
+  title?: string;
+  isUpdated?: boolean;
+}) {
+  const v = value || {};
+  return (
+    <div className="space-y-3">
+      <FieldLabel
+        label={title}
+        hint="Configure speaking voice: name + rate/pitch/volume."
+        isUpdated={isUpdated}
+      />
+      <Grid>
+        <Input
+          label="Voice Name"
+          value={v.voiceName || ""}
+          onChange={(e) => onChange({ ...v, voiceName: e.target.value })}
+          placeholder="e.g., en-US-JennyNeural"
+          isUpdated={isUpdated}
+        />
+        <Input
+          label="Rate (0.5–2.0)"
+          type="number"
+          step={0.1}
+          value={(v.rate ?? "").toString()}
+          onChange={(e) => onChange({ ...v, rate: ensureNumber(e.target.value, 1.0) })}
+          isUpdated={isUpdated}
+        />
+        <Input
+          label="Pitch (-10–10)"
+          type="number"
+          step={1}
+          value={(v.pitch ?? "").toString()}
+          onChange={(e) => onChange({ ...v, pitch: ensureNumber(e.target.value, 0) })}
+          isUpdated={isUpdated}
+        />
+        <Input
+          label="Volume (0–100)"
+          type="number"
+          step={1}
+          value={(v.volume ?? "").toString()}
+          onChange={(e) => onChange({ ...v, volume: ensureNumber(e.target.value, 80) })}
+          isUpdated={isUpdated}
+        />
+      </Grid>
+    </div>
+  );
+}
+
+/** 4) faqItems: Array<{ question, answer, keywords: string[] }> */
+export function FaqItemsForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: Array<{ question?: string; answer?: string; keywords?: string[] }> | null;
+  onChange: (v: any[]) => void;
+  isUpdated?: boolean;
+}) {
+  const list = Array.isArray(value) ? value : [];
+
+  const update = (idx: number, patch: any) => {
+    const next = [...list];
+    next[idx] = { ...(next[idx] || {}), ...patch };
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel
+        label="FAQ Items"
+        hint="Add Q/A items and optional keyword tags to help the robot route questions."
+        isUpdated={isUpdated}
+      />
+
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          No FAQ items. Click “Add FAQ” to create one.
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {list.map((item, idx) => (
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-900">FAQ #{idx + 1}</div>
+              <Button variant="danger" onClick={() => onChange(list.filter((_, i) => i !== idx))}>
+                Remove
+              </Button>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              <Input
+                label="Question"
+                value={item.question || ""}
+                onChange={(e) => update(idx, { question: e.target.value })}
+                placeholder="e.g., How do I register?"
+              />
+              <Textarea
+                label="Answer"
+                value={item.answer || ""}
+                onChange={(e) => update(idx, { answer: e.target.value })}
+                placeholder="e.g., Please scan the QR code and fill the form..."
+              />
+              <TagInput
+                label="Keywords"
+                hint="Optional. Example: checkin, register, booth"
+                tags={Array.isArray(item.keywords) ? item.keywords : []}
+                onChange={(tags) => update(idx, { keywords: tags })}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Button
+        variant="secondary"
+        onClick={() => onChange([...list, { question: "", answer: "", keywords: [] }])}
+      >
+        Add FAQ
+      </Button>
+    </div>
+  );
+}
+
+/** 5) pois: Array<{ name, description, locationHint }> */
+export function PoisForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: Array<{ name?: string; description?: string; locationHint?: string }> | null;
+  onChange: (v: any[]) => void;
+  isUpdated?: boolean;
+}) {
+  const list = Array.isArray(value) ? value : [];
+
+  const update = (idx: number, patch: any) => {
+    const next = [...list];
+    next[idx] = { ...(next[idx] || {}), ...patch };
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel
+        label="Points of Interest (POI)"
+        hint="Define booths/places the robot can guide visitors to."
+        isUpdated={isUpdated}
+      />
+
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          No POIs. Click “Add POI” to create one.
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {list.map((poi, idx) => (
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-900">POI #{idx + 1}</div>
+              <Button variant="danger" onClick={() => onChange(list.filter((_, i) => i !== idx))}>
+                Remove
+              </Button>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              <Input
+                label="Name"
+                required
+                value={poi.name || ""}
+                onChange={(e) => update(idx, { name: e.target.value })}
+                placeholder="e.g., Registration Booth"
+              />
+              <Input
+                label="Description"
+                value={poi.description || ""}
+                onChange={(e) => update(idx, { description: e.target.value })}
+                placeholder="Optional"
+              />
+              <Input
+                label="Location Hint"
+                value={poi.locationHint || ""}
+                onChange={(e) => update(idx, { locationHint: e.target.value })}
+                placeholder="e.g., Near the main entrance, left side"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Button
+        variant="secondary"
+        onClick={() => onChange([...list, { name: "", description: "", locationHint: "" }])}
+      >
+        Add POI
+      </Button>
+    </div>
+  );
+}
+
+/** 6) navigationRules: { maxSpeed, noGoZones: string[], preferredPaths: string[] } */
+export function NavigationRulesForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: { maxSpeed?: number; noGoZones?: string[]; preferredPaths?: string[] } | null;
+  onChange: (v: any) => void;
+  isUpdated?: boolean;
+}) {
+  const v = value || {};
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Navigation Rules" hint="Set speed and navigation restrictions." isUpdated={isUpdated} />
+      <Grid>
+        <Input
+          label="Max Speed (m/s)"
+          type="number"
+          step={0.1}
+          value={(v.maxSpeed ?? "").toString()}
+          onChange={(e) => onChange({ ...v, maxSpeed: ensureNumber(e.target.value, 0.8) })}
+        />
+        <Input
+          label="No-Go Zones"
+          hint="Comma separated. Example: stage, backstage"
+          value={(Array.isArray(v.noGoZones) ? v.noGoZones : []).join(", ")}
+          onChange={(e) => onChange({ ...v, noGoZones: normalizeCommaList(e.target.value) })}
+        />
+        <Input
+          label="Preferred Paths"
+          hint="Comma separated. Example: aisle A, aisle B"
+          value={(Array.isArray(v.preferredPaths) ? v.preferredPaths : []).join(", ")}
+          onChange={(e) => onChange({ ...v, preferredPaths: normalizeCommaList(e.target.value) })}
+        />
+      </Grid>
+    </div>
+  );
+}
+
+/** 7) showSets: Array<{ setName, musicTrackUrl, choreographyId, durationSec, repeatCount }> */
+export function ShowSetsForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: Array<{
+    setName?: string;
+    musicTrackUrl?: string;
+    choreographyId?: string;
+    durationSec?: number;
+    repeatCount?: number;
+  }> | null;
+  onChange: (v: any[]) => void;
+  isUpdated?: boolean;
+}) {
+  const list = Array.isArray(value) ? value : [];
+
+  const update = (idx: number, patch: any) => {
+    const next = [...list];
+    next[idx] = { ...(next[idx] || {}), ...patch };
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Show Sets" hint="Configure dance sets (music + choreography + duration + repeat)." isUpdated={isUpdated} />
+
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          No show sets. Click “Add Show Set”.
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {list.map((set, idx) => (
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-900">Set #{idx + 1}</div>
+              <Button variant="danger" onClick={() => onChange(list.filter((_, i) => i !== idx))}>
+                Remove
+              </Button>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              <Input
+                label="Set Name"
+                required
+                value={set.setName || ""}
+                onChange={(e) => update(idx, { setName: e.target.value })}
+                placeholder="e.g., Opening Dance"
+              />
+              <Grid>
+                <Input
+                  label="Music Track URL"
+                  type="url"
+                  value={set.musicTrackUrl || ""}
+                  onChange={(e) => update(idx, { musicTrackUrl: e.target.value })}
+                  placeholder="https://..."
+                />
+                <Input
+                  label="Choreography ID"
+                  value={set.choreographyId || ""}
+                  onChange={(e) => update(idx, { choreographyId: e.target.value })}
+                  placeholder="e.g., CHO-001"
+                />
+                <Input
+                  label="Duration (sec)"
+                  type="number"
+                  min={10}
+                  value={(set.durationSec ?? 10).toString()}
+                  onChange={(e) => update(idx, { durationSec: ensureNumber(e.target.value, 10) })}
+                />
+                <Input
+                  label="Repeat Count"
+                  type="number"
+                  min={1}
+                  value={(set.repeatCount ?? 1).toString()}
+                  onChange={(e) => update(idx, { repeatCount: ensureNumber(e.target.value, 1) })}
+                />
+              </Grid>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Button
+        variant="secondary"
+        onClick={() =>
+          onChange([
+            ...list,
+            { setName: "", musicTrackUrl: "", choreographyId: "", durationSec: 10, repeatCount: 1 },
+          ])
+        }
+      >
+        Add Show Set
+      </Button>
+    </div>
+  );
+}
+
+/** 8) showOrder: number[] */
+export function ShowOrderForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: number[] | null;
+  onChange: (v: number[]) => void;
+  isUpdated?: boolean;
+}) {
+  const arr = Array.isArray(value) ? value : [];
+  const text = arr.join(", ");
+
+  return (
+    <Input
+      label="Show Order"
+      hint="Comma-separated indices. Example: 0, 2, 1"
+      value={text}
+      onChange={(e) => {
+        const nums = normalizeCommaList(e.target.value).map((x) => Number(x));
+        onChange(nums.filter((n) => Number.isFinite(n)));
+      }}
+      placeholder="0, 1, 2"
+      isUpdated={isUpdated}
+    />
+  );
+}
+
+/** 9) cuePoints: Array<{ timecodeSec, action, note }> */
+export function CuePointsForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: Array<{ timecodeSec?: number; action?: string; note?: string }> | null;
+  onChange: (v: any[]) => void;
+  isUpdated?: boolean;
+}) {
+  const list = Array.isArray(value) ? value : [];
+
+  const update = (idx: number, patch: any) => {
+    const next = [...list];
+    next[idx] = { ...(next[idx] || {}), ...patch };
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Cue Points" hint="Timecoded actions used during show playback." isUpdated={isUpdated} />
+
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          No cue points. Click “Add Cue”.
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {list.map((cue, idx) => (
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-900">Cue #{idx + 1}</div>
+              <Button variant="danger" onClick={() => onChange(list.filter((_, i) => i !== idx))}>
+                Remove
+              </Button>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              <Grid>
+                <Input
+                  label="Timecode (sec)"
+                  type="number"
+                  min={0}
+                  value={(cue.timecodeSec ?? 0).toString()}
+                  onChange={(e) => update(idx, { timecodeSec: ensureNumber(e.target.value, 0) })}
+                />
+                <Input
+                  label="Action"
+                  required
+                  value={cue.action || ""}
+                  onChange={(e) => update(idx, { action: e.target.value })}
+                  placeholder="e.g., waveHand"
+                />
+              </Grid>
+              <Input
+                label="Note"
+                value={cue.note || ""}
+                onChange={(e) => update(idx, { note: e.target.value })}
+                placeholder="Optional"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Button variant="secondary" onClick={() => onChange([...list, { timecodeSec: 0, action: "", note: "" }])}>
+        Add Cue
+      </Button>
+    </div>
+  );
+}
+
+/** 10) stageZone: { widthM, depthM, safeDistanceM } */
+export function StageZoneForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: { widthM?: number; depthM?: number; safeDistanceM?: number } | null;
+  onChange: (v: any) => void;
+  isUpdated?: boolean;
+}) {
+  const v = value || {};
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Stage Zone" hint="Define stage size and required safe distance." isUpdated={isUpdated} />
+      <Grid>
+        <Input
+          label="Width (m)"
+          type="number"
+          min={1}
+          step={0.1}
+          value={(v.widthM ?? "").toString()}
+          onChange={(e) => onChange({ ...v, widthM: ensureNumber(e.target.value, 1) })}
+        />
+        <Input
+          label="Depth (m)"
+          type="number"
+          min={1}
+          step={0.1}
+          value={(v.depthM ?? "").toString()}
+          onChange={(e) => onChange({ ...v, depthM: ensureNumber(e.target.value, 1) })}
+        />
+        <Input
+          label="Safe Distance (m)"
+          type="number"
+          min={0.5}
+          step={0.1}
+          value={(v.safeDistanceM ?? "").toString()}
+          onChange={(e) => onChange({ ...v, safeDistanceM: ensureNumber(e.target.value, 0.5) })}
+        />
+      </Grid>
+    </div>
+  );
+}
+
+/** 11) safetyLimits: { maxJointSpeed, maxLimbAngle, emergencyStopRequired } */
+export function SafetyLimitsForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: { maxJointSpeed?: number; maxLimbAngle?: number; emergencyStopRequired?: boolean } | null;
+  onChange: (v: any) => void;
+  isUpdated?: boolean;
+}) {
+  const v = value || {};
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Safety Limits" hint="Optional advanced safety boundaries." isUpdated={isUpdated} />
+      <Grid>
+        <Input
+          label="Max Joint Speed"
+          type="number"
+          step={0.1}
+          value={(v.maxJointSpeed ?? "").toString()}
+          onChange={(e) => onChange({ ...v, maxJointSpeed: ensureNumber(e.target.value, 1.0) })}
+        />
+        <Input
+          label="Max Limb Angle"
+          type="number"
+          step={1}
+          value={(v.maxLimbAngle ?? "").toString()}
+          onChange={(e) => onChange({ ...v, maxLimbAngle: ensureNumber(e.target.value, 90) })}
+        />
+      </Grid>
+
+      <Checkbox
+        label="Emergency Stop Required"
+        checked={!!v.emergencyStopRequired}
+        onChange={(checked) => onChange({ ...v, emergencyStopRequired: checked })}
+        hint="If enabled, staff must have e-stop ready before performance."
+        isUpdated={isUpdated}
+      />
+    </div>
+  );
+}
+
+/** 12) scriptBlocks: Array<{ blockTitle, timecode, text, language, estimatedDurationSec, interactionPrompts:string[] }> */
+export function ScriptBlocksForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: Array<{
+    blockTitle?: string;
+    timecode?: string;
+    text?: string;
+    language?: string;
+    estimatedDurationSec?: number;
+    interactionPrompts?: string[];
+  }> | null;
+  onChange: (v: any[]) => void;
+  isUpdated?: boolean;
+}) {
+  const list = Array.isArray(value) ? value : [];
+
+  const update = (idx: number, patch: any) => {
+    const next = [...list];
+    next[idx] = { ...(next[idx] || {}), ...patch };
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Script Blocks" hint="MC timeline blocks (title, text, timecode, etc.)." isUpdated={isUpdated} />
+
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          No script blocks. Click “Add Block”.
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {list.map((b, idx) => (
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-900">Block #{idx + 1}</div>
+              <Button variant="danger" onClick={() => onChange(list.filter((_, i) => i !== idx))}>
+                Remove
+              </Button>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              <Grid>
+                <Input
+                  label="Block Title"
+                  required
+                  value={b.blockTitle || ""}
+                  onChange={(e) => update(idx, { blockTitle: e.target.value })}
+                  placeholder="e.g., Opening"
+                />
+                <Input
+                  label="Timecode"
+                  hint="Optional. e.g., 09:30"
+                  value={b.timecode || ""}
+                  onChange={(e) => update(idx, { timecode: e.target.value })}
+                  placeholder="HH:MM or any label"
+                />
+              </Grid>
+
+              <Textarea
+                label="Text"
+                required
+                value={b.text || ""}
+                onChange={(e) => update(idx, { text: e.target.value })}
+                placeholder="What the robot will say..."
+              />
+
+              <Grid>
+                <Input
+                  label="Language"
+                  value={b.language || ""}
+                  onChange={(e) => update(idx, { language: e.target.value })}
+                  placeholder="VI / EN / ..."
+                />
+                <Input
+                  label="Estimated Duration (sec)"
+                  type="number"
+                  min={5}
+                  value={(b.estimatedDurationSec ?? 5).toString()}
+                  onChange={(e) => update(idx, { estimatedDurationSec: ensureNumber(e.target.value, 5) })}
+                />
+              </Grid>
+
+              <TagInput
+                label="Interaction Prompts"
+                hint="Optional. Add short prompts or cue phrases."
+                tags={Array.isArray(b.interactionPrompts) ? b.interactionPrompts : []}
+                onChange={(tags) => update(idx, { interactionPrompts: tags })}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Button
+        variant="secondary"
+        onClick={() =>
+          onChange([
+            ...list,
+            { blockTitle: "", timecode: "", text: "", language: "", estimatedDurationSec: 5, interactionPrompts: [] },
+          ])
+        }
+      >
+        Add Block
+      </Button>
+    </div>
+  );
+}
+
+/** 13) pronunciationDict: Array<{ term, phonetic }> */
+export function PronunciationDictForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: Array<{ term?: string; phonetic?: string }> | null;
+  onChange: (v: any[]) => void;
+  isUpdated?: boolean;
+}) {
+  const list = Array.isArray(value) ? value : [];
+
+  const update = (idx: number, patch: any) => {
+    const next = [...list];
+    next[idx] = { ...(next[idx] || {}), ...patch };
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Pronunciation Dictionary" hint="Help the robot pronounce names/brands correctly." isUpdated={isUpdated} />
+
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          No entries. Click “Add Entry”.
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {list.map((item, idx) => (
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-900">Entry #{idx + 1}</div>
+              <Button variant="danger" onClick={() => onChange(list.filter((_, i) => i !== idx))}>
+                Remove
+              </Button>
+            </div>
+
+            <div className="mt-3">
+              <Grid>
+                <Input
+                  label="Term"
+                  required
+                  value={item.term || ""}
+                  onChange={(e) => update(idx, { term: e.target.value })}
+                  placeholder="e.g., RoboRent"
+                />
+                <Input
+                  label="Phonetic"
+                  required
+                  value={item.phonetic || ""}
+                  onChange={(e) => update(idx, { phonetic: e.target.value })}
+                  placeholder="e.g., roh-boh-rent"
+                />
+              </Grid>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Button variant="secondary" onClick={() => onChange([...list, { term: "", phonetic: "" }])}>
+        Add Entry
+      </Button>
+    </div>
+  );
+}
+
+/** 14) screenAssets: Array<{ type, url, displayDurationSec }> */
+export function ScreenAssetsForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: Array<{ type?: string; url?: string; displayDurationSec?: number }> | null;
+  onChange: (v: any[]) => void;
+  isUpdated?: boolean;
+}) {
+  const list = Array.isArray(value) ? value : [];
+
+  const update = (idx: number, patch: any) => {
+    const next = [...list];
+    next[idx] = { ...(next[idx] || {}), ...patch };
+    onChange(next);
+  };
+
+  const assetTypes = ["Image", "Video", "QR", "Slide"];
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="On-screen Assets" hint="Assets the screen will show (QR/Image/Slide) with duration." isUpdated={isUpdated} />
+
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          No screen assets. Click “Add Asset”.
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {list.map((item, idx) => (
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-900">Asset #{idx + 1}</div>
+              <Button variant="danger" onClick={() => onChange(list.filter((_, i) => i !== idx))}>
+                Remove
+              </Button>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              <Grid>
+                <Select
+                  label="Type"
+                  value={item.type || assetTypes[0]}
+                  options={assetTypes}
+                  onChange={(v) => update(idx, { type: v })}
+                />
+                <Input
+                  label="URL"
+                  type="url"
+                  required
+                  value={item.url || ""}
+                  onChange={(e) => update(idx, { url: e.target.value })}
+                  placeholder="https://..."
+                />
+                <Input
+                  label="Display Duration (sec)"
+                  type="number"
+                  min={1}
+                  value={(item.displayDurationSec ?? 5).toString()}
+                  onChange={(e) => update(idx, { displayDurationSec: ensureNumber(e.target.value, 5) })}
+                />
+              </Grid>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Button variant="secondary" onClick={() => onChange([...list, { type: "Image", url: "", displayDurationSec: 5 }])}>
+        Add Asset
+      </Button>
+    </div>
+  );
+}
+
+/** 15) countdownSettings: { enabled: boolean, targetTime: string } */
+export function CountdownSettingsForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: { enabled?: boolean; targetTime?: string } | null;
+  onChange: (v: any) => void;
+  isUpdated?: boolean;
+}) {
+  const v = value || {};
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Countdown Settings" hint="Optional countdown timer configuration." isUpdated={isUpdated} />
+
+      <Checkbox
+        label="Enabled"
+        checked={!!v.enabled}
+        onChange={(checked) => onChange({ ...v, enabled: checked })}
+        isUpdated={isUpdated}
+      />
+
+      <Input
+        label="Target Time"
+        hint="Use local datetime."
+        type="datetime-local"
+        value={v.targetTime || ""}
+        onChange={(e) => onChange({ ...v, targetTime: e.target.value })}
+        isUpdated={isUpdated}
+      />
+    </div>
+  );
+}
+
+/** 16) handoffCues: Array<{ cue, who }> */
+export function HandoffCuesForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: Array<{ cue?: string; who?: string }> | null;
+  onChange: (v: any[]) => void;
+  isUpdated?: boolean;
+}) {
+  const list = Array.isArray(value) ? value : [];
+
+  const update = (idx: number, patch: any) => {
+    const next = [...list];
+    next[idx] = { ...(next[idx] || {}), ...patch };
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Handoff Cues" hint="Cues to hand off between Robot and Human MC." isUpdated={isUpdated} />
+
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          No cues. Click “Add Cue”.
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {list.map((item, idx) => (
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-900">Cue #{idx + 1}</div>
+              <Button variant="danger" onClick={() => onChange(list.filter((_, i) => i !== idx))}>
+                Remove
+              </Button>
+            </div>
+
+            <div className="mt-3">
+              <Grid>
+                <Input
+                  label="Cue"
+                  required
+                  value={item.cue || ""}
+                  onChange={(e) => update(idx, { cue: e.target.value })}
+                  placeholder="e.g., Now please welcome our MC..."
+                />
+                <Select
+                  label="Who"
+                  value={item.who || "Robot"}
+                  options={["Robot", "Human"]}
+                  onChange={(v) => update(idx, { who: v })}
+                />
+              </Grid>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Button variant="secondary" onClick={() => onChange([...list, { cue: "", who: "Robot" }])}>
+        Add Cue
+      </Button>
+    </div>
+  );
+}
+
+/** 17) adPlaylist: Array<{ assetUrl, assetType, durationSec, order }> */
+export function AdPlaylistForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: Array<{ assetUrl?: string; assetType?: string; durationSec?: number; order?: number }> | null;
+  onChange: (v: any[]) => void;
+  isUpdated?: boolean;
+}) {
+  const list = Array.isArray(value) ? value : [];
+
+  const update = (idx: number, patch: any) => {
+    const next = [...list];
+    next[idx] = { ...(next[idx] || {}), ...patch };
+    onChange(next);
+  };
+
+  const types = ["Image", "Video"];
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Ad Playlist" hint="Playlist of ads (image/video) with duration and order." isUpdated={isUpdated} />
+
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          No items. Click “Add Ad”.
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {list.map((item, idx) => (
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-900">Ad #{idx + 1}</div>
+              <Button variant="danger" onClick={() => onChange(list.filter((_, i) => i !== idx))}>
+                Remove
+              </Button>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              <Input
+                label="Asset URL"
+                type="url"
+                required
+                value={item.assetUrl || ""}
+                onChange={(e) => update(idx, { assetUrl: e.target.value })}
+                placeholder="https://..."
+              />
+              <Grid>
+                <Select
+                  label="Asset Type"
+                  value={item.assetType || "Image"}
+                  options={types}
+                  onChange={(v) => update(idx, { assetType: v })}
+                />
+                <Input
+                  label="Duration (sec)"
+                  type="number"
+                  min={1}
+                  value={(item.durationSec ?? 5).toString()}
+                  onChange={(e) => update(idx, { durationSec: ensureNumber(e.target.value, 5) })}
+                />
+                <Input
+                  label="Order"
+                  type="number"
+                  min={0}
+                  value={(item.order ?? idx).toString()}
+                  onChange={(e) => update(idx, { order: ensureNumber(e.target.value, idx) })}
+                />
+              </Grid>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Button
+        variant="secondary"
+        onClick={() => onChange([...list, { assetUrl: "", assetType: "Image", durationSec: 5, order: list.length }])}
+      >
+        Add Ad
+      </Button>
+    </div>
+  );
+}
+
+/** 18) scheduleRules: { start, end, peakMode, intervalSec } */
+export function ScheduleRulesForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: { start?: string; end?: string; peakMode?: boolean; intervalSec?: number } | null;
+  onChange: (v: any) => void;
+  isUpdated?: boolean;
+}) {
+  const v = value || {};
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Schedule Rules" hint="When and how often to run playlist items." isUpdated={isUpdated} />
+      <Grid>
+        <Input
+          label="Start"
+          type="time"
+          value={v.start || ""}
+          onChange={(e) => onChange({ ...v, start: e.target.value })}
+        />
+        <Input
+          label="End"
+          type="time"
+          value={v.end || ""}
+          onChange={(e) => onChange({ ...v, end: e.target.value })}
+        />
+        <Input
+          label="Interval (sec)"
+          type="number"
+          min={5}
+          value={(v.intervalSec ?? 10).toString()}
+          onChange={(e) => onChange({ ...v, intervalSec: ensureNumber(e.target.value, 10) })}
+        />
+      </Grid>
+
+      <Checkbox
+        label="Peak Mode"
+        checked={!!v.peakMode}
+        onChange={(checked) => onChange({ ...v, peakMode: checked })}
+        hint="If enabled, robot may run ads more aggressively during peak hours."
+        isUpdated={isUpdated}
+      />
+    </div>
+  );
+}
+
+/** 19) audioPlaylist: string[] */
+export function AudioPlaylistForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: string[] | null;
+  onChange: (v: string[]) => void;
+  isUpdated?: boolean;
+}) {
+  const arr = Array.isArray(value) ? value : [];
+  return (
+    <Input
+      label="Audio Playlist"
+      hint="Comma separated audio URLs."
+      value={arr.join(", ")}
+      onChange={(e) => onChange(normalizeCommaList(e.target.value))}
+      placeholder="https://.../track1.mp3, https://.../track2.mp3"
+      isUpdated={isUpdated}
+    />
+  );
+}
+
+/** 20) volumeRules: { defaultVolume, quietHoursVolume? } */
+export function VolumeRulesForm({
+  value,
+  onChange,
+  withQuietHours = true,
+  isUpdated,
+}: {
+  value: { defaultVolume?: number; quietHoursVolume?: number } | null;
+  onChange: (v: any) => void;
+  withQuietHours?: boolean;
+  isUpdated?: boolean;
+}) {
+  const v = value || {};
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Volume Rules" hint="Set default volume (and optional quiet-hours volume)." isUpdated={isUpdated} />
+      <Grid>
+        <Input
+          label="Default Volume (0–100)"
+          type="number"
+          min={0}
+          max={100}
+          value={(v.defaultVolume ?? 80).toString()}
+          onChange={(e) => onChange({ ...v, defaultVolume: ensureNumber(e.target.value, 80) })}
+        />
+        {withQuietHours ? (
+          <Input
+            label="Quiet Hours Volume (0–100)"
+            type="number"
+            min={0}
+            max={100}
+            value={(v.quietHoursVolume ?? 40).toString()}
+            onChange={(e) => onChange({ ...v, quietHoursVolume: ensureNumber(e.target.value, 40) })}
+          />
+        ) : null}
+      </Grid>
+    </div>
+  );
+}
+
+/** 21) routePoints: Array<{ name, stopDurationSec }> */
+export function RoutePointsForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: Array<{ name?: string; stopDurationSec?: number }> | null;
+  onChange: (v: any[]) => void;
+  isUpdated?: boolean;
+}) {
+  const list = Array.isArray(value) ? value : [];
+
+  const update = (idx: number, patch: any) => {
+    const next = [...list];
+    next[idx] = { ...(next[idx] || {}), ...patch };
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Route Points" hint="Patrol mode stops. Each point has a name and stop duration." isUpdated={isUpdated} />
+
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          No route points. Click “Add Point”.
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {list.map((p, idx) => (
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-900">Point #{idx + 1}</div>
+              <Button variant="danger" onClick={() => onChange(list.filter((_, i) => i !== idx))}>
+                Remove
+              </Button>
+            </div>
+
+            <div className="mt-3">
+              <Grid>
+                <Input
+                  label="Name"
+                  required
+                  value={p.name || ""}
+                  onChange={(e) => update(idx, { name: e.target.value })}
+                  placeholder="e.g., Booth A"
+                />
+                <Input
+                  label="Stop Duration (sec)"
+                  type="number"
+                  min={1}
+                  value={(p.stopDurationSec ?? 5).toString()}
+                  onChange={(e) => update(idx, { stopDurationSec: ensureNumber(e.target.value, 5) })}
+                />
+              </Grid>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Button variant="secondary" onClick={() => onChange([...list, { name: "", stopDurationSec: 5 }])}>
+        Add Point
+      </Button>
+    </div>
+  );
+}
+
+/** 22) avoidZones: string[] */
+export function AvoidZonesForm({
+  value,
+  onChange,
+  isUpdated,
+}: {
+  value: string[] | null;
+  onChange: (v: string[]) => void;
+  isUpdated?: boolean;
+}) {
+  const arr = Array.isArray(value) ? value : [];
+  return (
+    <Input
+      label="Avoid Zones"
+      hint="Comma-separated zone labels to avoid."
+      value={arr.join(", ")}
+      onChange={(e) => onChange(normalizeCommaList(e.target.value))}
+      placeholder="stage, backstage, VIP"
+      isUpdated={isUpdated}
+    />
+  );
+}
+
+/* =========================================================================
+ * Ability -> Form mapping
+ * ========================================================================= */
+
+export type AbilityKey =
+  | "themeAssets"
+  | "sponsorAssets"
+  | "voiceProfile"
+  | "faqItems"
+  | "pois"
+  | "navigationRules"
+  | "showSets"
+  | "showOrder"
+  | "cuePoints"
+  | "stageZone"
+  | "safetyLimits"
+  | "scriptBlocks"
+  | "pronunciationDict"
+  | "screenAssets"
+  | "countdownSettings"
+  | "handoffCues"
+  | "adPlaylist"
+  | "scheduleRules"
+  | "audioPlaylist"
+  | "volumeRules"
+  | "routePoints"
+  | "avoidZones";
+
+/**
+ * ✅ Updated:
+ * - added `isUpdated?: boolean` passthrough
+ */
+export function renderJsonAbilityForm(
+  key: AbilityKey,
+  value: any,
+  onChange: (v: any) => void,
+  isUpdated?: boolean
+): React.ReactNode {
+  switch (key) {
+    case "themeAssets":
+      return <ThemeAssetsForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "sponsorAssets":
+      return <SponsorAssetsForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "voiceProfile":
+      return <VoiceProfileForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "faqItems":
+      return <FaqItemsForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "pois":
+      return <PoisForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "navigationRules":
+      return <NavigationRulesForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "showSets":
+      return <ShowSetsForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "showOrder":
+      return <ShowOrderForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "cuePoints":
+      return <CuePointsForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "stageZone":
+      return <StageZoneForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "safetyLimits":
+      return <SafetyLimitsForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "scriptBlocks":
+      return <ScriptBlocksForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "pronunciationDict":
+      return <PronunciationDictForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "screenAssets":
+      return <ScreenAssetsForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "countdownSettings":
+      return <CountdownSettingsForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "handoffCues":
+      return <HandoffCuesForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "adPlaylist":
+      return <AdPlaylistForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "scheduleRules":
+      return <ScheduleRulesForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "audioPlaylist":
+      return <AudioPlaylistForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "volumeRules":
+      return <VolumeRulesForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "routePoints":
+      return <RoutePointsForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    case "avoidZones":
+      return <AvoidZonesForm value={value} onChange={onChange} isUpdated={isUpdated} />;
+    default:
+      return null;
+  }
 }

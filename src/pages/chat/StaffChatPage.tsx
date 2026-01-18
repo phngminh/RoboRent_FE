@@ -29,7 +29,9 @@ import { getRentalByIdAsync, getUpdatedStatusAsync, rejectActiveQuotesForRentalA
 import { getRentalDetailsByRentalIdAsync } from '../../apis/rentaldetail.api'
 import { Eye } from "lucide-react"
 import RentalDetailModal from '../../components/staff/RentalDetailModal'
-
+import { getAllGroupByActivityTypeIdAsync } from '../../apis/robotGroup.staff.api'
+import { getAllScheduleByGroupIdAsync } from '../../apis/groupSchedule.staff.api'
+import RobotGroupScheduleModal from '../../components/staff/RobotGroupScheduleModal'
 
 // Interface for customer chat list
 interface CustomerChat {
@@ -51,6 +53,7 @@ interface StaffChatPageProps {
 
 const StaffChatPage: React.FC<StaffChatPageProps> = ({ onViewContract }) => {
   const [showRentalDetailModal, setShowRentalDetailModal] = useState(false)
+  const [showGroupScheduleModal, setShowGroupScheduleModal] = useState(false)
 type ApiResponse<T> = { success: boolean; data: T }
 
 type RentalDetailResponse = {
@@ -76,7 +79,7 @@ type RentalDetailResponse = {
   }>
 }
 
-const [rentalDetails, setRentalDetails] = useState<RentalDetailResponse[]>([])
+  const [rentalDetails, setRentalDetails] = useState<RentalDetailResponse[]>([])
   const [isLoadingRentalDetails, setIsLoadingRentalDetails] = useState(false)
   const { rentalId } = useParams<{ rentalId: string }>()
   const navigate = useNavigate()
@@ -769,6 +772,14 @@ const loadRentalDetails = async () => {
     <Eye className="w-4 h-4 text-gray-700" />
     View Details
   </button>
+    <button
+    onClick={() => setShowGroupScheduleModal(true)}
+    className="px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium flex items-center gap-2"
+    title="View robot group schedule"
+  >
+    <Calendar className="w-4 h-4 text-gray-700" />
+    Group Schedule
+  </button>
               <button
                 onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1147,12 +1158,33 @@ const loadRentalDetails = async () => {
       )}
 
       <RentalDetailModal
-  isOpen={showRentalDetailModal}
-  onClose={() => setShowRentalDetailModal(false)}
-  rentalInfo={rentalInfo}
-  rentalDetails={rentalDetails}
-  isLoading={isLoadingRentalDetails}
+        isOpen={showRentalDetailModal}
+        onClose={() => setShowRentalDetailModal(false)}
+        rentalInfo={rentalInfo}
+        rentalDetails={rentalDetails}
+        isLoading={isLoadingRentalDetails}
+      />
+
+<RobotGroupScheduleModal
+  isOpen={showGroupScheduleModal}
+  onClose={() => setShowGroupScheduleModal(false)}
+  title="Robot Group Schedule"
+  subtitle="Select a robot group to view schedule grouped by day"
+  rentalId={parseInt(rentalId || "0")}
+  staffId={rentalInfo?.staffId}
+  startTime={rentalInfo?.startTime}
+  endTime={rentalInfo?.endTime}
+  rentalStatus={rentalInfo?.status} // ✅ ADD THIS (or use rentalStatus state if you prefer)
+  fetchGroups={async () => {
+    const activityTypeId = rentalInfo?.activityTypeId
+    if (!activityTypeId) return { success: true, data: [] }
+    return await getAllGroupByActivityTypeIdAsync(activityTypeId)
+  }}
+  fetchGroupSchedule={async (groupId: number) => {
+    return await getAllScheduleByGroupIdAsync(groupId)
+  }}
 />
+
 
     </div>
   )

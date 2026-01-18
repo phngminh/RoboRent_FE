@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, ChevronRight, User, Truck, Group, ChartColumn, LogOut } from 'lucide-react'
+import { LayoutDashboard, ChevronRight, LogOut, ShieldUser } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import path from '../../constants/path'
 
@@ -13,7 +13,8 @@ const AdminSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   const { logout } = useAuth()
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_ADMIN },
+    { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_ADMIN },
+    { id: 'account', label: 'Accounts', icon: ShieldUser, path: path.ADMIN_ACCOUNTS },
     { id: 'logout', label: 'Logout', icon: LogOut, path: undefined }
   ]
 

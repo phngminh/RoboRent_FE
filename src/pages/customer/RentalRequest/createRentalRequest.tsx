@@ -71,20 +71,45 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
 
-  const validateStreetAddress = (value: string): string | null => {
-    if (!value.trim()) return 'Street & House Number is required.'
-    if (!value.includes(',')) return 'Address must follow format: "number, Street name".'
+const validateStreetAddress = (value: string): string | null => {
+  const raw = value.trim();
+  if (!raw) return 'Street & House Number is required.';
 
-    const [num, street] = value.split(',').map(s => s.trim())
+  // Require comma separator: "houseNo, street"
+  const commaIndex = raw.indexOf(',');
+  if (commaIndex === -1) return 'Address must follow format: "number, Street name".';
 
-    if (!num) return 'House number is required.'
-    if (!/^[0-9A-Za-z]+$/.test(num)) return 'House number must be alphanumeric (e.g., 12 or 12A).'
+  const num = raw.slice(0, commaIndex).trim();
+  const street = raw.slice(commaIndex + 1).trim();
 
-    if (!street) return 'Street name is required.'
-    if (/^\d+$/.test(street)) return 'Street name cannot be numbers only.'
+  if (!num) return 'House number is required.';
 
-    return null
+  /**
+   * ✅ VN house number patterns:
+   * - 26
+   * - 26A
+   * - 26/1
+   * - 26/1A
+   * - 26/1/2/3
+   * - 26A/1/2B
+   *
+   * Rule: starts with digits, optional letters, then zero or more "/ segment"
+   * where segment = digits + optional letters
+   */
+  const vnHouseNoRegex = /^\d+[A-Za-z]*?(?:\/\d+[A-Za-z]*?)*$/;
+
+  if (!vnHouseNoRegex.test(num)) {
+    return 'House number format is invalid. Examples: 26A, 26/1, 26/1/2/3.';
   }
+
+  if (!street) return 'Street name is required.';
+
+  // Street name cannot be numbers only (allow: "123 Street", but not "123")
+  if (/^\d+$/.test(street)) return 'Street name cannot be numbers only.';
+
+  return null;
+};
+
 
   const parseAddress = (addr?: string) => {
     if (!addr) return { street: '', wardName: '' }

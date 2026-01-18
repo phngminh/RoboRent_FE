@@ -69,11 +69,11 @@ const HowItWorks = () => {
   return (
     <div className='relative bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 py-20 px-6 overflow-hidden'>
       <div className='relative max-w-8xl mx-auto text-center -mt-8'>
-        <p className='inline-block text-lg font-medium text-emerald-400 tracking-wide mb-4 border border-emerald-500 rounded-full px-4 py-1 bg-gray-800' data-aos='fade-down'>
+        <p className='inline-block text-lg font-medium text-emerald-200 tracking-wide mb-4 border border-emerald-500 rounded-full px-4 py-1 bg-gray-800' data-aos='fade-down'>
           HOW IT WORKS
         </p>
         <h1 className='text-[2.5rem] font-bold text-emerald-400 mb-12' data-aos='fade-up'>
-          Get your robot ready in <span className='text-emerald-300'>four</span> simple steps
+          Get your robot ready in <span className='bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent'>four</span> simple steps
         </h1>
 
         <div className='relative' data-aos='fade-right'>
