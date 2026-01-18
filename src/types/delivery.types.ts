@@ -1,12 +1,15 @@
 // src/types/delivery.types.ts
 
 export type DeliveryStatus = 'Pending' | 'Assigned' | 'Delivering' | 'Delivered';
+export type DeliveryType = 'FirstOfDay' | 'MidDay' | 'LastOfDay';
+
 
 export interface ActualDeliveryResponse {
   id: number;
   groupScheduleId: number;
   staffId: number | null;
   staffName: string | null;
+  type: DeliveryType;
   scheduledDeliveryTime: string | null;
   scheduledPickupTime: string | null;
   actualDeliveryTime: string | null;

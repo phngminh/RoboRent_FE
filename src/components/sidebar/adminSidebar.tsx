@@ -49,9 +49,8 @@ const AdminSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
               <button
                 key={item.id}
                 onClick={() => navigate(item.path!)}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors duration-200 ${
-                  isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
-                }`}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors duration-200 ${isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+                  }`}
               >
                 <div className='flex items-center space-x-3'>
                   <Icon size={20} className='shrink-0' />
