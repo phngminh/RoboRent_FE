@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from '../../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Button } from '../../../components/ui/button'
-import { Search, Eye } from 'lucide-react'
+import { Search, Eye, ClipboardCheck } from 'lucide-react'
 import { getAllReports, type ContractReportResponse } from '../../../apis/contractReport.api'
 
 interface BreachReportsProps {
@@ -29,8 +29,9 @@ const BreachReports: React.FC<BreachReportsProps> = ({ onView }) => {
       setLoading(true)
       const reportsData = await getAllReports()
       console.log('Fetched reports:', reportsData)
-      setReports(reportsData)
-      setFilteredReports(reportsData)
+      const sortedReports = reportsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      setReports(sortedReports)
+      setFilteredReports(sortedReports)
     } catch (err) {
       console.error('Failed to load reports', err)
       setReports([])
@@ -57,6 +58,7 @@ const BreachReports: React.FC<BreachReportsProps> = ({ onView }) => {
       filtered = filtered.filter((report) => report.status === appliedStatus)
     }
 
+    filtered = filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     setFilteredReports(filtered)
     setCurrentPage(1)
   }, [reports, search, appliedStatus])
@@ -100,12 +102,6 @@ const BreachReports: React.FC<BreachReportsProps> = ({ onView }) => {
   }
 
   const columns = [
-    {
-      key: 'id',
-      title: 'ID',
-      accessor: 'id' as keyof ContractReportResponse,
-      className: 'w-[100px] whitespace-nowrap',
-    },
      {
       key: 'draftClauseTitle',
       title: 'Title',
@@ -261,19 +257,26 @@ const BreachReports: React.FC<BreachReportsProps> = ({ onView }) => {
                             content = <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(report.status)}`}>
                               {report.status}
                             </span>
-                          } else if (column.key === 'createdAt' || column.key === 'reviewedAt') {
-                            content = report[column.key as 'createdAt' | 'reviewedAt'] 
-                                ? new Date(report[column.key as 'createdAt' | 'reviewedAt']).toLocaleDateString()
+                          } else if (column.key === 'createdAt') {
+                            content = report.createdAt 
+                                ? new Date(report.createdAt).toLocaleDateString()
                                 : 'N/A'
                           } else if (column.key === 'actions') {
+                            const isPending = report.status === 'Pending';
+                            const buttonClass = isPending
+                              ? 'flex items-center space-x-1 rounded px-2 py-1 bg-red-100 text-red-800 hover:bg-red-200 transition-colors'
+                              : 'flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors';
+                            const buttonText = isPending ? 'Review' : 'View';
+                            const IconComponent = isPending ? ClipboardCheck : Eye;
+
                             content = (
                               <div className='flex items-center justify-center space-x-2 text-sm'>
                                 <button
                                   onClick={() => onView(report.id)}
-                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
+                                  className={buttonClass}
                                 >
-                                  <Eye size={14} />
-                                  <span>View</span>
+                                  <IconComponent size={14} />
+                                  <span>{buttonText}</span>
                                 </button>
                               </div>
                             )

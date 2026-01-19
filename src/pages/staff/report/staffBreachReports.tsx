@@ -29,8 +29,9 @@ const StaffBreachReports: React.FC<StaffBreachReportsProps> = ({ onView }) => {
       setLoading(true)
       const reportsData = await getMyReports()
       console.log('Fetched reports:', reportsData)
-      setReports(reportsData)
-      setFilteredReports(reportsData)
+      const sortedReports = reportsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      setReports(sortedReports)
+      setFilteredReports(sortedReports)
     } catch (err) {
       console.error('Failed to load reports', err)
       setReports([])
@@ -56,7 +57,7 @@ const StaffBreachReports: React.FC<StaffBreachReportsProps> = ({ onView }) => {
     if (appliedStatus !== 'All Status') {
       filtered = filtered.filter((report) => report.status === appliedStatus)
     }
-
+    filtered = filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     setFilteredReports(filtered)
     setCurrentPage(1)
   }, [reports, search, appliedStatus])

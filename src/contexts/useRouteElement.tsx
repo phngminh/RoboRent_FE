@@ -7,8 +7,7 @@ import CustomerChatPage from '../pages/chat/CustomerChatPage'
 import StaffChatPage from '../pages/chat/StaffChatPage'
 import ManagerQuotesPage from '../pages/manager/ManagerQuotesPage'
 import AuthCallback from '../pages/auth/callback'
-import DashboardContent from '../pages/customer/dashboard'
-import ManagerDashboard from '../pages/manager/ManagerDashboard'
+import CustomerDashboardContent from '../pages/customer/dashboard'
 import CustomerRentalRequestsContent from '../pages/customer/RentalRequest/rentalRequest'
 import StaffRentalRequestsContent from '../pages/staff/rentalRequest'
 import ManagerRentalRequestsContent from '../pages/manager/rentalRequest'
@@ -48,7 +47,7 @@ import DeliveryChecklistPage from '../pages/technicalStaff/DeliveryChecklistPage
 import CustomerChecklistAcceptPage from '../pages/customer/checklist/CustomerChecklistAcceptPage'
 import AdminProfile from '../pages/admin/profile'
 import StaffDashboardContent from '../pages/staff/dashboard'
-import ManagerDashboardContent from '../pages/manager/dashboard'
+import ManagerDashboardContent from '../pages/manager/ManagerDashboard'
 import AdminDashboard from '../pages/admin/AdminDashboard'
 import PackageDisplay from '../pages/home/product/packageSection'
 import OurProblems from '../pages/home/homePage/ourProblems'
@@ -100,7 +99,7 @@ export default function useRouteElements() {
         {
           element: <CustomerProfile />,
           children: [
-            { path: 'dashboard', element: <ManagerDashboard /> },
+            { path: 'dashboard', element: <CustomerDashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
             {
               path: 'rental-requests',
@@ -307,7 +306,7 @@ export default function useRouteElements() {
         {
           element: <ManagerProfile />,
           children: [
-            { path: 'dashboard', element: <DashboardContent /> },
+            { path: 'dashboard', element: <ManagerDashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
             {
               path: 'rental-requests',
