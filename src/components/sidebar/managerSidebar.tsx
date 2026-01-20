@@ -14,7 +14,7 @@ const ManagerSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   const [contractsExpanded, setContractsExpanded] = useState(false)
 
   const menuItems = [
-    { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_MANAGER },
+    // { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_MANAGER },
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.MANAGER_REQUESTS },
     { id: 'quotes', label: 'Price Quotes', icon: CreditCard, path: path.MANAGER_QUOTES },
     { id: 'contracts', label: 'Contracts', icon: Newspaper, hasSubItems: true },

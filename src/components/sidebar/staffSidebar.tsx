@@ -13,7 +13,7 @@ const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   const { logout } = useAuth()
 
   const menuItems = [
-    { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_STAFF },
+    // { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_STAFF },
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.STAFF_REQUESTS },
     { id: 'contract-drafts', label: 'Contract Drafts', icon: Calendar, path: path.STAFF_CONTRACT_DRAFTS },
     { id: 'deliveries', label: 'Delivery Tracking', icon: Truck, path: path.STAFF_DELIVERIES },

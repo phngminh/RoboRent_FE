@@ -49,6 +49,7 @@ import AdminDashboard from '../pages/admin/AdminDashboard'
 import PackageDisplay from '../pages/home/product/packageSection'
 import OurProblems from '../pages/home/homePage/ourProblems'
 import { toast } from 'react-toastify'
+import AccountManagement from '../pages/admin/account'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -366,6 +367,7 @@ export default function useRouteElements() {
           element: <AdminProfile />,
           children: [
             { path: 'dashboard', element: <AdminDashboard /> },
+            { path: 'accounts', element: <AccountManagement /> },
           ]
         }
       ]

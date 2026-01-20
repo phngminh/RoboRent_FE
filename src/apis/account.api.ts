@@ -17,9 +17,15 @@ export interface AccountResponse {
   phoneNumber: string
   status: string
   emailConfirmed: string
+  role: string
 }
 
 export const getAllManagers = async (): Promise<AccountResponse[]> => {
   const response = await http.get<PaginatedResponse<AccountResponse>>(`Admin/manager?page=1&pageSize=10`)
+  return response.data.items
+}
+
+export const getAllAccounts = async (): Promise<AccountResponse[]> => {
+  const response = await http.get<PaginatedResponse<AccountResponse>>(`Admin/accounts?page=1&pageSize=10`)
   return response.data.items
 }
