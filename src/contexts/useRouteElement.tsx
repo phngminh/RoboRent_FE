@@ -7,7 +7,6 @@ import CustomerChatPage from '../pages/chat/CustomerChatPage'
 import StaffChatPage from '../pages/chat/StaffChatPage'
 import ManagerQuotesPage from '../pages/manager/ManagerQuotesPage'
 import AuthCallback from '../pages/auth/callback'
-import CustomerDashboardContent from '../pages/customer/dashboard'
 import CustomerRentalRequestsContent from '../pages/customer/RentalRequest/rentalRequest'
 import StaffRentalRequestsContent from '../pages/staff/rentalRequest'
 import ManagerRentalRequestsContent from '../pages/manager/rentalRequest'
@@ -46,8 +45,6 @@ import ActualDeliveryManagement from '../pages/technicalStaff/ActualDeliveryMana
 import DeliveryChecklistPage from '../pages/technicalStaff/DeliveryChecklistPage'
 import CustomerChecklistAcceptPage from '../pages/customer/checklist/CustomerChecklistAcceptPage'
 import AdminProfile from '../pages/admin/profile'
-import StaffDashboardContent from '../pages/staff/dashboard'
-import ManagerDashboardContent from '../pages/manager/ManagerDashboard'
 import AdminDashboard from '../pages/admin/AdminDashboard'
 import PackageDisplay from '../pages/home/product/packageSection'
 import OurProblems from '../pages/home/homePage/ourProblems'
@@ -95,11 +92,10 @@ export default function useRouteElements() {
       path: path.BASE_CUSTOMER,
       element: <ProtectedRoute allowedRoles={['customer']} />,
       children: [
-        { index: true, element: <Navigate to='dashboard' replace /> },
+        { index: true, element: <Navigate to='rental-requests' replace /> },
         {
           element: <CustomerProfile />,
           children: [
-            { path: 'dashboard', element: <CustomerDashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
             {
               path: 'rental-requests',
@@ -219,11 +215,10 @@ export default function useRouteElements() {
       path: path.BASE_STAFF,
       element: <ProtectedRoute allowedRoles={['staff']} />,
       children: [
-        { index: true, element: <Navigate to='dashboard' replace /> },
+        { index: true, element: <Navigate to='rental-requests' replace /> },
         {
           element: <StaffProfile />,
           children: [
-            { path: 'dashboard', element: <StaffDashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
             {
               path: 'rental-requests',
@@ -302,11 +297,10 @@ export default function useRouteElements() {
       path: path.BASE_MANAGER,
       element: <ProtectedRoute allowedRoles={['manager']} />,
       children: [
-        { index: true, element: <Navigate to='dashboard' replace /> },
+        { index: true, element: <Navigate to='rental-requests' replace /> },
         {
           element: <ManagerProfile />,
           children: [
-            { path: 'dashboard', element: <ManagerDashboardContent /> },
             { path: 'account', element: <AccountProfile /> },
             {
               path: 'rental-requests',
