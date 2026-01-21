@@ -651,13 +651,15 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                             )}
 
                               <>
-                                <button
-                                  onClick={() => navigate(path.CUSTOMER_CHECKLIST_ACCEPT.replace(':rentalId', String(request.id)))}
-                                  className='flex items-center space-x-1 bg-indigo-100 text-indigo-800 hover:bg-indigo-200 px-2 py-1 rounded whitespace-nowrap'
-                                >
-                                  <ClipboardCheck size={14} />
-                                  <span>Checklist</span>
-                                </button>
+                                {request.status === 'Completed' && (
+                                  <button
+                                    onClick={() => navigate(path.CUSTOMER_CHECKLIST_ACCEPT.replace(':rentalId', String(request.id)))}
+                                    className='flex items-center space-x-1 bg-indigo-100 text-indigo-800 hover:bg-indigo-200 px-2 py-1 rounded whitespace-nowrap'
+                                  >
+                                    <ClipboardCheck size={14} />
+                                    <span>Checklist</span>
+                                  </button>
+                                )}
 
                                 <button
                                   onClick={() => navigate(path.CUSTOMER_DELIVERY.replace(':rentalId', String(request.id)))}
