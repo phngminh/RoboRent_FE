@@ -40,13 +40,30 @@ const formatFullDate = (dateStr: string): string => {
   })
 }
 
-const formatTime = (timeStr: string): string => {
-  const [hours, minutes] = timeStr.split(':')
-  const hour = parseInt(hours)
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const displayHour = hour % 12 || 12
-  return `${displayHour}:${minutes} ${ampm}`
-}
+const formatTime = (value?: string | null): string => {
+  if (!value) return "--:--";
+
+  // ISO datetime
+  if (value.includes("T")) {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "--:--";
+    const hour = d.getHours();
+    const minute = d.getMinutes();
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${String(minute).padStart(2, '0')} ${ampm}`;
+  }
+
+  // "HH:mm:ss" / "HH:mm"
+  const parts = value.split(":");
+  if (parts.length < 2) return "--:--";
+  const hour = parseInt(parts[0]);
+  const minute = parseInt(parts[1]);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return "--:--";
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${String(minute).padStart(2, '0')} ${ampm}`;
+};
 
 const getInitials = (name: string): string => 
   name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
