@@ -462,7 +462,7 @@ export default function StaffAssignmentPage() {
           <div className="flex items-center gap-4">
             {/* Back Button */}
             <button
-              onClick={() => navigate('/manager/dashboard')}
+              onClick={() => navigate('/manager')}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors group"
               title="Back to Dashboard"
             >

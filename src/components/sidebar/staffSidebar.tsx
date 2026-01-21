@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, ChevronRight, User, Truck, Group, ChartColumn, LogOut } from 'lucide-react'
+import { LayoutDashboard, Calendar, ChevronRight, User, Truck, ChartColumn, LogOut } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import path from '../../constants/path'
 
@@ -13,7 +13,7 @@ const StaffSidebar: React.FC<ProfileSidebarProps> = ({ activeTab }) => {
   const { logout } = useAuth()
 
   const menuItems = [
-    { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_STAFF },
+    // { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.DASHBOARD_STAFF },
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.STAFF_REQUESTS },
     { id: 'contract-drafts', label: 'Contract Drafts', icon: Calendar, path: path.STAFF_CONTRACT_DRAFTS },
     { id: 'deliveries', label: 'Delivery Tracking', icon: Truck, path: path.STAFF_DELIVERIES },

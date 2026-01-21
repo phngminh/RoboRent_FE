@@ -1,87 +1,92 @@
 import React, { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader } from '../../../components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
-import { Input } from '../../../components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
-import { Button } from '../../../components/ui/button'
-import { Search, Eye } from 'lucide-react'
-import { getMyReports, type ContractReportResponse } from '../../../apis/contractReport.api'
+import { Card, CardContent, CardHeader } from '../../components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { Input } from '../../components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { Button } from '../../components/ui/button'
+import { Search, Unlock, Lock } from 'lucide-react'
+import { getAllAccounts, type AccountResponse } from '../../apis/account.api'
 
-interface CustomerBreachReportsProps {
-  onView: (reportId: number) => void
-}
-
-const CustomerBreachReports: React.FC<CustomerBreachReportsProps> = ({ onView }) => {
-  const [reports, setReports] = useState<ContractReportResponse[]>([])
-  const [filteredReports, setFilteredReports] = useState<ContractReportResponse[]>([])
+const AccountManagement: React.FC = () => {
+  const [accounts, setAccounts] = useState<AccountResponse[]>([])
+  const [filteredAccounts, setFilteredAccounts] = useState<AccountResponse[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
+  const [roleFilter, setRoleFilter] = useState('All Roles')
   const [appliedStatus, setAppliedStatus] = useState('All Status')
+  const [appliedRole, setAppliedRole] = useState('All Roles')
   const [loading, setLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
 
   const pageSize = 5
-  const totalPages = Math.ceil(filteredReports.length / pageSize)
-  const paginatedReports = filteredReports.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const totalPages = Math.ceil(filteredAccounts.length / pageSize)
+  const paginatedAccounts = filteredAccounts.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
-  const fetchReports = async () => {
+  const fetchAccounts = async () => {
     try {
       setLoading(true)
-      const reportsData = await getMyReports()
-      console.log('Fetched reports:', reportsData)
-      const sortedReports = reportsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      setReports(sortedReports)
-      setFilteredReports(sortedReports)
+      const accounts = await getAllAccounts()
+      setAccounts(accounts)
+      setFilteredAccounts(accounts)
     } catch (err) {
-      console.error('Failed to load reports', err)
-      setReports([])
-      setFilteredReports([])
+      console.error('Failed to load accounts', err)
+      setAccounts([])
+      setFilteredAccounts([])
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchReports()
+    fetchAccounts()
   }, [])
 
   useEffect(() => {
-    let filtered = [...reports]
+    let filtered = [...accounts]
     if (search.trim()) {
       const searchTerm = search.toLowerCase()
-      filtered = filtered.filter((report) =>
-        report.draftClauseTitle.toLowerCase().includes(searchTerm)
+      filtered = filtered.filter((account) =>
+        account.fullName.toLowerCase().includes(searchTerm) ||
+        account.email?.toLowerCase().includes(searchTerm)
       )
     }
 
     if (appliedStatus !== 'All Status') {
-      filtered = filtered.filter((report) => report.status === appliedStatus)
+      filtered = filtered.filter((account) => account.status === appliedStatus)
     }
 
-    filtered = filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    setFilteredReports(filtered)
-    setCurrentPage(1)
-  }, [reports, search, appliedStatus])
+    if (appliedRole !== 'All Roles') {
+      filtered = filtered.filter((account) => account.role === appliedRole)
+    }
 
-  const statusOptions = ['All Status', 'Pending', 'Rejected', 'Resolved']
+    setFilteredAccounts(filtered)
+    setCurrentPage(1)
+  }, [accounts, search, appliedStatus, appliedRole])
+
+  const statusOptions = ['All Status', 'PendingVerification', 'Active', 'Disabled']
+  const roleOptions = ['All Roles', 'Customer', 'Staff', 'TechnicalStaff', 'Manager']
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Pending':
+      case 'PendingVerification':
         return 'bg-yellow-100 text-yellow-800'
-      case 'Rejected':
-        return 'bg-red-100 text-red-800'
-      case 'Resolved':
+      case 'Active':
         return 'bg-green-100 text-green-800'
+      case 'Disabled':
+        return 'bg-red-100 text-red-800'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-blue-100 text-blue-800'
     }
   }
 
-  const decodeHtml = (html: string) => {
-    const txt = document.createElement('textarea')
-    txt.innerHTML = html
-    return txt.value
+  const handleEnable = (id: number) => {
+    console.log('Enable account', id)
+    setAccounts(accounts.map(acc => acc.accountId === id ? {...acc, status: 'Active'} : acc))
+  }
+
+  const handleDisable = (id: number) => {
+    console.log('Disable account', id)
+    setAccounts(accounts.map(acc => acc.accountId === id ? {...acc, status: 'Disabled'} : acc))
   }
 
   const handlePageChange = (page: number) => {
@@ -92,57 +97,43 @@ const CustomerBreachReports: React.FC<CustomerBreachReportsProps> = ({ onView })
 
   const applyFilters = () => {
     setAppliedStatus(statusFilter)
+    setAppliedRole(roleFilter)
   }
 
   const clearFilters = () => {
     setSearch('')
     setStatusFilter('All Status')
+    setRoleFilter('All Roles')
     setAppliedStatus('All Status')
+    setAppliedRole('All Roles')
     setCurrentPage(1)
   }
 
   const columns = [
-    // {
-    //   key: 'id',
-    //   title: 'ID',
-    //   accessor: 'id' as keyof ContractReportResponse,
-    //   className: 'w-[100px] whitespace-nowrap',
-    // },
     {
-      key: 'draftClauseTitle',
-      title: 'Title',
-      accessor: 'draftClauseTitle' as keyof ContractReportResponse,
-      className: 'w-[100px] whitespace-nowrap',
+      key: 'id',
+      title: 'ID',
+      accessor: 'accountId' as keyof AccountResponse,
+      className: 'whitespace-nowrap',
     },
     {
-      key: 'accusedName',
-      title: 'Accused Name',
-      accessor: 'accusedName' as keyof ContractReportResponse,
-      className: 'w-[120px] whitespace-nowrap',
+      key: 'fullName',
+      title: 'Full Name',
+      accessor: 'fullName' as keyof AccountResponse,
+      className: 'max-w-[200px] truncate',
     },
     {
-      key: 'description',
-      title: 'Description',
-      accessor: 'description' as keyof ContractReportResponse,
-      className: 'w-[80px] whitespace-nowrap',
+      key: 'email',
+      title: 'Email',
+      accessor: 'email' as keyof AccountResponse,
+      className: 'max-w-[250px] truncate',
     },
     {
-      key: 'createdAt',
-      title: 'Created At',
-      className: 'w-[120px] whitespace-nowrap',
+      key: 'role',
+      title: 'Role',
+      accessor: 'role' as keyof AccountResponse,
+      className: 'max-w-[150px] truncate',
     },
-    // {
-    //   key: 'reporterName',
-    //   title: 'Reporter Name',
-    //   accessor: 'reporterName' as keyof ContractReportResponse,
-    //   className: 'w-[120px] whitespace-nowrap',
-    // },
-    // {
-    //   key: 'reportRole',
-    //   title: 'Reporter Role',
-    //   accessor: 'reportRole' as keyof ContractReportResponse,
-    //   className: 'max-w-md whitespace-nowrap',
-    // },
     {
       key: 'status',
       title: 'Status',
@@ -159,7 +150,7 @@ const CustomerBreachReports: React.FC<CustomerBreachReportsProps> = ({ onView })
     <div className='space-y-6 bg-gray-50 p-6'>
       <Card className='rounded-xl shadow-sm border border-gray-100'>
         <CardHeader className='pb-0'>
-          <h2 className='text-lg font-semibold text-gray-800 text-center mb-3'>Filter Reports</h2>
+          <h2 className='text-lg font-semibold text-gray-800 text-center mb-3'>Filter Accounts</h2>
         </CardHeader>
         <CardContent className='p-6 pt-0'>
           <div className='flex flex-col gap-4 md:flex-row md:items-end md:gap-4'>
@@ -179,13 +170,28 @@ const CustomerBreachReports: React.FC<CustomerBreachReportsProps> = ({ onView })
                   </SelectContent>
                 </Select>
               </div>
+              <div className='w-full md:w-48'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Role</label>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
+                    <SelectValue placeholder='Role' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleOptions.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className='flex-1'>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Title</label>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Search by Name/Email</label>
                 <div className='relative'>
                   <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500' size={18} />
                   <Input
-                    placeholder='Enter report title...'
+                    placeholder='Enter name or email...'
                     className='w-full pl-10 pr-4 py-2 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -218,7 +224,7 @@ const CustomerBreachReports: React.FC<CustomerBreachReportsProps> = ({ onView })
       <Card className='rounded-xl shadow-sm border border-gray-300 relative'>
         <CardHeader className='p-6 border-b border-gray-100 relative'>
           <h2 className='text-xl text-gray-800 font-semibold text-center w-full'>
-            Breach of Contract Reports
+            Account Management
           </h2>
         </CardHeader>
 
@@ -245,49 +251,49 @@ const CustomerBreachReports: React.FC<CustomerBreachReportsProps> = ({ onView })
                         Loading...
                       </TableCell>
                     </TableRow>
-                  ) : paginatedReports.length === 0 ? (
+                  ) : paginatedAccounts.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={columns.length} className='text-center py-6 text-gray-500 text-sm'>
-                        No reports found.
+                        No accounts found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedReports.map((report) => (
-                      <TableRow key={report.id} className='hover:bg-gray-50'>
+                    paginatedAccounts.map((account) => (
+                      <TableRow key={account.accountId} className='hover:bg-gray-50'>
                         {columns.map((column) => {
                           const cellClass = `px-6 py-4 text-sm text-gray-900 text-center ${column.className || ''}`
                           let content: React.ReactNode
-                          if (column.key === 'draftClauseTitle') {
-                            content = decodeHtml(report.draftClauseTitle)
+                          if (column.key === 'fullName' || column.key === 'email' || column.key === 'role') {
+                            content = <span className='max-w-md truncate'>{account[column.accessor as keyof AccountResponse] || 'N/A'}</span>
                           } else if (column.key === 'status') {
-                            content = <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(report.status)}`}>
-                              {report.status}
+                            content = <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(account.status)}`}>
+                              {account.status}
                             </span>
-                          } else if (column.key === 'createdAt' || column.key === 'reviewedAt') {
-                            content = report[column.key as 'createdAt' | 'reviewedAt'] 
-                                ? new Date(report[column.key as 'createdAt' | 'reviewedAt']).toLocaleDateString()
-                                : 'N/A'
                           } else if (column.key === 'actions') {
+                            const isActive = account.status === 'Active'
                             content = (
                               <div className='flex items-center justify-center space-x-2 text-sm'>
-                                <button
-                                  onClick={() => onView(report.id)}
-                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
-                                >
-                                  <Eye size={14} />
-                                  <span>View</span>
-                                </button>
+                                {isActive ? (
+                                  <button
+                                    onClick={() => handleDisable(account.accountId)}
+                                    className='flex items-center space-x-1 rounded px-2 py-1 bg-red-100 text-red-800 hover:bg-red-200 transition-colors'
+                                  >
+                                    <Lock size={14} />
+                                    <span>Disable</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleEnable(account.accountId)}
+                                    className='flex items-center space-x-1 rounded px-2 py-1 bg-green-100 text-green-800 hover:bg-green-200 transition-colors'
+                                  >
+                                    <Unlock size={14} />
+                                    <span>Enable</span>
+                                  </button>
+                                )}
                               </div>
                             )
                           } else {
-                            const value = report[column.accessor as keyof ContractReportResponse]
-                            if (value instanceof Date) {
-                              content = value.toLocaleDateString()
-                            } else if (value === null || value === undefined) {
-                              content = 'N/A'
-                            } else {
-                              content = String(value)
-                            }
+                            content = account[column.accessor as keyof AccountResponse] || 'N/A'
                           }
                           return <TableCell key={column.key} className={cellClass}>{content}</TableCell>
                         })}
@@ -332,7 +338,7 @@ const CustomerBreachReports: React.FC<CustomerBreachReportsProps> = ({ onView })
               </Button>
             </div>
             <div className='text-sm text-gray-500'>
-              Showing {paginatedReports.length} of {filteredReports.length} report{filteredReports.length === 1 ? '' : 's'}
+              Showing {paginatedAccounts.length} of {filteredAccounts.length} account{filteredAccounts.length === 1 ? '' : 's'}
             </div>
           </div>
         </CardContent>
@@ -341,4 +347,4 @@ const CustomerBreachReports: React.FC<CustomerBreachReportsProps> = ({ onView })
   )
 }
 
-export default CustomerBreachReports
+export default AccountManagement

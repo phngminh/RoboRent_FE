@@ -11,7 +11,7 @@ const TechnicalStaffProfile: React.FC<ProfileSidebarProps> = ({ activeTab }) => 
   const navigate = useNavigate()
 
   const menuItems = [
-    { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.CUSTOMER_DASHBOARD },
+    // { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.CUSTOMER_DASHBOARD },
     { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.CUSTOMER_REQUESTS },
     { id: 'transactions', label: 'Transactions', icon: CreditCard, path: path.CUSTOMER_TRANSACTIONS },
     { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.CUSTOMER_REPORTS },

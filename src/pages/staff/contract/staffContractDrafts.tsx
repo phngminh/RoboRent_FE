@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from '../../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Button } from '../../../components/ui/button'
-import { Eye, Plus, Search, Send } from 'lucide-react'
+import { Eye, Plus, Search, Send, Edit } from 'lucide-react'
 import { getDraftsByStaff, sendDraftToManager, type ContractDraftResponse } from '../../../apis/contractDraft.api'
 import { useAuth } from '../../../contexts/AuthContext'
 import CreateContractDraft from './createContractDraft'
@@ -342,6 +342,12 @@ const StaffContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
                   ) : (
                     paginatedDrafts.map((draft) => {
                       const canSend = draft.status === 'Draft' || draft.status === 'Modified'
+                      const isChangeRequested = draft.status === 'ChangeRequested'
+                      const buttonClass = isChangeRequested
+                        ? 'flex items-center space-x-1 rounded px-2 py-1 bg-red-100 text-red-800 hover:bg-red-200 transition-colors'
+                        : 'flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
+                      const buttonText = isChangeRequested ? 'Edit' : 'View'
+                      const IconComponent = isChangeRequested ? Edit : Eye
 
                       return (
                         <TableRow key={draft.id} className='hover:bg-gray-50'>
@@ -363,10 +369,10 @@ const StaffContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
                                 <div className='flex items-center justify-center space-x-2 text-sm'>
                                   <button
                                     onClick={() => onView(draft.id)}
-                                    className='flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
+                                    className={buttonClass}
                                   >
-                                    <Eye size={14} />
-                                    <span>View</span>
+                                    <IconComponent size={14} />
+                                    <span>{buttonText}</span>
                                   </button>
                                   {canSend && (
                                     <button

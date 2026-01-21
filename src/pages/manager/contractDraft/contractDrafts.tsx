@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from '../../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Button } from '../../../components/ui/button'
-import { Search, SettingsIcon } from 'lucide-react'
+import { Search, Eye, ClipboardCheck } from 'lucide-react'
 import { getDraftsByManager, type ContractDraftResponse } from '../../../apis/contractDraft.api'
 import { useAuth } from '../../../contexts/AuthContext'
 
@@ -31,8 +31,9 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
       setLoading(true)
       const draftsData = await getDraftsByManager(user?.accountId)
       console.log('Fetched drafts:', draftsData)
-      setDrafts(draftsData)
-      setFilteredDrafts(draftsData)
+      const sortedDrafts = draftsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      setDrafts(sortedDrafts)
+      setFilteredDrafts(sortedDrafts)
     } catch (err) {
       console.error('Failed to load drafts', err)
       setDrafts([])
@@ -59,6 +60,7 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
       filtered = filtered.filter((draft) => draft.status === appliedStatus)
     }
 
+    filtered = filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     setFilteredDrafts(filtered)
     setCurrentPage(1)
   }, [drafts, search, appliedStatus])
@@ -265,18 +267,25 @@ const ContractDrafts: React.FC<ContractDraftsProps> = ({ onView }) => {
                               {draft.status}
                             </span>
                           } else if (column.key === 'createdAt' || column.key === 'updatedAt') {
-                                content = draft[column.key as 'createdAt' | 'updatedAt'] 
-                                    ? new Date(draft[column.key as 'createdAt' | 'updatedAt']).toLocaleDateString()
-                                    : 'N/A'
+                            content = draft[column.key as 'createdAt' | 'updatedAt'] 
+                                ? new Date(draft[column.key as 'createdAt' | 'updatedAt']).toLocaleDateString()
+                                : 'N/A'
                           } else if (column.key === 'actions') {
+                            const isPendingManagerSignature = draft.status === 'PendingManagerSignature'
+                            const buttonClass = isPendingManagerSignature
+                              ? 'flex items-center space-x-1 rounded px-2 py-1 bg-red-100 text-red-800 hover:bg-red-200 transition-colors'
+                              : 'flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
+                            const buttonText = isPendingManagerSignature ? 'Review' : 'View'
+                            const IconComponent = isPendingManagerSignature ? ClipboardCheck : Eye
+
                             content = (
                               <div className='flex items-center justify-center space-x-2 text-sm'>
                                 <button
                                   onClick={() => onView(draft.id)}
-                                  className='flex items-center space-x-1 rounded px-2 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors'
+                                  className={buttonClass}
                                 >
-                                  <SettingsIcon size={14} />
-                                  <span>View</span>
+                                  <IconComponent size={14} />
+                                  <span>{buttonText}</span>
                                 </button>
                               </div>
                             )
