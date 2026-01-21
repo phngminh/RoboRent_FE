@@ -64,6 +64,12 @@ const AuthCallback = () => {
           localStorage.setItem('showVerifyModal', 'true')
           navigate('/', { replace: true })
           return
+        } 
+        
+        if (user.accountStatus === 'Disabled') {
+          localStorage.setItem('showDisabledModal', 'true')
+          navigate('/', { replace: true })
+          return
         }
 
         login(urlToken, user)
