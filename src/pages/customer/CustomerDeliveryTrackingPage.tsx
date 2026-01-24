@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import {
   Truck, Package, CheckCircle2, Clock, MapPin, Phone, User,
   Calendar, ArrowLeft, Timer, MessageSquare, Building2,
-  RefreshCw
+  RefreshCw, Send
 } from 'lucide-react';
 import Header from '../../components/header';
 import { getDeliveryByRentalId } from '../../apis/delivery.api';
@@ -23,6 +23,11 @@ const STATUS_CONFIG: Record<DeliveryStatus, {
   Assigned: { color: 'text-violet-600', bg: 'bg-violet-100', border: 'border-violet-300', gradient: 'from-violet-400 to-violet-600', icon: <User className="w-4 h-4" />, label: 'Assigned' },
   Delivering: { color: 'text-amber-600', bg: 'bg-amber-100', border: 'border-amber-300', gradient: 'from-amber-400 to-orange-500', icon: <Truck className="w-4 h-4" />, label: 'Delivering' },
   Delivered: { color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'border-emerald-300', gradient: 'from-emerald-400 to-teal-500', icon: <Package className="w-4 h-4" />, label: 'Delivered' },
+  
+  // Mapping internal statuses to simple customer views
+  Dispatched: { color: 'text-amber-600', bg: 'bg-amber-100', border: 'border-amber-300', gradient: 'from-amber-400 to-orange-500', icon: <Truck className="w-4 h-4" />, label: 'Delivering' }, // Show as Delivering
+  Returning: { color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'border-emerald-300', gradient: 'from-emerald-400 to-teal-500', icon: <Package className="w-4 h-4" />, label: 'Delivered' }, // Show as Delivered
+  Returned: { color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'border-emerald-300', gradient: 'from-emerald-400 to-teal-500', icon: <Package className="w-4 h-4" />, label: 'Delivered' }, // Show as Delivered
 };
 
 const FALLBACK_STATUS = {
@@ -64,11 +69,19 @@ const getStatusMeta = (status: unknown) => {
 
 const STATUS_ORDER: DeliveryStatus[] = ['Pending', 'Assigned', 'Delivering', 'Delivered'];
 
+// Helper to map internal status to stepper status
+const getStepperStatus = (status: DeliveryStatus): DeliveryStatus => {
+  if (status === 'Dispatched') return 'Delivering';
+  if (status === 'Returning' || status === 'Returned') return 'Delivered';
+  return status;
+};
+
 // DeliveryType configuration
 const TYPE_CONFIG: Record<DeliveryType, { label: string; color: string; bg: string; emoji: string }> = {
   FirstOfDay: { label: 'First of Day', color: 'text-sky-700', bg: 'bg-sky-100', emoji: '🌅' },
   MidDay: { label: 'Mid-Day', color: 'text-slate-600', bg: 'bg-slate-100', emoji: '☀️' },
   LastOfDay: { label: 'Last of Day', color: 'text-indigo-700', bg: 'bg-indigo-100', emoji: '🌆' },
+  SoleDelivery: { label: 'Sole Delivery', color: 'text-purple-700', bg: 'bg-purple-100', emoji: '💎' },
 };
 
 const getTypeMeta = (type: unknown) => {
@@ -311,7 +324,8 @@ export default function CustomerDeliveryTrackingPage() {
               </div>
             </div>
             <div className="bg-white/10 rounded-2xl p-6 mt-6 backdrop-blur-xl">
-              <StatusStepper currentStatus={delivery.status} />
+              {/* Pass mapped status to Stepper to ensure it highlights correctly */}
+              <StatusStepper currentStatus={getStepperStatus(delivery.status)} />
             </div>
           </div>
 
