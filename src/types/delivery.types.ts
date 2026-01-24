@@ -32,6 +32,7 @@ export interface ActualDeliveryResponse {
     eventName: string;
     customerName: string;
     phoneNumber: string;
+    packageName?: string; // New field
   };
 }
 

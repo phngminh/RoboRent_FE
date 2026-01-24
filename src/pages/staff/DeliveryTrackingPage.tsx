@@ -71,7 +71,8 @@ const TYPE_CONFIG: Record<DeliveryType, { label: string; color: string; bg: stri
 
 const getTypeMeta = (type: unknown) => {
   const key = type == null ? "" : String(type);
-  return TYPE_CONFIG[key as DeliveryType] ?? { emoji: "❓", label: "Unknown", color: "text-gray-700", bg: "bg-gray-100" };
+  // Fallback to MidDay for cleaner UI
+  return TYPE_CONFIG[key as DeliveryType] ?? TYPE_CONFIG['MidDay']; 
 };
 
 // Helper functions
@@ -910,8 +911,8 @@ export default function DeliveryTrackingPage() {
                           <Building2 className="w-5 h-5" />
                         </div>
                         <div>
-                          <p className="text-xs text-violet-600 font-semibold mb-1">RENTAL ID</p>
-                          <p className="font-bold text-slate-800">#{selectedDelivery.rentalInfo.rentalId}</p>
+                          <p className="text-xs text-violet-600 font-semibold mb-1">PACKAGE</p>
+                          <p className="font-bold text-slate-800">{selectedDelivery.rentalInfo.packageName || `#${selectedDelivery.rentalInfo.rentalId}`}</p>
                         </div>
                       </div>
                     </div>
