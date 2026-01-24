@@ -4,9 +4,10 @@ import {
   Truck, Package, CheckCircle2, Clock, MapPin, Phone, User,
   Calendar, ChevronRight, Search, RefreshCw,
   MessageSquare, X, ArrowRight,
-  Building2, Timer, Bot, Send
+  Building2, Timer, Bot, Send, ClipboardCheck, Wrench
 } from 'lucide-react'
 import { toast } from 'react-toastify'
+import { useNavigate } from 'react-router-dom'
 import Header from '../../components/header'
 import {
   getMyDeliveries,
@@ -68,6 +69,11 @@ const TYPE_CONFIG: Record<DeliveryType, { label: string; color: string; bg: stri
   LastOfDay: { label: 'Last of Day', color: 'text-indigo-700', bg: 'bg-indigo-100', emoji: '🌆' },
 };
 
+const getTypeMeta = (type: unknown) => {
+  const key = type == null ? "" : String(type);
+  return TYPE_CONFIG[key as DeliveryType] ?? { emoji: "❓", label: "Unknown", color: "text-gray-700", bg: "bg-gray-100" };
+};
+
 // Helper functions
 const getNextStatus = (current: DeliveryStatus): DeliveryStatus | null => {
   const currentIndex = STATUS_ORDER.indexOf(current);
@@ -93,12 +99,24 @@ const formatDate = (dateStr: string): string => {
   });
 };
 
-const formatTime = (timeStr: string): string => {
-  const [hours, minutes] = timeStr.split(':');
-  const hour = parseInt(hours);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 || 12;
-  return `${displayHour}:${minutes} ${ampm}`;
+const formatTime = (value?: string | null) => {
+  if (!value) return "--:--";
+
+  // Nếu backend trả ISO datetime: "2026-01-21T08:30:00"
+  if (value.includes("T")) {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "--:--";
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
+
+  // Nếu backend trả "HH:mm:ss" hoặc "HH:mm"
+  const parts = value.split(":");
+  if (parts.length < 2) return "--:--";
+  const hh = parts[0].padStart(2, "0");
+  const mm = parts[1].padStart(2, "0");
+  return `${hh}:${mm}`;
 };
 
 // Status Update Modal
@@ -383,11 +401,11 @@ const DeliveryCard: React.FC<{
       <div className={`flex items-center gap-4 text-sm ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
         <div className="flex items-center gap-1.5">
           <Calendar className="w-4 h-4" />
-          {formatDate(delivery.scheduleInfo.eventDate)}
+          {formatDate(delivery.scheduleInfo?.eventDate)}
         </div>
         <div className="flex items-center gap-1.5">
           <Clock className="w-4 h-4" />
-          {formatTime(delivery.scheduleInfo.deliveryTime)}
+          {formatTime(delivery.scheduleInfo?.deliveryTime)}
         </div>
       </div>
     </button>
@@ -446,7 +464,8 @@ const TimeComparison: React.FC<{
 };
 
 // Main Dashboard Component
-export default function DeliveryTrackingPage() {
+export default function DeliveryTrackingPage() {  
+  const navigate = useNavigate()  
   const [deliveries, setDeliveries] = useState<ActualDeliveryResponse[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -725,8 +744,8 @@ export default function DeliveryTrackingPage() {
                             ID: #{selectedDelivery.id}
                           </span>
                           <span className="px-3 py-1 rounded-lg bg-white/20 text-sm flex items-center gap-1.5">
-                            <span>{TYPE_CONFIG[selectedDelivery.type].emoji}</span>
-                            {TYPE_CONFIG[selectedDelivery.type].label}
+                            <span>{getTypeMeta(selectedDelivery.type).emoji}</span>
+                            {getTypeMeta(selectedDelivery.type).label}
                           </span>
                         </div>
                         <h2 className="text-3xl font-extrabold mb-2">{selectedDelivery.rentalInfo.eventName}</h2>
@@ -802,7 +821,7 @@ export default function DeliveryTrackingPage() {
                           <span className="font-semibold text-violet-700">Event Date</span>
                         </div>
                         <p className="text-xl font-bold text-slate-800">
-                          {formatDate(selectedDelivery.scheduleInfo.eventDate)}
+                          {formatDate(selectedDelivery.scheduleInfo?.eventDate)}
                         </p>
                       </div>
 
@@ -814,7 +833,7 @@ export default function DeliveryTrackingPage() {
                           <span className="font-semibold text-amber-700">Event Hours</span>
                         </div>
                         <p className="text-xl font-bold text-slate-800">
-                          {formatTime(selectedDelivery.scheduleInfo.startTime)} - {formatTime(selectedDelivery.scheduleInfo.endTime)}
+                          {formatTime(selectedDelivery.scheduleInfo?.startTime)} - {formatTime(selectedDelivery.scheduleInfo?.endTime)}
                         </p>
                       </div>
 
@@ -826,7 +845,7 @@ export default function DeliveryTrackingPage() {
                           <span className="font-semibold text-emerald-700">Delivery Window</span>
                         </div>
                         <p className="text-xl font-bold text-slate-800">
-                          {formatTime(selectedDelivery.scheduleInfo.deliveryTime)} - {formatTime(selectedDelivery.scheduleInfo.finishTime)}
+                          {formatTime(selectedDelivery.scheduleInfo?.deliveryTime)} - {formatTime(selectedDelivery.scheduleInfo?.finishTime)}
                         </p>
                       </div>
                     </div>

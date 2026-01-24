@@ -55,8 +55,17 @@ const path = {
   DASHBOARD_ADMIN: '/admin/dashboard',
   ADMIN_ACCOUNTS: '/admin/accounts',
 
-  //============= Technical Staff ============
-  BASE_TECH_STAFF: '/technicalstaff',
-  TECH_STAFF_REQUESTS: '/technicalstaff/rental-requests',
+//============= Technical Staff ============
+BASE_TECH_STAFF: "/technicalstaff",
+
+// ✅ Actual Delivery LIST
+TECH_STAFF_DELIVERIES: "/technicalstaff/deliveries",
+
+// ✅ Checklist LIST
+TECH_STAFF_CHECKLISTS: "/technicalstaff/checklists",
+
+// ✅ Checklist DETAIL
+TECH_STAFF_DELIVERY_CHECKLIST_DETAIL: "/technicalstaff/deliveries/:actualDeliveryId/checklist",
+
 }
 export default path

@@ -373,20 +373,29 @@ export default function useRouteElements() {
       ]
     },
     //================ TechnicalStaff routes ================
+{
+  path: path.BASE_TECH_STAFF, // '/technicalstaff'
+  element: <ProtectedRoute allowedRoles={['technicalstaff']} />,
+  children: [
+    // vào /technicalstaff -> chuyển về deliveries (Actual Delivery list)
+    { index: true, element: <Navigate to="deliveries" replace /> },
+
     {
-      path: path.BASE_TECH_STAFF, // '/techstaff'
-      element: <ProtectedRoute allowedRoles={['technicalstaff']} />,
+      element: <TechnicalStaffProfile />,
       children: [
-        { index: true, element: <Navigate to='rental-requests' replace /> },
-        {
-          element: <TechnicalStaffProfile />,
-          children: [
-            { path: 'rental-requests', element: <ActualDeliveryManagement /> },
-            { path: 'deliveries/:actualDeliveryId/checklist', element: <DeliveryChecklistPage /> }
-          ]
-        }
-      ]
-    }
+        // ✅ Actual Delivery LIST
+        { path: "deliveries", element: <DeliveryTrackingPage /> },
+
+        // ✅ Checklist LIST
+        { path: "checklists", element: <ActualDeliveryManagement /> },
+
+        // ✅ Checklist DETAIL theo actualDeliveryId
+        { path: "deliveries/:actualDeliveryId/checklist", element: <DeliveryChecklistPage /> },
+      ],
+    },
+  ],
+}
+
   ])
   return routeElements
 }
