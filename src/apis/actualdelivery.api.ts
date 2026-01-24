@@ -79,3 +79,32 @@ export const getChecklistDeliveryByRentalForCustomerAsync = async (
     throw error;
   }
 };
+
+/** ===== Customer accept checklist ===== */
+export type CustomerAcceptChecklistRequest = {
+  customerAcceptedAt: string;   // ISO datetime
+  customerAcceptedById: number;
+  customerNote?: string | null;
+};
+
+/**
+ * PUT: /api/ChecklistDelivery/customer/confirm/delivered/robot/{checklistDeliveryId}
+ */
+export const customerAcceptChecklistAsync = async (
+  checklistDeliveryId: number,
+  payload: CustomerAcceptChecklistRequest
+) => {
+  try {
+    const response = await http.put(
+      `${API_URL}/customer/confirm/delivered/robot/${checklistDeliveryId}`,
+      payload
+    );
+
+    // Your backend style: { success, data, message }
+    return response.data.data;
+  } catch (error: any) {
+    console.error("Error customer accept checklist:", error);
+    throw error;
+  }
+};
+

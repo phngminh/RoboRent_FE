@@ -10,6 +10,7 @@ import BlockTimePicker from '../../../components/customer/BlockTimePicker'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { useParams } from 'react-router-dom'
+import { getProfile } from '../../../apis/auth.api'
 
 interface ActivityType {
   id: number
@@ -49,6 +50,8 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
   const { user } = useAuth()
   const [errors, setErrors] = useState<string[]>([])
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string[] }>({})
+
+  const [profileLoaded, setProfileLoaded] = useState(false)
 
   const [eventName, setEventName] = useState('')
   const { rentalId: rentalIdString } = useParams<{ rentalId: string }>()
@@ -240,6 +243,31 @@ const validateStreetAddress = (value: string): string | null => {
       setActivityTypes(types)
     })()
   }, [])
+
+  // AUTO FILL CONTACT INFO FROM PROFILE (create mode only)
+useEffect(() => {
+  if (!user?.accountId) return
+  if (profileLoaded) return
+  if (rentalId) return // ✅ edit mode: lấy theo rental, không lấy profile
+
+  ;(async () => {
+    try {
+      const p = await getProfile()
+
+      // ✅ chỉ set nếu field đang trống (không ghi đè khi user đã nhập)
+      setPhoneNumber(prev => (prev?.trim() ? prev : (p.phoneNumber ?? '')))
+      setEmail(prev => (prev?.trim() ? prev : (p.email ?? '')))
+
+      // (Tuỳ chọn) Nếu muốn auto-fill địa chỉ vào ô Street luôn:
+      // setStreetAddress(prev => (prev?.trim() ? prev : (p.address ?? '')))
+
+      setProfileLoaded(true)
+    } catch (e) {
+      console.error('Failed to load profile:', e)
+      setProfileLoaded(true) // tránh gọi lại liên tục
+    }
+  })()
+}, [user?.accountId, profileLoaded, rentalId])
 
   useEffect(() => {
     ;(async () => {

@@ -8,10 +8,11 @@ import {
 import { toast } from 'react-toastify'
 import { 
   getPendingDeliveries, 
-  getStaffList, 
+  getTechStaffList, 
   checkStaffConflict, 
   assignStaff 
 } from '../../apis/delivery.api'
+
 import type { 
   ActualDeliveryResponse, 
   StaffListItemResponse 
@@ -117,7 +118,7 @@ const StaffDropdown: React.FC<{
   const loadStaff = async () => {
     setLoading(true)
     try {
-      const data = await getStaffList(1, 100, 'Active', search)
+      const data = await getTechStaffList(1, 100, 'Active', search)
       setStaff(data.items)
     } catch (err) {
       console.error('Failed to load staff:', err)
