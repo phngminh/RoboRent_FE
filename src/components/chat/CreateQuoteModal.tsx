@@ -97,7 +97,7 @@ export default function CreateQuoteModal({
   const customizationFeeNum = parseFloat(customizationFee) || 0
 
   const quoteNumber = currentQuoteCount + 1
-  const quotesRemaining = 3 - currentQuoteCount
+  // const quotesRemaining = 3 - currentQuoteCount // Removed limit
 
   // Get package pricing
   const packageName = rentalInfo?.activityTypeName || ''
@@ -196,7 +196,7 @@ export default function CreateQuoteModal({
     }
 
     if (!canCreate) {
-      toast.error('Maximum 3 quotes reached for this rental')
+      toast.error('Cannot create new quote (An active quote already exists)')
       return
     }
 
@@ -247,13 +247,13 @@ export default function CreateQuoteModal({
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30 animate-glow-pulse">
                     <div className="text-center">
                       <span className="text-2xl font-bold text-white">{quoteNumber}</span>
-                      <span className="text-xs text-white/70 block -mt-1">/3</span>
+                      <span className="text-[10px] text-white/70 block -mt-1 uppercase">Quote</span>
                     </div>
                   </div>
                   <svg className="absolute -inset-1 w-[72px] h-[72px]" viewBox="0 0 72 72">
                     <circle cx="36" cy="36" r="34" fill="none" stroke="rgba(139, 92, 246, 0.3)" strokeWidth="2" />
                     <circle cx="36" cy="36" r="34" fill="none" stroke="url(#gradient)" strokeWidth="3"
-                      strokeDasharray={`${(quoteNumber / 3) * 213.6} 213.6`}
+                      strokeDasharray="213.6 213.6"
                       strokeLinecap="round" transform="rotate(-90 36 36)"
                       className="transition-all duration-500"
                     />
@@ -290,24 +290,6 @@ export default function CreateQuoteModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Warning if approaching limit */}
-          {quotesRemaining <= 1 && (
-            <div className={`flex items-start gap-3 p-4 rounded-2xl border-2 animate-slide-up ${quotesRemaining === 0 ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'
-              }`}>
-              <div className={`p-2 rounded-xl ${quotesRemaining === 0 ? 'bg-red-100' : 'bg-amber-100'}`}>
-                <AlertCircle className={`w-5 h-5 ${quotesRemaining === 0 ? 'text-red-600' : 'text-amber-600'}`} />
-              </div>
-              <div>
-                <p className={`font-semibold ${quotesRemaining === 0 ? 'text-red-900' : 'text-amber-900'}`}>
-                  {quotesRemaining === 1 ? '⚡ Báo giá cuối cùng' : '🚫 Đã đạt giới hạn'}
-                </p>
-                <p className={`text-sm mt-1 ${quotesRemaining === 0 ? 'text-red-700' : 'text-amber-700'}`}>
-                  {quotesRemaining === 1 ? 'Đây là cơ hội cuối để chỉnh sửa giá.' : 'Không thể tạo thêm báo giá.'}
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* 🚨 SECTION: Previous Rejection Reasons (for Quote #2, #3) */}
           {rejectedQuotes.length > 0 && (
             <div className="animate-slide-up">

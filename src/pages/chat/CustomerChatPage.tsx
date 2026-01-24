@@ -942,7 +942,7 @@ const CustomerChatPage: React.FC = () => {
                   Quotes Received
                 </h2>
                 <span className="text-sm text-gray-500">
-                  {quotesData?.totalQuotes || 0} of 3
+                  Total: {quotesData?.totalQuotes || 0}
                 </span>
               </div>
 

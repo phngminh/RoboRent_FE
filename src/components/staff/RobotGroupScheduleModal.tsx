@@ -264,7 +264,7 @@ export default function RobotGroupScheduleModal({
         return;
       }
 
-      toast.success("✅ Assigned group to rental successfully!");
+      toast.success("Assigned group to rental successfully!");
 
       // refresh schedule for this group
       try {
