@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, CreditCard, ChevronRight, User,ScanFace, ChartColumn  } from 'lucide-react'
+import { Truck, ClipboardCheck, ChevronRight } from 'lucide-react'
 import path from '../../constants/path'
 
 interface ProfileSidebarProps {
@@ -11,12 +11,8 @@ const TechnicalStaffProfile: React.FC<ProfileSidebarProps> = ({ activeTab }) => 
   const navigate = useNavigate()
 
   const menuItems = [
-    // { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard, path: path.CUSTOMER_DASHBOARD },
-    { id: 'rental-requests', label: 'Rental Requests', icon: Calendar, path: path.CUSTOMER_REQUESTS },
-    { id: 'transactions', label: 'Transactions', icon: CreditCard, path: path.CUSTOMER_TRANSACTIONS },
-    { id: 'breach-reports', label: 'Reports', icon: ChartColumn, path: path.CUSTOMER_REPORTS },
-    { id: 'account', label: 'Account', icon: User, path: path.CUSTOMER_ACCOUNT },
-    { id: 'face-profile', label: 'Face Profile', icon:ScanFace, path: path.FACE_PROFILE }
+    { id: 'deliveries', label: 'Actual Deliveries', icon: Truck, path: path.TECH_STAFF_DELIVERIES },
+    { id: 'checklists', label: 'Delivery Checklists', icon: ClipboardCheck, path: path.TECH_STAFF_CHECKLISTS }
   ]
 
   return (
@@ -26,7 +22,7 @@ const TechnicalStaffProfile: React.FC<ProfileSidebarProps> = ({ activeTab }) => 
           {menuItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
-            
+
             return (
               <button
                 key={item.id}

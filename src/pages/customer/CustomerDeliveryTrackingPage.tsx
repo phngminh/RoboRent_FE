@@ -25,6 +25,43 @@ const STATUS_CONFIG: Record<DeliveryStatus, {
   Delivered: { color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'border-emerald-300', gradient: 'from-emerald-400 to-teal-500', icon: <Package className="w-4 h-4" />, label: 'Delivered' },
 };
 
+const FALLBACK_STATUS = {
+  color: 'text-slate-600',
+  bg: 'bg-slate-100',
+  border: 'border-slate-300',
+  gradient: 'from-slate-400 to-slate-500',
+  icon: <Clock className="w-4 h-4" />,
+  label: 'Unknown',
+};
+
+const getStatusMeta = (status: unknown) => {
+  // normalize key về string và dạng giống union type nếu cần
+  const key = status == null ? "" : String(status);
+
+  // Handle number enums (0, 1, 2, 3) -> map to string keys
+  const numberToString: Record<string, string> = {
+    "0": "Pending",
+    "1": "Assigned",
+    "2": "Delivering",
+    "3": "Delivered",
+  };
+
+  // Nếu backend trả UPPERCASE như "PENDING" thì chuyển về "Pending"
+  const normalized =
+    key.length > 0 ? key.charAt(0).toUpperCase() + key.slice(1).toLowerCase() : "";
+
+  // Try different variations: original key, normalized, number mapping
+  const possibleKeys = [key, normalized, numberToString[key]];
+
+  for (const possibleKey of possibleKeys) {
+    if (possibleKey && (STATUS_CONFIG as any)[possibleKey]) {
+      return (STATUS_CONFIG as any)[possibleKey];
+    }
+  }
+
+  return FALLBACK_STATUS;
+};
+
 const STATUS_ORDER: DeliveryStatus[] = ['Pending', 'Assigned', 'Delivering', 'Delivered'];
 
 // DeliveryType configuration
@@ -34,27 +71,66 @@ const TYPE_CONFIG: Record<DeliveryType, { label: string; color: string; bg: stri
   LastOfDay: { label: 'Last of Day', color: 'text-indigo-700', bg: 'bg-indigo-100', emoji: '🌆' },
 };
 
+const getTypeMeta = (type: unknown) => {
+  const key = type == null ? "" : String(type);
+
+  // Handle number enums (0, 1, 2) -> map to string keys
+  const numberToString: Record<string, string> = {
+    "0": "FirstOfDay",
+    "1": "MidDay",
+    "2": "LastOfDay",
+  };
+
+  // Normalize uppercase strings like "FIRSTOFDAY" -> "FirstOfDay"
+  const normalized = key.length > 0 ? key.charAt(0).toUpperCase() + key.slice(1).toLowerCase() : "";
+
+  // Try different variations: original key, normalized, number mapping
+  const possibleKeys = [key, normalized, numberToString[key]];
+
+  for (const possibleKey of possibleKeys) {
+    if (possibleKey && (TYPE_CONFIG as any)[possibleKey]) {
+      return (TYPE_CONFIG as any)[possibleKey];
+    }
+  }
+
+  return { emoji: "❓", label: "Unknown", color: "text-gray-700", bg: "bg-gray-100" };
+};
+
 // === REUSE HELPER FUNCTIONS ===
 const formatDateTime = (dateStr: string | null): string => {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-const formatDate = (dateStr: string): string => {
+const formatDate = (dateStr?: string | null): string => {
+  if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
-const formatTime = (timeStr: string): string => {
-  const [hours, minutes] = timeStr.split(':');
-  const hour = parseInt(hours);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 || 12;
-  return `${displayHour}:${minutes} ${ampm}`;
+const formatTime = (value?: string | null) => {
+  if (!value) return "--:--";
+
+  // Nếu backend trả ISO datetime: "2026-01-21T08:30:00"
+  if (value.includes("T")) {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "--:--";
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
+
+  // Nếu backend trả "HH:mm:ss" hoặc "HH:mm"
+  const parts = value.split(":");
+  if (parts.length < 2) return "--:--";
+  const hh = parts[0].padStart(2, "0");
+  const mm = parts[1].padStart(2, "0");
+  return `${hh}:${mm}`;
 };
 
 // === REUSE COMPONENTS (copy từ staff, chỉ cần read-only) ===
-const StatusStepper: React.FC<{ currentStatus: DeliveryStatus }> = ({ currentStatus }) => {
-  const currentIndex = STATUS_ORDER.indexOf(currentStatus);
+const StatusStepper: React.FC<{ currentStatus: DeliveryStatus | string | null | undefined }> = ({ currentStatus }) => {
+  const safeStatus = (STATUS_ORDER.includes(currentStatus as any) ? currentStatus : STATUS_ORDER[0]) as DeliveryStatus;
+  const currentIndex = STATUS_ORDER.indexOf(safeStatus);
   return (
     <div className="relative">
       <div className="flex items-center justify-between">
@@ -174,7 +250,33 @@ export default function CustomerDeliveryTrackingPage() {
     );
   }
 
-  const config = STATUS_CONFIG[delivery.status];
+  const config = getStatusMeta(delivery?.status);
+  const typeMeta = getTypeMeta(delivery?.type); // tính 1 lần
+
+  // Debug log để xem backend trả gì
+  console.log("DEBUG delivery data:", {
+    status: delivery?.status,
+    type: delivery?.type,
+    rentalInfo: delivery?.rentalInfo,
+    scheduleInfo: delivery?.scheduleInfo,
+  });
+
+  const rentalInfo = delivery?.rentalInfo ?? {
+    eventName: "—",
+    customerName: "—",
+    phoneNumber: "—",
+    rentalId: "—",
+  };
+
+  const scheduleInfo = delivery?.scheduleInfo ?? {
+    eventLocation: "—",
+    eventCity: "—",
+    eventDate: null as any,
+    startTime: null as any,
+    endTime: null as any,
+    deliveryTime: null as any,
+    finishTime: null as any,
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-rose-50/30">
@@ -197,14 +299,14 @@ export default function CustomerDeliveryTrackingPage() {
                   </span>
                   <span className="px-3 py-1 rounded-lg bg-white/20 text-sm">ID: #{delivery.id}</span>
                   <span className="px-3 py-1 rounded-lg bg-white/20 text-sm flex items-center gap-1.5">
-                    <span>{TYPE_CONFIG[delivery.type].emoji}</span>
-                    {TYPE_CONFIG[delivery.type].label}
+                    <span>{typeMeta.emoji}</span>
+                    {typeMeta.label}
                   </span>
                 </div>
-                <h1 className="text-4xl font-extrabold mb-2">{delivery.rentalInfo.eventName}</h1>
+                <h1 className="text-4xl font-extrabold mb-2">{rentalInfo.eventName}</h1>
                 <div className="flex items-center gap-2 text-white/80">
                   <MapPin className="w-5 h-5" />
-                  <span>{delivery.scheduleInfo.eventLocation}, {delivery.scheduleInfo.eventCity}</span>
+                  <span>{scheduleInfo.eventLocation}, {scheduleInfo.eventCity}</span>
                 </div>
               </div>
             </div>
@@ -219,20 +321,20 @@ export default function CustomerDeliveryTrackingPage() {
               <div className="p-5 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-200 text-center">
                 <Calendar className="w-10 h-10 text-violet-600 mx-auto mb-2" />
                 <p className="text-sm text-violet-700 font-semibold">Event Date</p>
-                <p className="text-2xl font-bold text-slate-800">{formatDate(delivery.scheduleInfo.eventDate)}</p>
+                <p className="text-2xl font-bold text-slate-800">{formatDate(scheduleInfo.eventDate)}</p>
               </div>
               <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 text-center">
                 <Clock className="w-10 h-10 text-amber-600 mx-auto mb-2" />
                 <p className="text-sm text-amber-700 font-semibold">Event Hours</p>
                 <p className="text-2xl font-bold text-slate-800">
-                  {formatTime(delivery.scheduleInfo.startTime)} - {formatTime(delivery.scheduleInfo.endTime)}
+                  {formatTime(scheduleInfo.startTime)} - {formatTime(scheduleInfo.endTime)}
                 </p>
               </div>
               <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 text-center">
                 <Truck className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
                 <p className="text-sm text-emerald-700 font-semibold">Delivery Window</p>
                 <p className="text-2xl font-bold text-slate-800">
-                  {formatTime(delivery.scheduleInfo.deliveryTime)} - {formatTime(delivery.scheduleInfo.finishTime)}
+                  {formatTime(scheduleInfo.deliveryTime)} - {formatTime(scheduleInfo.finishTime)}
                 </p>
               </div>
             </div>
@@ -258,20 +360,26 @@ export default function CustomerDeliveryTrackingPage() {
             <div className="space-y-5">
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                  {delivery.rentalInfo.customerName.split(' ').map(n => n[0]).join('')}
+                  {(delivery?.rentalInfo?.customerName ?? "U")
+                    .split(" ")
+                    .filter(Boolean)
+                    .map(n => n[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-bold text-slate-800 text-lg">{delivery.rentalInfo.customerName}</p>
+                  <p className="font-bold text-slate-800 text-lg">{rentalInfo.customerName}</p>
                   <p className="text-slate-500">Event Organizer</p>
                 </div>
               </div>
-              <a href={`tel:${delivery.rentalInfo.phoneNumber}`} className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 hover:shadow-lg transition-shadow group">
+              <a href={`tel:${rentalInfo.phoneNumber}`} className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 hover:shadow-lg transition-shadow group">
                 <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Phone className="w-6 h-6" />
                 </div>
                 <div>
                   <p className="text-xs text-emerald-600 font-semibold">PHONE NUMBER</p>
-                  <p className="font-bold text-slate-800">{delivery.rentalInfo.phoneNumber}</p>
+                  <p className="font-bold text-slate-800">{rentalInfo.phoneNumber}</p>
                 </div>
               </a>
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200">
@@ -280,7 +388,7 @@ export default function CustomerDeliveryTrackingPage() {
                 </div>
                 <div>
                   <p className="text-xs text-violet-600 font-semibold">RENTAL ID</p>
-                  <p className="font-bold text-slate-800">#{delivery.rentalInfo.rentalId}</p>
+                  <p className="font-bold text-slate-800">#{rentalInfo.rentalId}</p>
                 </div>
               </div>
             </div>

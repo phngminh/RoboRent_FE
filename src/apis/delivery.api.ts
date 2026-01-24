@@ -95,6 +95,20 @@ export const getStaffList = async (
   return response.data
 }
 
+export const getTechStaffList = async (
+  page: number = 1,
+  pageSize: number = 100,
+  status?: string,
+  searchTerm?: string
+): Promise<StaffListResponse> => {
+  const params: any = { page, pageSize }
+  if (status) params.status = status
+  if (searchTerm) params.searchTerm = searchTerm
+
+  const response = await http.get(`${API_URL}/Admin/technical-staff`, { params })
+  return response.data
+}
+
 /**
  * GET /api/ActualDelivery/check-conflict
  * Query params: staffId, groupScheduleId
