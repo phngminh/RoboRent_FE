@@ -553,7 +553,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                       && drafts.some(d => d.status === 'PendingCustomerSignature' 
                                       || d.status === 'ChangeRequested'
                                       || d.status === 'Active')
-                    const canReport = drafts.length > 0 && drafts.some(d => d.status === 'Active')
+                    const canReport = request.status === 'Completed'
 
                     return (
                       <TableRow key={request.id} className='hover:bg-gray-50'>
