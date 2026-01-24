@@ -1,7 +1,7 @@
 // src/types/delivery.types.ts
 
-export type DeliveryStatus = 'Pending' | 'Assigned' | 'Delivering' | 'Delivered';
-export type DeliveryType = 'FirstOfDay' | 'MidDay' | 'LastOfDay';
+export type DeliveryStatus = 'Pending' | 'Assigned' | 'Dispatched' | 'Delivering' | 'Delivered' | 'Returning' | 'Returned';
+export type DeliveryType = 'FirstOfDay' | 'MidDay' | 'LastOfDay' | 'SoleDelivery';
 
 
 export interface ActualDeliveryResponse {
@@ -32,6 +32,7 @@ export interface ActualDeliveryResponse {
     eventName: string;
     customerName: string;
     phoneNumber: string;
+    packageName?: string; // New field
   };
 }
 

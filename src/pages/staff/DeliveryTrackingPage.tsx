@@ -42,6 +42,14 @@ const STATUS_CONFIG: Record<DeliveryStatus, {
     icon: <User className="w-4 h-4" />,
     label: 'Assigned'
   },
+  Dispatched: {
+    color: 'text-blue-700',
+    bg: 'bg-blue-100',
+    border: 'border-blue-300',
+    gradient: 'from-blue-500 to-indigo-600',
+    icon: <Send className="w-4 h-4" />,
+    label: 'Dispatched'
+  },
   Delivering: {
     color: 'text-amber-600',
     bg: 'bg-amber-100',
@@ -58,27 +66,69 @@ const STATUS_CONFIG: Record<DeliveryStatus, {
     icon: <Package className="w-4 h-4" />,
     label: 'Delivered'
   },
+  Returning: {
+    color: 'text-orange-700',
+    bg: 'bg-orange-100',
+    border: 'border-orange-300',
+    gradient: 'from-orange-500 to-red-500',
+    icon: <RefreshCw className="w-4 h-4" />,
+    label: 'Returning'
+  },
+  Returned: {
+    color: 'text-slate-700',
+    bg: 'bg-slate-200',
+    border: 'border-slate-400',
+    gradient: 'from-slate-600 to-slate-800',
+    icon: <CheckCircle2 className="w-4 h-4" />,
+    label: 'Returned'
+  },
 };
 
-const STATUS_ORDER: DeliveryStatus[] = ['Pending', 'Assigned', 'Delivering', 'Delivered'];
+const STATUS_ORDER: DeliveryStatus[] = ['Pending', 'Assigned', 'Dispatched', 'Delivering', 'Delivered', 'Returning', 'Returned'];
 
 // DeliveryType configuration
 const TYPE_CONFIG: Record<DeliveryType, { label: string; color: string; bg: string; emoji: string }> = {
   FirstOfDay: { label: 'First of Day', color: 'text-sky-700', bg: 'bg-sky-100', emoji: '🌅' },
   MidDay: { label: 'Mid-Day', color: 'text-slate-600', bg: 'bg-slate-100', emoji: '☀️' },
   LastOfDay: { label: 'Last of Day', color: 'text-indigo-700', bg: 'bg-indigo-100', emoji: '🌆' },
+  SoleDelivery: { label: 'Sole Delivery', color: 'text-purple-700', bg: 'bg-purple-100', emoji: '💎' },
 };
 
 const getTypeMeta = (type: unknown) => {
   const key = type == null ? "" : String(type);
-  return TYPE_CONFIG[key as DeliveryType] ?? { emoji: "❓", label: "Unknown", color: "text-gray-700", bg: "bg-gray-100" };
+  // Fallback to MidDay for cleaner UI
+  return TYPE_CONFIG[key as DeliveryType] ?? TYPE_CONFIG['MidDay']; 
 };
 
 // Helper functions
-const getNextStatus = (current: DeliveryStatus): DeliveryStatus | null => {
-  const currentIndex = STATUS_ORDER.indexOf(current);
-  if (currentIndex === -1 || currentIndex === STATUS_ORDER.length - 1) return null;
-  return STATUS_ORDER[currentIndex + 1];
+const getNextStatus = (current: DeliveryStatus, type: DeliveryType): DeliveryStatus | null => {
+  // Logic chuyển trạng thái dựa trên DeliveryType
+  
+  // 1. Nếu là SoleDelivery hoặc LastOfDay -> Có thể đi tới Returning/Returned
+  // 2. Nếu là FirstOfDay hoặc MidDay -> Dừng ở Delivered (hoặc logic khác nếu muốn manual)
+  // Tuy nhiên, UI cần nút bấm linh hoạt.
+
+  switch (current) {
+    case 'Pending': return 'Assigned';
+    case 'Assigned': 
+      // First/Sole -> Dispatched
+      // Mid/Last -> Delivering (đi từ chỗ khác tới)
+      if (type === 'FirstOfDay' || type === 'SoleDelivery') return 'Dispatched';
+      return 'Delivering';
+    
+    case 'Dispatched': return 'Delivering';
+    case 'Delivering': return 'Delivered';
+    
+    case 'Delivered':
+      // Last/Sole -> Returning (Về kho)
+      // First/Mid -> Hết (Đi tiếp đơn khác)
+      if (type === 'LastOfDay' || type === 'SoleDelivery') return 'Returning';
+      return null;
+
+    case 'Returning': return 'Returned';
+    case 'Returned': return null;
+    default: return null;
+  }
 };
 
 const formatDateTime = (dateStr: string | null): string => {
@@ -125,7 +175,7 @@ const StatusUpdateModal: React.FC<{
   onClose: () => void;
   onUpdate: (status: DeliveryStatus, notes: string) => void;
 }> = ({ delivery, onClose, onUpdate }) => {
-  const nextStatus = getNextStatus(delivery.status);
+  const nextStatus = getNextStatus(delivery.status, delivery.type);
   const [notes, setNotes] = useState(delivery.notes || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -315,22 +365,35 @@ const NotesModal: React.FC<{
 };
 
 // Status Stepper Component
-const StatusStepper: React.FC<{ currentStatus: DeliveryStatus }> = ({ currentStatus }) => {
-  const currentIndex = STATUS_ORDER.indexOf(currentStatus);
+const StatusStepper: React.FC<{ currentStatus: DeliveryStatus, deliveryType: DeliveryType }> = ({ currentStatus, deliveryType }) => {
+  // Define steps based on type
+  let steps: DeliveryStatus[] = ['Pending', 'Assigned'];
+
+  if (deliveryType === 'FirstOfDay' || deliveryType === 'SoleDelivery') {
+      steps.push('Dispatched');
+  }
+
+  steps.push('Delivering', 'Delivered');
+
+  if (deliveryType === 'LastOfDay' || deliveryType === 'SoleDelivery') {
+      steps.push('Returning', 'Returned');
+  }
+
+  const currentIndex = steps.indexOf(currentStatus);
 
   return (
     <div className="relative">
       <div className="flex items-center justify-between">
-        {STATUS_ORDER.map((status, index) => {
+        {steps.map((status, index) => {
           const config = STATUS_CONFIG[status];
-          const isCompleted = index < currentIndex;
-          const isCurrent = index === currentIndex;
+          const isCompleted = steps.indexOf(currentStatus) > index;
+          const isCurrent = status === currentStatus;
 
           return (
             <div key={status} className="flex-1 flex flex-col items-center relative">
               {/* Connector Line */}
               {index > 0 && (
-                <div className={`absolute left-0 right-1/2 top-5 h-1 -translate-y-1/2 rounded-full transition-all duration-500 ${isCompleted || isCurrent ? `bg-gradient-to-r ${STATUS_CONFIG[STATUS_ORDER[index - 1]].gradient}` : 'bg-slate-200'
+                <div className={`absolute left-0 right-1/2 top-5 h-1 -translate-y-1/2 rounded-full transition-all duration-500 ${isCompleted || isCurrent ? `bg-gradient-to-r ${STATUS_CONFIG[steps[index - 1]].gradient}` : 'bg-slate-200'
                   }`} style={{ right: '50%', left: '-50%' }} />
               )}
 
@@ -766,13 +829,22 @@ export default function DeliveryTrackingPage() {
                         </button>
 
                         {/* Update Status (Existing) */}
-                        {getNextStatus(selectedDelivery.status) && (
+                        {getNextStatus(selectedDelivery.status, selectedDelivery.type) && (
                           <button
                             onClick={() => setShowStatusModal(true)}
                             className="px-5 py-3 rounded-xl bg-white text-slate-800 font-bold flex items-center gap-2 hover:bg-white/90 transition-colors shadow-lg"
                           >
                             <ArrowRight className="w-5 h-5" />
-                            Update Status
+                            {/* Hiển thị tên hành động cụ thể cho dễ hiểu */}
+                            {(() => {
+                                const next = getNextStatus(selectedDelivery.status, selectedDelivery.type);
+                                if (next === 'Dispatched') return 'Dispatch (Start)';
+                                if (next === 'Delivering') return 'Start Delivering';
+                                if (next === 'Delivered') return 'Mark Arrived';
+                                if (next === 'Returning') return 'Return to Warehouse';
+                                if (next === 'Returned') return 'Confirm Returned';
+                                return 'Update Status';
+                            })()}
                           </button>
                         )}
 
@@ -805,8 +877,15 @@ export default function DeliveryTrackingPage() {
                     </div>
 
                     {/* Status Stepper */}
-                    <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-xl">
-                      <StatusStepper currentStatus={selectedDelivery.status} />
+                    <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-xl overflow-x-auto">
+                      <div className="min-w-[600px]"> {/* Đảm bảo đủ rộng cho nhiều step */}
+                         {/* Filter status steps based on DeliveryType for cleaner UI? 
+                             Or show all? Let's show relevant steps only to avoid confusion. */}
+                         <StatusStepper 
+                            currentStatus={selectedDelivery.status} 
+                            deliveryType={selectedDelivery.type} // Pass type to stepper
+                         />
+                      </div>
                     </div>
                   </div>
 
@@ -910,8 +989,8 @@ export default function DeliveryTrackingPage() {
                           <Building2 className="w-5 h-5" />
                         </div>
                         <div>
-                          <p className="text-xs text-violet-600 font-semibold mb-1">RENTAL ID</p>
-                          <p className="font-bold text-slate-800">#{selectedDelivery.rentalInfo.rentalId}</p>
+                          <p className="text-xs text-violet-600 font-semibold mb-1">PACKAGE</p>
+                          <p className="font-bold text-slate-800">{selectedDelivery.rentalInfo.packageName || `ID: #${selectedDelivery.id}`}</p>
                         </div>
                       </div>
                     </div>
