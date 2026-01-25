@@ -105,19 +105,19 @@ const getNextStatus = (current: DeliveryStatus, type: DeliveryType): DeliverySta
   // Logic chuyển trạng thái dựa trên DeliveryType
   
   // 1. Nếu là SoleDelivery hoặc LastOfDay -> Có thể đi tới Returning/Returned
-  // 2. Nếu là FirstOfDay hoặc MidDay -> Dừng ở Delivered (hoặc logic khác nếu muốn manual)
-  // Tuy nhiên, UI cần nút bấm linh hoạt.
-
+  // 2. Nếu là FirstOfDay hoặc MidDay -> Dừng ở Delivered
+  
   switch (current) {
     case 'Pending': return 'Assigned';
     case 'Assigned': 
-      // First/Sole -> Dispatched
-      // Mid/Last -> Delivering (đi từ chỗ khác tới)
+      // First/Sole -> Dispatched (Rời kho)
+      // Mid/Last -> Delivering (Đi từ chỗ khác tới)
       if (type === 'FirstOfDay' || type === 'SoleDelivery') return 'Dispatched';
       return 'Delivering';
     
-    case 'Dispatched': return 'Delivering';
-    case 'Delivering': return 'Delivered';
+    case 'Dispatched': 
+    case 'Delivering': 
+      return 'Delivered';
     
     case 'Delivered':
       // Last/Sole -> Returning (Về kho)
