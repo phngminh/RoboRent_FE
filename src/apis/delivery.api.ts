@@ -7,7 +7,10 @@ import type {
   ConflictCheckResponse,
   AssignStaffRequest,
   StaffListResponse,
-  PendingDeliveriesResponse
+  PendingDeliveriesResponse,
+  AssignStaffBatchRequest,
+  AssignStaffBatchResponse,
+  PendingDeliveriesGroupedResponse
 } from '../types/delivery.types'
 
 const API_URL = `${import.meta.env.VITE_API_URL}`
@@ -168,4 +171,40 @@ export const getDeliveryByRentalId = async (
     }
     throw error
   }
+}
+
+/**
+ * [NEW] GET /api/ActualDelivery/pending-grouped
+ * Query params: from (ISO date), to (ISO date)
+ * Returns: Grouped deliveries by (EventDate + ActivityTypeGroup)
+ */
+export const getPendingDeliveriesGrouped = async (
+  from?: string,
+  to?: string
+): Promise<PendingDeliveriesGroupedResponse> => {
+  const params: any = {}
+  if (from) params.from = from
+  if (to) params.to = to
+
+  const response = await http.get(`${API_URL}/ActualDelivery/pending-grouped`, { params })
+  return response.data.data
+}
+
+/**
+ * [NEW] PUT /api/ActualDelivery/assign-staff-batch
+ * Body: { activityTypeGroupId, eventDate, staffId, notes?, forcePartialAssign? }
+ * Returns: AssignStaffBatchResponse with conflict info
+ * Backend validates: No conflict with different ActivityTypeGroup on same day
+ * Backend validates: Travel time sufficient between consecutive locations
+ */
+export const assignStaffBatch = async (
+  request: AssignStaffBatchRequest
+): Promise<AssignStaffBatchResponse> => {
+  const response = await http.put(
+    `${API_URL}/ActualDelivery/assign-staff-batch`,
+    request
+  )
+  
+  // Backend returns { success, assignedCount, hasConflict, ... }
+  return response.data
 }

@@ -89,3 +89,47 @@ export interface ConflictCheckResponse {
   hasConflict: boolean
   conflicts: ConflictDetail[]
 }
+
+// NEW: Batch Assignment Types
+export interface AssignStaffBatchRequest {
+  activityTypeGroupId: number
+  eventDate: string  // ISO date string (e.g., "2026-01-25")
+  staffId: number
+  notes?: string
+  forcePartialAssign?: boolean
+}
+
+export interface AssignStaffBatchResponse {
+  success: boolean
+  assignedCount: number
+  hasConflict: boolean
+  conflictingScheduleIds?: number[]
+  assignedScheduleIds?: number[]
+  conflictMessage?: string
+}
+
+// NEW: Grouped Deliveries Types
+export interface GroupedDeliveryInfo {
+  activityTypeGroupId: number
+  activityTypeGroupName: string
+  eventDate: string
+  deliveryIds: number[]
+  groupScheduleIds: number[]
+  scheduleCount: number
+  scheduleInfo: {
+    eventLocations: string[]
+    eventCities: string[]
+    earliestSetupTime: string
+    latestFinishTime: string
+  }
+  rentalInfo: {
+    eventNames: string[]
+    customerNames: string[]
+  }
+}
+
+export interface PendingDeliveriesGroupedResponse {
+  groups: GroupedDeliveryInfo[]
+  from: string
+  to: string
+}
