@@ -94,10 +94,27 @@ const TYPE_CONFIG: Record<DeliveryType, { label: string; color: string; bg: stri
   SoleDelivery: { label: 'Sole Delivery', color: 'text-purple-700', bg: 'bg-purple-100', emoji: '💎' },
 };
 
+// Helper: Normalize DeliveryType from backend enum number to string
+const normalizeDeliveryType = (type: unknown): DeliveryType => {
+  // Backend returns enum as number (0=FirstOfDay, 1=MidDay, 2=LastOfDay, 3=SoleDelivery)
+  const typeMap: Record<number, DeliveryType> = {
+    0: 'FirstOfDay',
+    1: 'MidDay',
+    2: 'LastOfDay',
+    3: 'SoleDelivery'
+  };
+  
+  if (typeof type === 'number') {
+    return typeMap[type] ?? 'MidDay';
+  } else if (typeof type === 'string') {
+    return type as DeliveryType;
+  }
+  return 'MidDay'; // Fallback for null/undefined
+};
+
 const getTypeMeta = (type: unknown) => {
-  const key = type == null ? "" : String(type);
-  // Fallback to MidDay for cleaner UI
-  return TYPE_CONFIG[key as DeliveryType] ?? TYPE_CONFIG['MidDay']; 
+  const key = normalizeDeliveryType(type);
+  return TYPE_CONFIG[key] ?? TYPE_CONFIG['MidDay'];
 };
 
 // Helper functions
@@ -175,7 +192,8 @@ const StatusUpdateModal: React.FC<{
   onClose: () => void;
   onUpdate: (status: DeliveryStatus, notes: string) => void;
 }> = ({ delivery, onClose, onUpdate }) => {
-  const nextStatus = getNextStatus(delivery.status, delivery.type);
+  const normalizedType = normalizeDeliveryType(delivery.type);
+  const nextStatus = getNextStatus(delivery.status, normalizedType);
   const [notes, setNotes] = useState(delivery.notes || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -369,12 +387,16 @@ const StatusStepper: React.FC<{ currentStatus: DeliveryStatus, deliveryType: Del
   // Define steps based on type
   let steps: DeliveryStatus[] = ['Pending', 'Assigned'];
 
+  // Dispatched (leave warehouse) vs Delivering (from another location) - mutually exclusive
   if (deliveryType === 'FirstOfDay' || deliveryType === 'SoleDelivery') {
       steps.push('Dispatched');
+  } else {
+      steps.push('Delivering');
   }
 
-  steps.push('Delivering', 'Delivered');
+  steps.push('Delivered');
 
+  // Return to warehouse only for LastOfDay or SoleDelivery
   if (deliveryType === 'LastOfDay' || deliveryType === 'SoleDelivery') {
       steps.push('Returning', 'Returned');
   }
@@ -735,7 +757,7 @@ export default function DeliveryTrackingPage() {
                   >
                     All ({deliveries.length})
                   </button>
-                  {(['Pending', 'Assigned', 'Delivering', 'Delivered'] as DeliveryStatus[]).map(status => {
+                  {STATUS_ORDER.map(status => {
                     const count = deliveries.filter(d => d.status === status).length;
                     const config = STATUS_CONFIG[status];
                     return (
@@ -829,7 +851,7 @@ export default function DeliveryTrackingPage() {
                         </button>
 
                         {/* Update Status (Existing) */}
-                        {getNextStatus(selectedDelivery.status, selectedDelivery.type) && (
+                        {getNextStatus(selectedDelivery.status, normalizeDeliveryType(selectedDelivery.type)) && (
                           <button
                             onClick={() => setShowStatusModal(true)}
                             className="px-5 py-3 rounded-xl bg-white text-slate-800 font-bold flex items-center gap-2 hover:bg-white/90 transition-colors shadow-lg"
@@ -837,7 +859,7 @@ export default function DeliveryTrackingPage() {
                             <ArrowRight className="w-5 h-5" />
                             {/* Hiển thị tên hành động cụ thể cho dễ hiểu */}
                             {(() => {
-                                const next = getNextStatus(selectedDelivery.status, selectedDelivery.type);
+                                const next = getNextStatus(selectedDelivery.status, normalizeDeliveryType(selectedDelivery.type));
                                 if (next === 'Dispatched') return 'Dispatch (Start)';
                                 if (next === 'Delivering') return 'Start Delivering';
                                 if (next === 'Delivered') return 'Mark Arrived';
@@ -883,7 +905,7 @@ export default function DeliveryTrackingPage() {
                              Or show all? Let's show relevant steps only to avoid confusion. */}
                          <StatusStepper 
                             currentStatus={selectedDelivery.status} 
-                            deliveryType={selectedDelivery.type} // Pass type to stepper
+                            deliveryType={normalizeDeliveryType(selectedDelivery.type)} // Normalize type here
                          />
                       </div>
                     </div>
