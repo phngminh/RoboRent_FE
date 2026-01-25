@@ -189,7 +189,7 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
         <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1 -mt-4'>
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
-              <Label htmlFor='clauseCode'>Clause Code</Label>
+              <Label htmlFor='clauseCode'>Clause Code <span className='text-red-500'>*</span></Label>
               <Input
                 id='clauseCode'
                 name='clauseCode'
@@ -201,7 +201,7 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
               {errors.clauseCode && <ErrorMessage message={errors.clauseCode} />}
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='title'>Title</Label>
+              <Label htmlFor='title'>Title <span className='text-red-500'>*</span></Label>
               <Input
                 id='title'
                 name='title'
@@ -213,7 +213,7 @@ const EditTemplateClause: React.FC<EditTemplateClauseProps> = ({ open, onClose, 
               {errors.title && <ErrorMessage message={errors.title} />}
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='body'>Body</Label>
+              <Label htmlFor='body'>Body <span className='text-red-500'>*</span></Label>
               <div
                 className={cn(errors.body && 'border-destructive p-1')}
                 style={{

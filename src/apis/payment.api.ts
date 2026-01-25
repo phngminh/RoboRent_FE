@@ -15,3 +15,7 @@ export const paymentApi = {
     return response.data;
   }
 };
+
+export const updatePaymentStatus = async (orderCode: number): Promise<void> => {
+  await http.put(`payment/mark-as-paid/${orderCode}`)
+}

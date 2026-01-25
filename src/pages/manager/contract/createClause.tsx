@@ -168,7 +168,7 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
         <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1 -mt-4'>
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
-              <Label htmlFor='contractTemplateId'>Template</Label>
+              <Label htmlFor='contractTemplateId'>Template <span className='text-red-500'>*</span></Label>
               <Select 
                 value={formData.contractTemplateId ? formData.contractTemplateId.toString() : ''}
                 onValueChange={handleTemplateChange}
@@ -193,7 +193,7 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
               {errors.contractTemplateId && <ErrorMessage message={errors.contractTemplateId} />}
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='titleOrCode'>Title or Code</Label>
+              <Label htmlFor='titleOrCode'>Title or Code <span className='text-red-500'>*</span></Label>
               <Input
                 id='titleOrCode'
                 name='titleOrCode'
@@ -205,7 +205,7 @@ const CreateTemplateClause: React.FC<CreateTemplateClauseProps> = ({ open, onClo
               {errors.titleOrCode && <ErrorMessage message={errors.titleOrCode} />}
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='body'>Body</Label>
+              <Label htmlFor='body'>Body <span className='text-red-500'>*</span></Label>
               <div
                 className={cn(errors.body && 'border-destructive p-1')}
                 style={{

@@ -5,13 +5,12 @@ import {
   CheckCircle2, 
   Clock, 
   XCircle, 
-  AlertCircle, 
-  ExternalLink,
+  AlertCircle,
   Calendar,
   Wallet
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { paymentApi } from '../../apis/payment.api';
+import { paymentApi, updatePaymentStatus } from '../../apis/payment.api';
 import type { PaymentRecordResponse } from '../../types/payment.types';
 import { formatMoney } from '../../utils/format';
 
@@ -65,26 +64,25 @@ export default function TransactionsContent() {
   const [typeFilter, setTypeFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
 
-  // Load Data
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const res = await paymentApi.getMyTransactions();
-        if (res.success) {
-          // Sort client-side: Mới nhất lên đầu
-          const sorted = res.data.sort((a, b) => 
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          setTransactions(sorted);
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error('Unable to load transaction history');
-      } finally {
-        setLoading(false);
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const res = await paymentApi.getMyTransactions();
+      if (res.success) {
+        const sorted = res.data.sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setTransactions(sorted);
       }
-    };
+    } catch (error) {
+      console.error(error);
+      toast.error('Unable to load transaction history');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -93,7 +91,9 @@ export default function TransactionsContent() {
     new Date(dateStr).toLocaleDateString('vi-VN', { 
       day: '2-digit', month: 'short', year: 'numeric',
       hour: '2-digit', minute: '2-digit' 
-    });
+    }
+  );
+    
 
   const checkExpired = (dateStr: string | null) => 
     dateStr ? new Date(dateStr) < new Date() : false;
@@ -124,11 +124,16 @@ export default function TransactionsContent() {
     return matchSearch && matchType && matchStatus;
   });
 
-  // Action Handler
   const handlePay = (url: string | null) => {
     if (!url) return toast.error('Payment link is invalid');
     window.location.href = url;
   };
+
+  const handleReceive = async (orderCode: number) => {
+    await updatePaymentStatus(orderCode)
+    toast.success('Refund processed successfully!')
+    loadData()
+  }
 
   return (
     <div className="min-h-screen bg-gray-50/50 p-6 space-y-8">
@@ -149,7 +154,7 @@ export default function TransactionsContent() {
             <div>
               <p className="text-xs text-gray-500 font-medium uppercase">Total Spent</p>
               <p className="text-sm font-bold text-gray-900">
-                {formatMoney(transactions.filter(t => t.status === 'Paid').reduce((sum, t) => sum + t.amount, 0))}
+                {formatMoney(transactions.filter(t => t.status === 'Paid' && t.paymentType !== 'Refund').reduce((sum, t) => sum + t.amount, 0))}
               </p>
             </div>
           </div>
@@ -178,6 +183,8 @@ export default function TransactionsContent() {
             <option value="All">All Types</option>
             <option value="Deposit">Deposit (30%)</option>
             <option value="Full">Full Payment (70%)</option>
+            <option value="Refund">Refund</option>
+            <option value="Fine">Fine</option>
           </select>
 
           <select 
@@ -221,6 +228,7 @@ export default function TransactionsContent() {
               <tbody className="divide-y divide-gray-100">
                 {filteredData.map((item) => {
                   const isExpiredLink = checkExpired(item.expiredAt);
+                  const showPendingAction = item.status === 'Pending' && !isExpiredLink;
                   
                   return (
                     <tr key={item.id} className="group hover:bg-blue-50/30 transition-colors">
@@ -241,7 +249,13 @@ export default function TransactionsContent() {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${
                           item.paymentType === 'Deposit' 
                             ? 'bg-purple-100 text-purple-700' 
-                            : 'bg-indigo-100 text-indigo-700'
+                            : item.paymentType === 'Full'
+                            ? 'bg-indigo-100 text-indigo-700'
+                            : item.paymentType === 'Refund'
+                            ? 'bg-green-100 text-green-700'
+                            : item.paymentType === 'Fine'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-gray-100 text-gray-700'
                         }`}>
                           {item.paymentType}
                         </span>
@@ -269,23 +283,24 @@ export default function TransactionsContent() {
 
                       {/* Cột 6: Action (Căn phải) */}
                       <td className="py-4 px-6 text-right">
-                        {/* Show Pay Now only if status is Pending AND not expired (from BE or client-side) */}
-                        {item.status === 'Pending' && !isExpiredLink ? (
-                          <button
-                            onClick={() => handlePay(item.checkoutUrl)}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm shadow-blue-200 transition-all hover:translate-y-[-1px]"
-                          >
-                            <CreditCard className="w-3.5 h-3.5" />
-                            Pay Now
-                          </button>
-                        ) : item.status === 'Paid' ? (
-                          <button 
-                            disabled 
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-gray-400 bg-gray-100 rounded-lg text-xs font-medium cursor-default"
-                          >
-                            Receipt
-                            <ExternalLink className="w-3 h-3" />
-                          </button>
+                        {showPendingAction ? (
+                          item.paymentType === 'Refund' ? (
+                            <button
+                              onClick={() => handleReceive(item.orderCode)}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg shadow-sm shadow-green-200 transition-all hover:translate-y-[-1px]"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Mark as Received
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handlePay(item.checkoutUrl)}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm shadow-blue-200 transition-all hover:translate-y-[-1px]"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              Pay Now
+                            </button>
+                          )
                         ) : (
                           <span className="text-xs text-gray-400 italic">No action</span>
                         )}

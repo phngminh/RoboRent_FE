@@ -3,7 +3,7 @@ export interface PaymentRecordResponse {
   rentalId: number | null;
   rentalName: string | null; // Tên sự kiện (Thông tin quan trọng nhất)
   priceQuoteId: number | null;
-  paymentType: 'Deposit' | 'Full';
+  paymentType: 'Deposit' | 'Full' | 'Fine' | 'Refund';
   amount: number;
   orderCode: number; // Dùng làm Ref ID
   paymentLinkId: string | null;

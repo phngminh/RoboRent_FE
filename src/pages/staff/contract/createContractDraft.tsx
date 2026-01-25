@@ -228,7 +228,9 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
         <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1 -mt-8'>
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
-              <Label htmlFor='title'>Title</Label>
+              <Label htmlFor='title'>
+                Title <span className='text-red-500'>*</span>
+              </Label>
               <Input
                 id='title'
                 name='title'
@@ -240,7 +242,9 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
               {errors.title && <ErrorMessage message={errors.title} />}
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='rentalId'>Rental</Label>
+              <Label htmlFor='rentalId'>
+                Rental <span className='text-red-500'>*</span>
+              </Label>
               <Select onValueChange={handleRentalChange} value={formData.rentalId?.toString() || ''}>
                 <SelectTrigger className={cn(errors.rentalId && 'border-destructive')}>
                   <SelectValue placeholder='Select a rental' />
@@ -276,7 +280,9 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
             )}
 
             <div className='space-y-2'>
-              <Label htmlFor='managerId'>Manager</Label>
+              <Label htmlFor='managerId'>
+                Manager <span className='text-red-500'>*</span>
+              </Label>
               <Select onValueChange={handleManagerChange} value={formData.managerId?.toString() || ''}>
                 <SelectTrigger className={cn(errors.managerId && 'border-destructive')}>
                   <SelectValue placeholder='Select a manager' />
@@ -299,7 +305,9 @@ const CreateContractDraft: React.FC<CreateContractDraftProps> = ({ open, onClose
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='contractTemplatesId'>Template</Label>
+              <Label htmlFor='contractTemplatesId'>
+                Template <span className='text-red-500'>*</span>
+              </Label>
               <Select onValueChange={handleTemplateChange} value={formData.contractTemplatesId?.toString() || ''}>
                 <SelectTrigger className={cn(errors.contractTemplatesId && 'border-destructive')}>
                   <SelectValue placeholder='Select a template' />
