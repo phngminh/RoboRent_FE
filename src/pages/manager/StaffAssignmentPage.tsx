@@ -1,23 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
-  Users, UserPlus, Calendar, Search, ChevronDown, X, 
-  AlertTriangle, CheckCircle2, RefreshCw, User, Package, 
-  ChevronRight, ArrowUpDown, Zap, MapPin, Phone,
-  ArrowLeft
+  Users, UserPlus, Calendar, Search, 
+  AlertTriangle, CheckCircle2, RefreshCw, Package, 
+  ChevronRight, ArrowLeft, MapPin, User
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { 
-  getPendingDeliveries, 
+  getPendingDeliveriesGrouped, 
   getTechStaffList, 
-  checkStaffConflict, 
-  assignStaff 
+  assignStaffBatch 
 } from '../../apis/delivery.api'
 
 import type { 
-  ActualDeliveryResponse, 
+  GroupedDeliveryInfo, 
   StaffListItemResponse 
 } from '../../types/delivery.types'
 import { useNavigate } from 'react-router-dom'
+import ConflictConfirmDialog from '../../components/ConflictConfirmDialog'
 
 // Helper functions
 const formatDate = (dateStr: string): string => {
@@ -29,15 +28,10 @@ const formatDate = (dateStr: string): string => {
   if (date.toDateString() === today.toDateString()) return 'Today'
   if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow'
   
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-const formatFullDate = (dateStr: string): string => {
-  return new Date(dateStr).toLocaleDateString('en-US', { 
+  return date.toLocaleDateString('en-US', { 
     weekday: 'long', 
     month: 'long', 
-    day: 'numeric', 
-    year: 'numeric' 
+    day: 'numeric' 
   })
 }
 
@@ -89,20 +83,18 @@ const getUrgencyLevel = (dateStr: string): 'urgent' | 'soon' | 'normal' => {
 
 // Staff Dropdown Component
 const StaffDropdown: React.FC<{
-  deliveryId: number
-  groupScheduleId: number
   onAssign: (staffId: number, staffName: string) => void
   onClose: () => void
-}> = ({ deliveryId, groupScheduleId, onAssign, onClose }) => {
+}> = ({ onAssign, onClose }) => {
   const [search, setSearch] = useState('')
   const [staff, setStaff] = useState<StaffListItemResponse[]>([])
   const [loading, setLoading] = useState(false)
-  const [checking, setChecking] = useState<number | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [assigning, setAssigning] = useState<number | null>(null)
   const dropdownRef = React.useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadStaff()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -133,34 +125,16 @@ const StaffDropdown: React.FC<{
       if (search) loadStaff()
     }, 300)
     return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
   const handleAssign = async (staffMember: StaffListItemResponse) => {
-    setChecking(staffMember.accountId)
-    setError(null)
+    setAssigning(staffMember.accountId)
     
     try {
-      // Check conflict first
-      const conflictCheck = await checkStaffConflict(staffMember.accountId, groupScheduleId)
-      
-      if (conflictCheck.hasConflict) {
-        const conflictMessages = conflictCheck.conflicts
-          .map(c => `${c.eventName} (${new Date(c.scheduledStart).toLocaleString()} - ${new Date(c.scheduledEnd).toLocaleString()})`)
-          .join(', ')
-        setError(`${staffMember.fullName}: Schedule conflict - ${conflictMessages}`)
-        setChecking(null)
-        return
-      }
-
-      // No conflict, proceed with assignment
-      await assignStaff(deliveryId, { staffId: staffMember.accountId })
       onAssign(staffMember.accountId, staffMember.fullName)
-      toast.success(`Successfully assigned to ${staffMember.fullName}`)
-    } catch (err: any) {
-      console.error('Assignment failed:', err)
-      toast.error(err.response?.data?.Error || 'Failed to assign staff')
     } finally {
-      setChecking(null)
+      setAssigning(null)
     }
   }
 
@@ -186,15 +160,6 @@ const StaffDropdown: React.FC<{
         </div>
       </div>
       
-      {error && (
-        <div className="px-3 py-2 bg-red-50 border-b border-red-100">
-          <p className="text-xs text-red-600 flex items-center gap-1.5">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            {error}
-          </p>
-        </div>
-      )}
-      
       <div className="max-h-64 overflow-y-auto">
         {loading ? (
           <div className="px-3 py-6 text-center">
@@ -209,11 +174,11 @@ const StaffDropdown: React.FC<{
             <button
               key={staffMember.accountId}
               onClick={() => handleAssign(staffMember)}
-              disabled={checking !== null}
+              disabled={assigning !== null}
               className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-violet-50 transition-colors text-left disabled:opacity-50"
             >
               <div className={`w-8 h-8 rounded-full ${getAvatarColor(staffMember.accountId)} flex items-center justify-center text-white text-xs font-bold`}>
-                {checking === staffMember.accountId ? (
+                {assigning === staffMember.accountId ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
                 ) : (
                   getInitials(staffMember.fullName)
@@ -233,165 +198,88 @@ const StaffDropdown: React.FC<{
   )
 }
 
-// Assignee Cell Component
-const AssigneeCell: React.FC<{
-  delivery: ActualDeliveryResponse
-  onAssign: (deliveryId: number, staffId: number, staffName: string) => void
-}> = ({ delivery, onAssign }) => {
+// Group Card Component
+const GroupCard: React.FC<{
+  group: GroupedDeliveryInfo
+  onAssign: (group: GroupedDeliveryInfo, staffId: number, staffName: string) => void
+}> = ({ group, onAssign }) => {
   const [isOpen, setIsOpen] = useState(false)
-
-  if (delivery.staffId && delivery.staffName) {
-    return (
-      <div className="flex items-center gap-2">
-        <div className={`w-7 h-7 rounded-full ${getAvatarColor(delivery.staffId)} flex items-center justify-center text-white text-xs font-bold`}>
-          {getInitials(delivery.staffName)}
-        </div>
-        <span className="text-sm text-slate-700">{delivery.staffName}</span>
-      </div>
-    )
-  }
+  const urgency = getUrgencyLevel(group.eventDate)
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 border-dashed border-slate-300 hover:border-violet-400 hover:bg-violet-50 transition-all group"
-      >
-        <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center group-hover:bg-violet-200">
-          <UserPlus className="w-3.5 h-3.5 text-slate-500 group-hover:text-violet-600" />
-        </div>
-        <span className="text-sm text-slate-500 group-hover:text-violet-600">Assign</span>
-        <ChevronDown className="w-4 h-4 text-slate-400" />
-      </button>
-      
-      {isOpen && (
-        <StaffDropdown
-          deliveryId={delivery.id}
-          groupScheduleId={delivery.groupScheduleId}
-          onAssign={(staffId, staffName) => {
-            onAssign(delivery.id, staffId, staffName)
-            setIsOpen(false)
-          }}
-          onClose={() => setIsOpen(false)}
-        />
-      )}
-    </div>
-  )
-}
-
-// Detail Panel Component
-const DetailPanel: React.FC<{
-  delivery: ActualDeliveryResponse
-  onClose: () => void
-  onAssign: (deliveryId: number, staffId: number, staffName: string) => void
-}> = ({ delivery, onClose, onAssign }) => {
-  const urgency = getUrgencyLevel(delivery.scheduleInfo.eventDate)
-
-  return (
-    <div className="w-[400px] border-l border-slate-200 bg-white flex flex-col h-full">
-      <div className="p-4 border-b border-slate-200 flex items-start justify-between">
-        <div className="flex-1 min-w-0 pr-4">
-          <div className="flex items-center gap-2 mb-1">
+    <div className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-all">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <Package className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-slate-800 truncate">
+                {group.activityTypeGroupName}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {group.scheduleCount} schedule{group.scheduleCount > 1 ? 's' : ''}
+              </p>
+            </div>
             {urgency === 'urgent' && (
-              <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">URGENT</span>
+              <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full flex-shrink-0">
+                URGENT
+              </span>
             )}
             {urgency === 'soon' && (
-              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">SOON</span>
+              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full flex-shrink-0">
+                SOON
+              </span>
             )}
-            <span className="text-xs text-slate-500">#{delivery.rentalInfo.rentalId}</span>
           </div>
-          <h2 className="text-lg font-bold text-slate-800 truncate">
-            {delivery.rentalInfo.eventName}
-          </h2>
-        </div>
-        <button 
-          onClick={onClose} 
-          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          <X className="w-5 h-5 text-slate-400" />
-        </button>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Date & Time */}
-        <div className="p-4 bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl border border-violet-200">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-violet-500 flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-white" />
+
+          {/* Details */}
+          <div className="space-y-1.5 mb-3">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <Calendar className="w-4 h-4 text-violet-500 flex-shrink-0" />
+              <span>
+                {formatTime(group.scheduleInfo.earliestSetupTime)} - {formatTime(group.scheduleInfo.latestFinishTime)}
+              </span>
             </div>
-            <div>
-              <p className="text-xs text-violet-600 font-medium">EVENT DATE</p>
-              <p className="font-bold text-slate-800">
-                {formatFullDate(delivery.scheduleInfo.eventDate)}
-              </p>
+            <div className="flex items-start gap-2 text-sm text-slate-600">
+              <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+              <span className="truncate">
+                {group.scheduleInfo.eventLocations.slice(0, 2).join(', ')}
+                {group.scheduleInfo.eventLocations.length > 2 && ` +${group.scheduleInfo.eventLocations.length - 2} more`}
+              </span>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mt-3">
-            <div className="p-2.5 bg-white rounded-lg">
-              <p className="text-xs text-slate-500 mb-0.5">Delivery</p>
-              <p className="font-semibold text-slate-800">
-                {formatTime(delivery.scheduleInfo.deliveryTime)}
-              </p>
-            </div>
-            <div className="p-2.5 bg-white rounded-lg">
-              <p className="text-xs text-slate-500 mb-0.5">Finish</p>
-              <p className="font-semibold text-slate-800">
-                {formatTime(delivery.scheduleInfo.finishTime)}
-              </p>
+            <div className="flex items-start gap-2 text-sm text-slate-600">
+              <User className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" />
+              <span className="truncate">
+                {group.rentalInfo.customerNames.slice(0, 2).join(', ')}
+                {group.rentalInfo.customerNames.length > 2 && ` +${group.rentalInfo.customerNames.length - 2} more`}
+              </span>
             </div>
           </div>
         </div>
-        
-        {/* Location */}
-        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">LOCATION</p>
-              <p className="font-bold text-slate-800">
-                {delivery.scheduleInfo.eventLocation}
-              </p>
-              <p className="text-sm text-slate-600">{delivery.scheduleInfo.eventCity}</p>
-            </div>
-          </div>
-        </div>
-        
-        {/* Customer */}
-        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg bg-sky-500 flex items-center justify-center flex-shrink-0">
-              <User className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-slate-500 font-medium">CUSTOMER</p>
-              <p className="font-bold text-slate-800">
-                {delivery.rentalInfo.customerName}
-              </p>
-              <a 
-                href={`tel:${delivery.rentalInfo.phoneNumber}`}
-                className="text-sm text-sky-600 hover:underline flex items-center gap-1 mt-1"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                {delivery.rentalInfo.phoneNumber}
-              </a>
-            </div>
-          </div>
-        </div>
-        
-        {/* Notes */}
-        {delivery.notes && (
-          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
-            <p className="text-xs text-amber-600 font-medium mb-1">SPECIAL NOTES</p>
-            <p className="text-sm text-amber-800">{delivery.notes}</p>
-          </div>
-        )}
-        
-        {/* Assignment */}
-        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-          <p className="text-xs text-slate-500 font-medium mb-3">ASSIGNED STAFF</p>
-          <AssigneeCell delivery={delivery} onAssign={onAssign} />
+
+        {/* Assign Button */}
+        <div className="relative flex-shrink-0">
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium text-sm whitespace-nowrap"
+          >
+            <UserPlus className="w-4 h-4" />
+            Assign Staff
+            <ChevronRight className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+          </button>
+          
+          {isOpen && (
+            <StaffDropdown
+              onAssign={(staffId, staffName) => {
+                onAssign(group, staffId, staffName)
+                setIsOpen(false)
+              }}
+              onClose={() => setIsOpen(false)}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -401,54 +289,145 @@ const DetailPanel: React.FC<{
 // Main Component
 export default function StaffAssignmentPage() {
   const navigate = useNavigate()
-  const [deliveries, setDeliveries] = useState<ActualDeliveryResponse[]>([])
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [groups, setGroups] = useState<GroupedDeliveryInfo[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<'date' | 'name' | 'customer' | 'location'>('date')
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
-  const selectedDelivery = deliveries.find(d => d.id === selectedId)
+  // Conflict dialog state
+  const [conflictDialog, setConflictDialog] = useState<{
+    open: boolean
+    group: GroupedDeliveryInfo | null
+    staffId: number | null
+    staffName: string | null
+    message: string
+    assignableCount: number
+    totalCount: number
+  }>({
+    open: false,
+    group: null,
+    staffId: null,
+    staffName: null,
+    message: '',
+    assignableCount: 0,
+    totalCount: 0
+  })
 
   useEffect(() => {
-    loadDeliveries()
-  }, [sortBy])
+    loadGroups()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery) loadDeliveries()
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [searchQuery])
-
-  const loadDeliveries = async () => {
-    const isRefresh = deliveries.length > 0
-    isRefresh ? setRefreshing(true) : setLoading(true)
+  const loadGroups = async () => {
+    const isRefresh = groups.length > 0
+    if (isRefresh) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
     
     try {
-      const data = await getPendingDeliveries(1, 50, searchQuery || undefined, sortBy)
-      setDeliveries(data.items)
+      // Default: next 30 days
+      const today = new Date()
+      const nextMonth = new Date(today)
+      nextMonth.setDate(nextMonth.getDate() + 30)
+      
+      const from = today.toISOString().split('T')[0]
+      const to = nextMonth.toISOString().split('T')[0]
+      
+      const data = await getPendingDeliveriesGrouped(from, to)
+      setGroups(data?.groups || [])
     } catch (err) {
-      console.error('Failed to load deliveries:', err)
-      toast.error('Failed to load deliveries')
+      console.error('Failed to load groups:', err)
+      toast.error('Failed to load pending deliveries')
+      setGroups([]) // Set empty array on error
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
   }
 
-  const stats = useMemo(() => {
-    const urgent = deliveries.filter(d => 
-      getUrgencyLevel(d.scheduleInfo.eventDate) === 'urgent'
-    )
-    return { total: deliveries.length, urgent: urgent.length }
-  }, [deliveries])
+  const handleAssign = async (group: GroupedDeliveryInfo, staffId: number, staffName: string) => {
+    try {
+      const response = await assignStaffBatch({
+        activityTypeGroupId: group.activityTypeGroupId,
+        eventDate: group.eventDate,
+        staffId,
+        forcePartialAssign: false
+      })
 
-  const handleAssign = (deliveryId: number, _staffId: number, staffName: string) => {
-    setDeliveries(prev => prev.filter(d => d.id !== deliveryId))
-    setSelectedId(null)
-    toast.success(`Successfully assigned to ${staffName}`)
+      // Conflict detected - show confirmation dialog
+      if (response.hasConflict && !response.success) {
+        setConflictDialog({
+          open: true,
+          group,
+          staffId,
+          staffName,
+          message: response.conflictMessage || 'Travel time conflict detected',
+          assignableCount: group.scheduleCount - (response.conflictingScheduleIds?.length || 0),
+          totalCount: group.scheduleCount
+        })
+        return
+      }
+
+      // Success
+      toast.success(`Successfully assigned ${response.assignedCount} schedule(s) to ${staffName}`)
+      loadGroups() // Reload data
+    } catch (err) {
+      const error = err as { response?: { data?: { error?: string } } }
+      console.error('Assignment failed:', error)
+      toast.error(error.response?.data?.error || 'Failed to assign staff')
+    }
   }
+
+  const handleConflictConfirm = async () => {
+    const { group, staffId } = conflictDialog
+    if (!group || !staffId) return
+
+    try {
+      const response = await assignStaffBatch({
+        activityTypeGroupId: group.activityTypeGroupId,
+        eventDate: group.eventDate,
+        staffId,
+        forcePartialAssign: true
+      })
+
+      toast.success(`Successfully assigned ${response.assignedCount} of ${conflictDialog.totalCount} schedule(s)`)
+      setConflictDialog({ ...conflictDialog, open: false })
+      loadGroups()
+    } catch (err) {
+      const error = err as { response?: { data?: { error?: string } } }
+      console.error('Assignment failed:', error)
+      toast.error(error.response?.data?.error || 'Failed to assign staff')
+    }
+  }
+
+  // Group by date
+  const groupedByDate = (groups || []).reduce((acc, group) => {
+    const dateKey = group.eventDate
+    if (!acc[dateKey]) {
+      acc[dateKey] = []
+    }
+    acc[dateKey].push(group)
+    return acc
+  }, {} as Record<string, GroupedDeliveryInfo[]>)
+
+  // Filter by search
+  const filteredGroupedByDate = Object.entries(groupedByDate).reduce((acc, [date, items]) => {
+    const filtered = items.filter(group =>
+      group.activityTypeGroupName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      group.scheduleInfo.eventLocations.some(loc => loc.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      group.scheduleInfo.eventCities.some(city => city.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      group.rentalInfo.customerNames.some(name => name.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    if (filtered.length > 0) {
+      acc[date] = filtered
+    }
+    return acc
+  }, {} as Record<string, GroupedDeliveryInfo[]>)
+
+  const totalGroups = Object.values(filteredGroupedByDate).flat().length
+  const urgentGroups = Object.values(filteredGroupedByDate).flat().filter(g => getUrgencyLevel(g.eventDate) === 'urgent').length
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
@@ -457,11 +436,10 @@ export default function StaffAssignmentPage() {
         * { font-family: 'Inter', sans-serif; }
       `}</style>
 
-      {/* Header - STANDALONE với Back Button */}
+      {/* Header */}
       <header className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* Back Button */}
             <button
               onClick={() => navigate('/manager')}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors group"
@@ -476,30 +454,30 @@ export default function StaffAssignmentPage() {
             
             <div>
               <h1 className="text-xl font-bold text-slate-800">Staff Assignment</h1>
-              <p className="text-sm text-slate-500">Assign staff to pending deliveries</p>
+              <p className="text-sm text-slate-500">Assign staff to delivery groups</p>
             </div>
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Stats Pills */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 rounded-full">
-              <Package className="w-4 h-4 text-amber-600" />
-              <span className="text-sm font-semibold text-amber-700">
-                {stats.total} pending
-              </span>
-            </div>
-            {stats.urgent > 0 && (
+            {totalGroups > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-100 rounded-full">
+                <Package className="w-4 h-4 text-violet-600" />
+                <span className="text-sm font-semibold text-violet-700">
+                  {totalGroups} group{totalGroups > 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+            {urgentGroups > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-red-100 rounded-full animate-pulse">
-                <Zap className="w-4 h-4 text-red-600" />
+                <AlertTriangle className="w-4 h-4 text-red-600" />
                 <span className="text-sm font-semibold text-red-700">
-                  {stats.urgent} urgent
+                  {urgentGroups} urgent
                 </span>
               </div>
             )}
             
-            {/* Refresh Button */}
             <button
-              onClick={loadDeliveries}
+              onClick={loadGroups}
               disabled={refreshing}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
               title="Refresh"
@@ -510,172 +488,87 @@ export default function StaffAssignmentPage() {
         </div>
       </header>
 
-      {/* Toolbar */}
+      {/* Search */}
       <div className="bg-white border-b border-slate-200 px-6 py-3">
-        <div className="flex items-center gap-4">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search events, customers, cities..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-100 border-0 focus:ring-2 focus:ring-violet-500 outline-none text-sm"
-            />
-          </div>
-          
-          {/* Sort Button */}
-          <button
-            onClick={() => setSortBy(prev => {
-              const order: Array<'date' | 'name' | 'customer' | 'location'> = ['date', 'name', 'customer', 'location']
-              const idx = order.indexOf(prev)
-              return order[(idx + 1) % order.length]
-            })}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <ArrowUpDown className="w-4 h-4" />
-            Sort by {sortBy}
-          </button>
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search groups, locations, customers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-100 border-0 focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+          />
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Table */}
-        <div className="flex-1 overflow-auto">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <RefreshCw className="w-8 h-8 animate-spin text-slate-400 mx-auto mb-3" />
-                <p className="text-slate-500 text-sm">Loading deliveries...</p>
-              </div>
+      <div className="flex-1 overflow-auto p-6">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <RefreshCw className="w-8 h-8 animate-spin text-slate-400 mx-auto mb-3" />
+              <p className="text-slate-500 text-sm">Loading groups...</p>
             </div>
-          ) : deliveries.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center p-8">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-1">
-                All caught up!
-              </h3>
-              <p className="text-slate-500 text-sm mb-4">No pending deliveries to assign</p>
-              <button
-                onClick={() => navigate('/manager/dashboard')}
-                className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors text-sm font-medium"
-              >
-                Back to Dashboard
-              </button>
+          </div>
+        ) : totalGroups === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
             </div>
-          ) : (
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-                <tr>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Event
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Date & Time
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Location
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Assignee
-                  </th>
-                  <th className="w-12"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {deliveries.map(delivery => {
-                  const urgency = getUrgencyLevel(delivery.scheduleInfo.eventDate)
-                  const isSelected = selectedId === delivery.id
-                  
-                  return (
-                    <tr
-                      key={delivery.id}
-                      onClick={() => setSelectedId(delivery.id)}
-                      className={`cursor-pointer transition-colors ${
-                        isSelected ? 'bg-violet-50' : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          {urgency === 'urgent' && (
-                            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                          )}
-                          {urgency === 'soon' && (
-                            <div className="w-2 h-2 rounded-full bg-amber-500" />
-                          )}
-                          <div>
-                            <p className="font-medium text-slate-800">
-                              {delivery.rentalInfo.eventName}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              #{delivery.rentalInfo.rentalId}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex flex-col">
-                          <span className={`text-sm font-medium ${
-                            urgency === 'urgent' 
-                              ? 'text-red-600' 
-                              : urgency === 'soon' 
-                                ? 'text-amber-600' 
-                                : 'text-slate-800'
-                          }`}>
-                            {formatDate(delivery.scheduleInfo.eventDate)}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            {formatTime(delivery.scheduleInfo.deliveryTime)} - {formatTime(delivery.scheduleInfo.finishTime)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex flex-col">
-                          <span className="text-sm text-slate-800 truncate max-w-[180px]">
-                            {delivery.scheduleInfo.eventLocation}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            {delivery.scheduleInfo.eventCity}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="text-sm text-slate-700">
-                          {delivery.rentalInfo.customerName}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
-                        <AssigneeCell delivery={delivery} onAssign={handleAssign} />
-                      </td>
-                      <td className="px-4 py-4">
-                        <ChevronRight className={`w-5 h-5 transition-colors ${
-                          isSelected ? 'text-violet-500' : 'text-slate-300'
-                        }`} />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-1">
+              All caught up!
+            </h3>
+            <p className="text-slate-500 text-sm mb-4">No pending deliveries to assign</p>
+            <button
+              onClick={() => navigate('/manager')}
+              className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors text-sm font-medium"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        ) : (
+          <div className="max-w-5xl mx-auto space-y-8">
+            {Object.entries(filteredGroupedByDate)
+              .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime())
+              .map(([date, items]) => (
+                <div key={date}>
+                  {/* Date Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-1 h-8 bg-violet-500 rounded-full" />
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-800">{formatDate(date)}</h2>
+                      <p className="text-xs text-slate-500">
+                        {new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
 
-        {/* Detail Panel */}
-        {selectedDelivery && (
-          <DetailPanel
-            delivery={selectedDelivery}
-            onClose={() => setSelectedId(null)}
-            onAssign={handleAssign}
-          />
+                  {/* Group Cards */}
+                  <div className="space-y-3 ml-6">
+                    {items.map(group => (
+                      <GroupCard
+                        key={`${group.activityTypeGroupId}-${group.eventDate}`}
+                        group={group}
+                        onAssign={handleAssign}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+          </div>
         )}
       </div>
+
+      {/* Conflict Confirmation Dialog */}
+      <ConflictConfirmDialog
+        open={conflictDialog.open}
+        onClose={() => setConflictDialog({ ...conflictDialog, open: false })}
+        onConfirm={handleConflictConfirm}
+        message={conflictDialog.message}
+        assignableCount={conflictDialog.assignableCount}
+        totalCount={conflictDialog.totalCount}
+      />
     </div>
   )
 }
