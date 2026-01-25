@@ -87,11 +87,12 @@ const TYPE_CONFIG: Record<DeliveryType, { label: string; color: string; bg: stri
 const getTypeMeta = (type: unknown) => {
   const key = type == null ? "" : String(type);
 
-  // Handle number enums (0, 1, 2) -> map to string keys
+  // Handle number enums (0=FirstOfDay, 1=MidDay, 2=LastOfDay, 3=SoleDelivery) -> map to string keys
   const numberToString: Record<string, string> = {
     "0": "FirstOfDay",
     "1": "MidDay",
     "2": "LastOfDay",
+    "3": "SoleDelivery",
   };
 
   // Normalize uppercase strings like "FIRSTOFDAY" -> "FirstOfDay"
