@@ -5,7 +5,7 @@ import TechnicalStaffProfile from '../../components/sidebar/technicalStaffSideba
 
 const Profile = () => {
   const location = useLocation()
-  const activeTab = location.pathname.split('/')[2] || 'rental-requests'
+  const activeTab = location.pathname.split('/')[2] || 'deliveries'
   
   return (
     <div className='flex flex-col h-screen'>

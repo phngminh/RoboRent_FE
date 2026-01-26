@@ -108,3 +108,17 @@ export const customerAcceptChecklistAsync = async (
   }
 };
 
+/**
+ * PUT: /api/ChecklistDelivery/staff/pickup/robot/{checklistDeliveryId}
+ */
+export const staffPickUpRobotAsync = async (checklistDeliveryId: number) => {
+  try {
+    const response = await http.put(
+      `${API_URL}/staff/pickup/robot/${checklistDeliveryId}`
+    );
+    return response.data.data;
+  } catch (error: any) {
+    console.error("Error staff pickup robot:", error);
+    throw error;
+  }
+};
