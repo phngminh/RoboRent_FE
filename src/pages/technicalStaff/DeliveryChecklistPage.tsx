@@ -14,6 +14,7 @@ import { getChecklistDeliveryItemByChecklistDeliveryIdAsync } from "../../apis/c
 import {
   getChecklistDeliveryByActualDeliveryAsync,
   staffCheckBeforeDeliveryAsync,
+  staffPickUpRobotAsync,
 } from "../../apis/actualdelivery.api";
 import { CreateEvidence } from "../../apis/checklistdeliveryevidence.api";
 import { useAuth } from "../../contexts/AuthContext";
@@ -137,6 +138,7 @@ export default function DeliveryChecklistPage() {
 
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
+  const [pickingUp, setPickingUp] = useState(false);
 
   const [checklist, setChecklist] = useState<ChecklistDelivery | null>(null);
   const [items, setItems] = useState<ChecklistDeliveryItem[]>([]);
@@ -147,8 +149,19 @@ export default function DeliveryChecklistPage() {
   const [evidenceDraft, setEvidenceDraft] = useState<Record<number, EvidenceDraft>>({});
   const [uploadingEvidence, setUploadingEvidence] = useState<Record<number, boolean>>({});
 
+  /** ===== BE Enum Mapping =====
+   * public enum ChecklistDeliveryStatus { Draft = 1, Approved = 3, Completed = 2 }
+   */
+  const ChecklistDeliveryStatus = {
+    Draft: 1,
+    Completed: 2,
+    Approved: 3,
+  } as const;
+
+  const isApproved = checklist?.status === ChecklistDeliveryStatus.Approved;
+
   const isPassed = checklist?.overallResult === 1;
-  const isReadOnly = isPassed; // you can extend later: or checklist.status === Completed
+  const isReadOnly = isPassed; // keep your current rule (you can extend later)
 
   const fetchData = async () => {
     if (!actualId || Number.isNaN(actualId)) return;
@@ -159,7 +172,9 @@ export default function DeliveryChecklistPage() {
       setChecklist(cl);
       setOverallNote(cl.overallNote ?? "");
 
-      const its = (await getChecklistDeliveryItemByChecklistDeliveryIdAsync(cl.id)) as ChecklistDeliveryItem[];
+      const its = (await getChecklistDeliveryItemByChecklistDeliveryIdAsync(
+        cl.id
+      )) as ChecklistDeliveryItem[];
 
       // Sort: category -> mustPass first -> severity desc -> sortOrder
       const sorted = [...its].sort((a, b) => {
@@ -272,13 +287,9 @@ export default function DeliveryChecklistPage() {
     const fail = countFailItems(items, draft);
     const done = countDoneItems(items, draft);
 
-    const blockingFail = items.filter(
-      (it) => it.mustPassToDispatch && (draft[it.id]?.result ?? 0) === 2
-    ).length;
+    const blockingFail = items.filter((it) => it.mustPassToDispatch && (draft[it.id]?.result ?? 0) === 2).length;
 
-    const evidenceNeeded = items.filter(
-      (it) => it.evidenceRequiredOnFail && (draft[it.id]?.result ?? 0) === 2
-    ).length;
+    const evidenceNeeded = items.filter((it) => it.evidenceRequiredOnFail && (draft[it.id]?.result ?? 0) === 2).length;
 
     return { total, done, pass, fail, missingRequired, blockingFail, evidenceNeeded };
   }, [items, draft]);
@@ -286,7 +297,6 @@ export default function DeliveryChecklistPage() {
   const missingEvidenceCount = useMemo(() => {
     return items.filter((it) => {
       const r = draft[it.id]?.result ?? 0;
-      // only FAIL items (result === 2) require evidence
       if (r !== 2) return false;
       const ev = evidenceDraft[it.id];
       return !ev?.url?.trim();
@@ -296,10 +306,39 @@ export default function DeliveryChecklistPage() {
   const canConfirm = useMemo(() => {
     if (!staffAccountId) return false;
     if (items.length === 0) return false;
-
-    // must finish required fields + evidence for every FAIL item
     return stats.missingRequired === 0 && missingEvidenceCount === 0;
   }, [items.length, staffAccountId, stats.missingRequired, missingEvidenceCount]);
+
+  /** ✅ REAL PickUp handler: calls PUT /staff/pickup/robot/{checklistDeliveryId} */
+  const handlePickUp = async () => {
+    if (!checklist) return;
+
+    if (!staffAccountId) {
+      alert("Missing staff accountId. Please login again.");
+      return;
+    }
+
+    if (!isApproved) {
+      alert("Checklist is not Approved yet.");
+      return;
+    }
+
+    try {
+      setPickingUp(true);
+
+      // IMPORTANT: API expects checklistDeliveryId in path
+      await staffPickUpRobotAsync(checklist.id);
+
+      alert("PickUp ✅");
+      await fetchData();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      console.error("PickUp failed:", err);
+      alert("PickUp failed ❌. Please try again.");
+    } finally {
+      setPickingUp(false);
+    }
+  };
 
   const handleConfirmCheck = async () => {
     if (!checklist) return;
@@ -359,13 +398,10 @@ export default function DeliveryChecklistPage() {
       setConfirming(true);
       await staffCheckBeforeDeliveryAsync(payload);
 
-      // After confirm succeeds, create evidence records for each PASS/FAIL item
+      // After confirm succeeds, create evidence records for each FAIL item
       try {
         const evidencesToCreate = items
-          .filter((it) => {
-            const r = draft[it.id]?.result ?? 0;
-            return r === 2; // only FAIL items
-          })
+          .filter((it) => (draft[it.id]?.result ?? 0) === 2)
           .map((it) => {
             const ev = evidenceDraft[it.id];
             return CreateEvidence({
@@ -385,7 +421,7 @@ export default function DeliveryChecklistPage() {
 
         if (evidencesToCreate.length > 0) await Promise.all(evidencesToCreate);
       } catch (e) {
-        console.error('Error creating evidences:', e);
+        console.error("Error creating evidences:", e);
       }
 
       alert("Confirmed check + evidences saved ✅");
@@ -418,12 +454,8 @@ export default function DeliveryChecklistPage() {
               Back
             </button>
 
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Delivery Pre-check (Tech Staff)
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Confirm the robot is ready before delivery.
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Delivery Pre-check (Tech Staff)</h1>
+            <p className="mt-1 text-sm text-slate-500">Confirm the robot is ready before delivery.</p>
 
             {stats.blockingFail > 0 && (
               <div className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-900 ring-2 ring-rose-200">
@@ -491,11 +523,21 @@ export default function DeliveryChecklistPage() {
 
             {checklist && (
               <div className="mt-4 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200 text-xs text-slate-700 space-y-1">
-                <div><b>ChecklistNo:</b> {checklist.checklistNo}</div>
-                <div><b>Type:</b> {checklist.type} | <b>Status:</b> {checklist.status}</div>
-                <div><b>CheckedByStaffId:</b> {checklist.checkedByStaffId ?? "—"}</div>
-                <div><b>CheckedAt:</b> {checklist.checkedAt ?? "—"}</div>
-                <div><b>UpdatedAt:</b> {checklist.updatedAt}</div>
+                <div>
+                  <b>ChecklistNo:</b> {checklist.checklistNo}
+                </div>
+                <div>
+                  <b>Type:</b> {checklist.type} | <b>Status:</b> {checklist.status}
+                </div>
+                <div>
+                  <b>CheckedByStaffId:</b> {checklist.checkedByStaffId ?? "—"}
+                </div>
+                <div>
+                  <b>CheckedAt:</b> {checklist.checkedAt ?? "—"}
+                </div>
+                <div>
+                  <b>UpdatedAt:</b> {checklist.updatedAt}
+                </div>
               </div>
             )}
           </div>
@@ -513,6 +555,11 @@ export default function DeliveryChecklistPage() {
                   Checklist #{checklist.id}
                 </span>
               )}
+              {isApproved && (
+                <span className="ml-2 rounded-full bg-violet-600 px-2 py-0.5 text-xs font-bold text-white ring-1 ring-violet-700">
+                  APPROVED
+                </span>
+              )}
             </div>
           </div>
 
@@ -524,13 +571,9 @@ export default function DeliveryChecklistPage() {
               Loading checklist...
             </div>
           ) : !checklist ? (
-            <div className="px-6 py-10 text-sm text-slate-500">
-              No checklist found for this delivery.
-            </div>
+            <div className="px-6 py-10 text-sm text-slate-500">No checklist found for this delivery.</div>
           ) : items.length === 0 ? (
-            <div className="px-6 py-10 text-sm text-slate-500">
-              Checklist exists but has no items.
-            </div>
+            <div className="px-6 py-10 text-sm text-slate-500">Checklist exists but has no items.</div>
           ) : (
             <>
               {/* Overall Note */}
@@ -549,13 +592,13 @@ export default function DeliveryChecklistPage() {
                 />
               </div>
 
+              {/* ===== the rest of your big items UI stays unchanged ===== */}
+              {/* I keep it exactly as you pasted (no behavior changes). */}
               <div className="px-6 py-6 space-y-10">
                 {grouped.map(({ category, list }) => (
                   <div key={category}>
                     <div className="mb-4 flex items-center justify-between">
-                      <div className="text-sm font-extrabold uppercase tracking-wide text-slate-900">
-                        {category}
-                      </div>
+                      <div className="text-sm font-extrabold uppercase tracking-wide text-slate-900">{category}</div>
                       <div className="text-xs text-slate-500">{list.length} item(s)</div>
                     </div>
 
@@ -660,8 +703,7 @@ export default function DeliveryChecklistPage() {
 
                                 {it.expected && (
                                   <div className="mt-2 text-xs text-slate-700">
-                                    <span className="font-bold text-slate-900">Expected:</span>{" "}
-                                    {it.expected}
+                                    <span className="font-bold text-slate-900">Expected:</span> {it.expected}
                                   </div>
                                 )}
 
@@ -779,10 +821,13 @@ export default function DeliveryChecklistPage() {
                                 {(() => {
                                   const v = d.valueJson;
                                   const options =
-                                    Array.isArray(v) ? v :
-                                    Array.isArray(v?.options) ? v.options :
-                                    Array.isArray(v?.values) ? v.values :
-                                    null;
+                                    Array.isArray(v)
+                                      ? v
+                                      : Array.isArray(v?.options)
+                                      ? v.options
+                                      : Array.isArray(v?.values)
+                                      ? v.values
+                                      : null;
 
                                   if (!options) {
                                     return (
@@ -793,7 +838,8 @@ export default function DeliveryChecklistPage() {
                                   }
 
                                   const normalized = options.map((o: any) => {
-                                    if (typeof o === "string" || typeof o === "number") return { label: String(o), value: o };
+                                    if (typeof o === "string" || typeof o === "number")
+                                      return { label: String(o), value: o };
                                     return { label: String(o.label ?? o.value), value: o.value ?? o.label };
                                   });
 
@@ -861,6 +907,7 @@ export default function DeliveryChecklistPage() {
                                     (isReadOnly || d.result !== 2) && "bg-slate-100 text-slate-500 cursor-not-allowed"
                                   )}
                                 />
+
                                 <div>
                                   <input
                                     id={`file-${it.id}`}
@@ -878,17 +925,18 @@ export default function DeliveryChecklistPage() {
                                           fileName: res.original_filename ?? file.name,
                                           fileSizeBytes: res.bytes ?? file.size,
                                           capturedAt: new Date().toISOString(),
-                                          type: file.type.startsWith('video') ? 2 : 1,
+                                          type: file.type.startsWith("video") ? 2 : 1,
                                           metaJson: JSON.stringify(res),
                                         });
                                       } catch (err) {
-                                        console.error('Upload failed', err);
-                                        alert('Upload failed');
+                                        console.error("Upload failed", err);
+                                        alert("Upload failed");
                                       } finally {
                                         setUploadingEvidence((prev) => ({ ...prev, [it.id]: false }));
                                       }
                                     }}
                                   />
+
                                   <button
                                     type="button"
                                     disabled={isReadOnly || d.result !== 2 || uploadingEvidence[it.id]}
@@ -898,7 +946,7 @@ export default function DeliveryChecklistPage() {
                                       (isReadOnly || d.result !== 2) && "opacity-50 cursor-not-allowed hover:bg-white"
                                     )}
                                   >
-                                    {uploadingEvidence[it.id] ? 'Uploading...' : 'Upload'}
+                                    {uploadingEvidence[it.id] ? "Uploading..." : "Upload"}
                                   </button>
                                 </div>
                               </div>
@@ -907,8 +955,7 @@ export default function DeliveryChecklistPage() {
                                 Required for FAIL items. You will replace this with real upload later.
                               </div>
                             </div>
-
-                          </div> 
+                          </div>
                         );
                       })}
                     </div>
@@ -967,30 +1014,52 @@ export default function DeliveryChecklistPage() {
             )}
           </div>
 
-          <button
-            type="button"
-            disabled={isReadOnly || !canConfirm || confirming}
-            onClick={handleConfirmCheck}
-            className={cls(
-              "rounded-xl px-5 py-3 text-sm font-extrabold ring-2 transition",
-              isReadOnly
-                ? "bg-emerald-100 text-emerald-800 ring-emerald-200 cursor-not-allowed"
-                : canConfirm && !confirming
-                ? "bg-slate-900 text-white ring-slate-900 hover:bg-slate-800"
-                : "bg-slate-100 text-slate-400 ring-slate-200 cursor-not-allowed"
+          {/* ACTIONS: PickUp (only when Approved) + Confirm */}
+          <div className="flex items-center gap-2">
+            {isApproved && (
+              <button
+                type="button"
+                disabled={!staffAccountId || pickingUp || confirming}
+                onClick={handlePickUp}
+                className={cls(
+                  "rounded-xl px-5 py-3 text-sm font-extrabold ring-2 transition",
+                  !staffAccountId || pickingUp || confirming
+                    ? "bg-slate-100 text-slate-400 ring-slate-200 cursor-not-allowed"
+                    : "bg-violet-700 text-white ring-violet-800 hover:bg-violet-600"
+                )}
+                title={!staffAccountId ? "Missing staff accountId" : "PickUp (only when Approved)"}
+              >
+                {pickingUp ? "PICKING UP..." : "📦 PICK UP"}
+              </button>
             )}
-            title={
-              isReadOnly
-                ? "Already confirmed (passed)"
-                : !staffAccountId
-                ? "Missing staff accountId"
-                : stats.missingRequired > 0
-                ? "Complete all REQUIRED items & required TEXT values"
-                : ""
-            }
-          >
-            {isReadOnly ? "✅ CONFIRMED (PASSED)" : confirming ? "CONFIRMING..." : "CONFIRM CHECK"}
-          </button>
+
+            <button
+              type="button"
+              disabled={isReadOnly || !canConfirm || confirming}
+              onClick={handleConfirmCheck}
+              className={cls(
+                "rounded-xl px-5 py-3 text-sm font-extrabold ring-2 transition",
+                isReadOnly
+                  ? "bg-emerald-100 text-emerald-800 ring-emerald-200 cursor-not-allowed"
+                  : canConfirm && !confirming
+                  ? "bg-slate-900 text-white ring-slate-900 hover:bg-slate-800"
+                  : "bg-slate-100 text-slate-400 ring-slate-200 cursor-not-allowed"
+              )}
+              title={
+                isReadOnly
+                  ? "Already confirmed (passed)"
+                  : !staffAccountId
+                  ? "Missing staff accountId"
+                  : stats.missingRequired > 0
+                  ? "Complete all REQUIRED items & required TEXT values"
+                  : missingEvidenceCount > 0
+                  ? "Upload evidence for FAIL items"
+                  : ""
+              }
+            >
+              {isReadOnly ? "✅ CONFIRMED (PASSED)" : confirming ? "CONFIRMING..." : "CONFIRM CHECK"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

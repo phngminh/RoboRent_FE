@@ -44,7 +44,7 @@ export type ActualDeliveryResponse = {
   rentalInfo?: RentalInfo | null;
 
   // Checklist info (populated client-side)
-  checklistStatus?: number | null; // 1=Draft, 3=Approved
+  checklistStatus?: number | null; // 1=Draft, 3=Approved, 2=Completed
   checklistOverallResult?: number | null;
   checklistId?: number | null;
 };
@@ -68,7 +68,6 @@ function isPending(status: string) {
 function statusPill(status: string) {
   const s = status.toLowerCase();
 
-  // tweak mapping freely
   if (s === "oke" || isReviewed(status)) {
     return "bg-emerald-50 text-emerald-700 ring-emerald-200";
   }
@@ -84,9 +83,30 @@ function statusPill(status: string) {
   return "bg-slate-50 text-slate-700 ring-slate-200";
 }
 
+/** ===== Checklist Status mapping (BE enum) ===== */
+const ChecklistDeliveryStatus = {
+  Draft: 1,
+  Completed: 2,
+  Approved: 3,
+} as const;
+
+function checklistStatusLabel(status?: number | null) {
+  if (status === ChecklistDeliveryStatus.Draft) return "Draft";
+  if (status === ChecklistDeliveryStatus.Approved) return "Approved";
+  if (status === ChecklistDeliveryStatus.Completed) return "Completed";
+  return "—";
+}
+
 function checklistPill(status?: number | null) {
-  if (status === 3) return "bg-emerald-50 text-emerald-700 ring-emerald-200"; // Approved
-  if (status === 1) return "bg-amber-50 text-amber-700 ring-amber-200"; // Draft
+  if (status === ChecklistDeliveryStatus.Approved) {
+    return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  }
+  if (status === ChecklistDeliveryStatus.Completed) {
+    return "bg-blue-50 text-blue-700 ring-blue-200";
+  }
+  if (status === ChecklistDeliveryStatus.Draft) {
+    return "bg-amber-50 text-amber-700 ring-amber-200";
+  }
   return "bg-slate-50 text-slate-700 ring-slate-200";
 }
 
@@ -102,29 +122,21 @@ function EmptyCard({ title, subtitle }: { title: string; subtitle: string }) {
   );
 }
 
-function MetaBlock({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
+function MetaBlock({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-        {label}
-      </div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
       <div className="text-sm text-slate-700">{value}</div>
     </div>
   );
 }
 
 export default function ActualDeliveryManagement() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-const openChecklist = (actualDeliveryId: number) => {
-  navigate(`/technicalstaff/deliveries/${actualDeliveryId}/checklist`);
-};
+  const openChecklist = (actualDeliveryId: number) => {
+    navigate(`/technicalstaff/deliveries/${actualDeliveryId}/checklist`);
+  };
 
   const [data, setData] = useState<ActualDeliveryResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,7 +147,6 @@ const openChecklist = (actualDeliveryId: number) => {
       const deliveries = await getMyDeliveries();
       const list = Array.isArray(deliveries) ? deliveries : [];
 
-      // Fetch checklist info for each delivery (non-blocking style using Promise.all)
       const withChecklist = await Promise.all(
         list.map(async (d) => {
           try {
@@ -146,8 +157,7 @@ const openChecklist = (actualDeliveryId: number) => {
               checklistOverallResult: cl?.overallResult ?? null,
               checklistId: cl?.id ?? null,
             };
-          } catch (err) {
-            // if checklist fetch fails, keep nulls — we still show deliveries
+          } catch {
             return { ...d, checklistStatus: null, checklistOverallResult: null, checklistId: null };
           }
         })
@@ -173,12 +183,13 @@ const openChecklist = (actualDeliveryId: number) => {
   }, [data]);
 
   const checklistCounts = useMemo(() => {
-    const draft = data.filter((x) => x.checklistStatus === 1).length;
-    const approved = data.filter((x) => x.checklistStatus === 3).length;
-    return { draft, approved };
+    const draft = data.filter((x) => x.checklistStatus === ChecklistDeliveryStatus.Draft).length;
+    const approved = data.filter((x) => x.checklistStatus === ChecklistDeliveryStatus.Approved).length;
+    const completed = data.filter((x) => x.checklistStatus === ChecklistDeliveryStatus.Completed).length;
+    return { draft, approved, completed };
   }, [data]);
 
-  const filtered = data; // no search/tabs
+  const filtered = data;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -186,27 +197,19 @@ const openChecklist = (actualDeliveryId: number) => {
         {/* Header */}
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Actual Delivery Management
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Review and track delivery & pickup execution
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Actual Delivery Management</h1>
+            <p className="mt-1 text-sm text-slate-500">Review and track delivery & pickup execution</p>
           </div>
 
           {/* Right counters */}
           <div className="flex items-center gap-10">
             <div className="text-right">
               <div className="text-xs text-slate-500">Pending Review</div>
-              <div className="text-2xl font-semibold text-amber-600">
-                {counts.pending}
-              </div>
+              <div className="text-2xl font-semibold text-amber-600">{counts.pending}</div>
             </div>
             <div className="text-right">
               <div className="text-xs text-slate-500">Reviewed</div>
-              <div className="text-2xl font-semibold text-emerald-600">
-                {counts.reviewed}
-              </div>
+              <div className="text-2xl font-semibold text-emerald-600">{counts.reviewed}</div>
             </div>
 
             <div className="text-right">
@@ -216,6 +219,10 @@ const openChecklist = (actualDeliveryId: number) => {
             <div className="text-right">
               <div className="text-xs text-slate-500">Checklists (Approved)</div>
               <div className="text-2xl font-semibold text-emerald-600">{checklistCounts.approved}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-slate-500">Checklists (Completed)</div>
+              <div className="text-2xl font-semibold text-blue-600">{checklistCounts.completed}</div>
             </div>
           </div>
         </div>
@@ -249,25 +256,13 @@ const openChecklist = (actualDeliveryId: number) => {
           {loading ? (
             <div className="px-6 py-10 text-sm text-slate-500">Loading...</div>
           ) : filtered.length === 0 ? (
-            <EmptyCard
-              title="No deliveries found"
-              subtitle="No actual deliveries created yet"
-            />
+            <EmptyCard title="No deliveries found" subtitle="No actual deliveries created yet" />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px]">
                 <thead>
                   <tr className="text-left">
-                    {[
-                      "Delivery",
-                      "Rental",
-                      "Customer",
-                      "Event",
-                      "Location",
-                      "Scheduled",
-                      "Actual",
-                      "Status",
-                    ].map((h) => (
+                    {["Delivery", "Rental", "Customer", "Event", "Location", "Scheduled", "Actual", "Status"].map((h) => (
                       <th
                         key={h}
                         className="border-b border-slate-100 px-6 py-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
@@ -280,44 +275,31 @@ const openChecklist = (actualDeliveryId: number) => {
 
                 <tbody>
                   {filtered.map((d) => (
-<tr
-  key={d.id}
-  onClick={() => openChecklist(d.id)}
-  className="cursor-pointer border-b border-slate-50 hover:bg-slate-50/60"
->
-
+                    <tr
+                      key={d.id}
+                      onClick={() => openChecklist(d.id)}
+                      className="cursor-pointer border-b border-slate-50 hover:bg-slate-50/60"
+                    >
                       {/* Delivery */}
                       <td className="px-6 py-5 align-top">
-                        <div className="text-sm font-semibold text-slate-900">
-                          #{d.id}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          Schedule #{d.groupScheduleId}
-                        </div>
+                        <div className="text-sm font-semibold text-slate-900">#{d.id}</div>
+                        <div className="mt-1 text-xs text-slate-500">Schedule #{d.groupScheduleId}</div>
                       </td>
 
                       {/* Rental */}
                       <td className="px-6 py-5 align-top">
-                        <div className="text-sm font-medium text-slate-900">
-                          {d.rentalInfo?.rentalId ?? "—"}
-                        </div>
+                        <div className="text-sm font-medium text-slate-900">{d.rentalInfo?.rentalId ?? "—"}</div>
                       </td>
 
                       {/* Customer */}
                       <td className="px-6 py-5 align-top">
-                        <div className="text-sm font-semibold text-slate-900">
-                          {d.rentalInfo?.customerName ?? "—"}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {d.rentalInfo?.phoneNumber ?? "—"}
-                        </div>
+                        <div className="text-sm font-semibold text-slate-900">{d.rentalInfo?.customerName ?? "—"}</div>
+                        <div className="mt-1 text-xs text-slate-500">{d.rentalInfo?.phoneNumber ?? "—"}</div>
                       </td>
 
                       {/* Event */}
                       <td className="px-6 py-5 align-top">
-                        <div className="text-sm font-semibold text-slate-900">
-                          {d.rentalInfo?.eventName ?? "—"}
-                        </div>
+                        <div className="text-sm font-semibold text-slate-900">{d.rentalInfo?.eventName ?? "—"}</div>
 
                         <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-200">
                           <CalendarClock className="h-4 w-4 text-slate-400" />
@@ -334,9 +316,7 @@ const openChecklist = (actualDeliveryId: number) => {
                             <div className="text-sm font-semibold text-slate-900">
                               {d.scheduleInfo?.eventLocation ?? "—"}
                             </div>
-                            <div className="mt-1 text-xs text-slate-500">
-                              {d.scheduleInfo?.eventCity ?? ""}
-                            </div>
+                            <div className="mt-1 text-xs text-slate-500">{d.scheduleInfo?.eventCity ?? ""}</div>
                           </div>
                         </div>
                       </td>
@@ -359,18 +339,27 @@ const openChecklist = (actualDeliveryId: number) => {
 
                       {/* Status */}
                       <td className="px-6 py-5 align-top">
+                        <div className={["inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ring-1", statusPill(d.status)].join(" ")}>
+                          {d.status}
+                        </div>
 
                         <div className="mt-3 space-y-1 text-xs text-slate-500">
                           {d.staffName && (
                             <div>
-                              <span className="font-semibold text-slate-600">Staff:</span>{" "}
-                              {d.staffName}
+                              <span className="font-semibold text-slate-600">Staff:</span> {d.staffName}
                             </div>
                           )}
 
                           {d.checklistStatus != null && (
                             <div className="mt-2 inline-flex items-center gap-2">
-                              <div className={["inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ring-1", checklistPill(d.checklistStatus)].join(" ")}>{d.checklistStatus === 3 ? "Approved" : "Draft"}</div>
+                              <div
+                                className={[
+                                  "inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ring-1",
+                                  checklistPill(d.checklistStatus),
+                                ].join(" ")}
+                              >
+                                {checklistStatusLabel(d.checklistStatus)}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -383,9 +372,7 @@ const openChecklist = (actualDeliveryId: number) => {
               {/* Footer */}
               <div className="flex items-center justify-between px-6 py-4 text-xs text-slate-500">
                 <div>Showing {filtered.length} record(s)</div>
-                <div className="text-slate-400">
-                  Last updated: {fmtDateTime(new Date().toISOString())}
-                </div>
+                <div className="text-slate-400">Last updated: {fmtDateTime(new Date().toISOString())}</div>
               </div>
             </div>
           )}
