@@ -1,16 +1,18 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { getActivityTypeByEAIdAsync } from '../../../apis/activitytype.api'
 import { getAllProvincesAsync, getAllWardsAsync } from '../../../apis/address.api'
 import { customerCreateRentalAsync, customerUpdateRentalAsync, getRentalByIdAsync } from '../../../apis/rental.customer.api'
 import 'react-time-picker/dist/TimePicker.css'
 import 'react-clock/dist/Clock.css'
 import { useAuth } from '../../../contexts/AuthContext'
-import { MapPin, Clock, Home, CalendarDays } from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, Home, CalendarDays } from 'lucide-react'
 import BlockTimePicker from '../../../components/customer/BlockTimePicker'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import Layout from '../../../components/layout'
 import { useParams } from 'react-router-dom'
+import { getProfile } from '../../../apis/auth.api'
+import Select, { type SingleValue } from 'react-select'
 
 interface ActivityType {
   id: number
@@ -41,14 +43,22 @@ interface Wards {
   province_code: number
 }
 
+interface Option {
+  value: number
+  label: string
+}
+
 interface CreateRentalRequestContentProps {
+  onBack: () => void
   onNextStep: (rentalId: number, activityTypeId: number) => void
 }
 
-const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({ onNextStep }) => {
+const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({ onBack, onNextStep }) => {
   const { user } = useAuth()
   const [errors, setErrors] = useState<string[]>([])
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string[] }>({})
+
+  const [profileLoaded, setProfileLoaded] = useState(false)
 
   const [eventName, setEventName] = useState('')
   const { rentalId: rentalIdString } = useParams<{ rentalId: string }>()
@@ -71,21 +81,39 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
 
+  const provinceOptions: Option[] = provinces.map(p => ({ value: p.code, label: p.name }))
+
+  const wardOptions: Option[] = wards
+    .filter(w => w.province_code === selectedProvinceId)
+    .map(w => ({ value: w.code, label: w.name }))
+
+  const minSelectableDate = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const minDate = new Date(today)
+    minDate.setDate(today.getDate() + 7)
+    return minDate
+  }, [])
+
   const validateStreetAddress = (value: string): string | null => {
-    if (!value.trim()) return "Street & House Number is required."
+    const raw = value.trim()
+    if (!raw) return 'Street & House Number is required.'
 
-    if (!value.includes(",")) 
-      return 'Address must follow format: "number, Street name".'
+    const commaIndex = raw.indexOf(',')
+    if (commaIndex === -1) return 'Address must follow format: "number, Street name".'
 
-    const [num, street] = value.split(",").map(s => s.trim())
+    const num = raw.slice(0, commaIndex).trim()
+    const street = raw.slice(commaIndex + 1).trim()
 
-    if (!num) return "House number is required."
-    if (!/^[0-9A-Za-z]+$/.test(num))
-      return "House number must be alphanumeric (e.g., 12 or 12A)."
+    if (!num) return 'House number is required.'
 
-    if (!street) return "Street name is required."
-    if (/^\d+$/.test(street))
-      return "Street name cannot be numbers only."
+    const vnHouseNoRegex = /^\d+[A-Za-z]*?(?:\/\d+[A-Za-z]*?)*$/
+
+    if (!vnHouseNoRegex.test(num)) {
+      return 'House number format is invalid. Examples: 26A, 26/1, 26/1/2/3.'
+    }
+    if (!street) return 'Street name is required.'
+    if (/^\d+$/.test(street)) return 'Street name cannot be numbers only.'
 
     return null
   }
@@ -134,6 +162,14 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
     if (!startTime) fe.startTime = ['Start Time is required.']
     if (!endTime) fe.endTime = ['End Time is required.']
 
+    if (eventDate) {
+      const selectedDate = new Date(eventDate)
+      selectedDate.setHours(0, 0, 0, 0)
+      if (selectedDate < minSelectableDate) {
+        fe.eventDate = ['Event Date must be more than 6 days in the future.']
+      }
+    }
+
     setFieldErrors(fe)
     return Object.keys(fe).length === 0
   }
@@ -145,18 +181,18 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
     const body: any = {
       eventName,
-      description,
       phoneNumber,
       email,
+      description,
       address: buildFullAddress(),
       city: provinces.find(p => p.code === selectedProvinceId)?.name || '',
-      eventDate: eventDate ? new Date(eventDate).toISOString() : null,
       startTime,
       endTime,
       updatedDate: nowIso,
       requestedDate: nowIso,
-      status: 'Draft',
+      eventDate: eventDate ? new Date(eventDate).toISOString() : null,
       isDeleted: false,
+      status: 'Draft',
       accountId: user?.accountId,
       activityTypeId: Number(selectedTypeId)
     }
@@ -182,7 +218,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
       setErrors([])
       return res?.id ?? rentalId
     } catch (err: any) {
-      console.log("FE caught:", err?.response?.data)
+      console.log('FE caught:', err?.response?.data)
 
       if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
         setErrors(err.response.data.errors)
@@ -194,7 +230,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
         return
       }
 
-      if (err.response?.data?.errors && typeof err.response.data.errors === "object") {
+      if (err.response?.data?.errors && typeof err.response.data.errors === 'object') {
         const fe: any = {}
         for (const key in err.response.data.errors) {
           fe[key] = err.response.data.errors[key]
@@ -202,7 +238,8 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
         setFieldErrors(fe)
         return
       }
-      setErrors(["Something went wrong. Please try again."])
+
+      setErrors(['Something went wrong. Please try again.'])
     }
   }
 
@@ -212,34 +249,56 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
     onNextStep(id, Number(selectedTypeId))
   }
 
-  useEffect(() => {(async () => {
+  useEffect(() => {
+    ;(async () => {
       const types = await getActivityTypeByEAIdAsync()
       setActivityTypes(types)
     })()
   }, [])
 
   useEffect(() => {
-    (async () => {
+    ;(async () => {
       setProvinces(await getAllProvincesAsync())
     })()
   }, [])
 
   useEffect(() => {
-    if (!selectedProvinceId) {
-      setWards([])
-      return setSelectedWardId('')
-    }
-
-    (async () => {
+    ;(async () => {
       const res = await getAllWardsAsync()
       setWards(res)
     })()
+  }, [])
+
+  useEffect(() => {
+    if (!selectedProvinceId) {
+      setSelectedWardId('')
+    }
   }, [selectedProvinceId])
 
   useEffect(() => {
-    if (!rentalId || provinces.length === 0) return
+    if (!user?.accountId) return
+    if (profileLoaded) return
+    if (rentalId) return
 
-    (async () => {
+    ;(async () => {
+      try {
+        const p = await getProfile()
+
+        setPhoneNumber(prev => (prev?.trim() ? prev : (p.phoneNumber ?? '')))
+        setEmail(prev => (prev?.trim() ? prev : (p.email ?? '')))
+
+        setProfileLoaded(true)
+      } catch (e) {
+        console.error('Failed to load profile:', e)
+        setProfileLoaded(true)
+      }
+    })()
+  }, [user?.accountId, profileLoaded, rentalId])
+
+  useEffect(() => {
+    if (!rentalId || provinces.length === 0 || wards.length === 0) return
+
+    ;(async () => {
       try {
         const r = await getRentalByIdAsync(rentalId)
 
@@ -261,11 +320,8 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
         setSelectedProvinceId(province.code)
 
-        const allWards = await getAllWardsAsync()
-        setWards(allWards)
-
         if (wardName) {
-          const matchedWard = allWards.find(
+          const matchedWard = wards.find(
             (w: Wards) => w.province_code === province.code && w.name === wardName
           )
           if (matchedWard) {
@@ -276,12 +332,20 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
         console.error('Failed to load rental by id', e)
       }
     })()
-  }, [rentalId, provinces])
+  }, [rentalId, provinces, wards])
 
   return (
     <Layout>
       <div className="fixed inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 -z-10" />
       <div className="max-w-5xl mx-auto my-20 relative z-10 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 w-full min-h-screen bg-white">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
+        >
+          <ArrowLeft size={18} />
+          Back
+        </button>
+
         <h2 className="text-3xl font-bold text-center mb-8 text-gray-800 bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
           {rentalId ? 'Edit Rental Request' : 'Create Your Rental Request'}
         </h2>
@@ -295,7 +359,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Event Name *</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Event Name <span className='text-red-500'>*</span></label>
                 <input
                   type="text"
                   value={eventName}
@@ -308,7 +372,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Activity Type *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Activity Type <span className='text-red-500'>*</span></label>
                   <select
                     value={selectedTypeId}
                     onChange={e => setSelectedTypeId(Number(e.target.value) || '')}
@@ -326,7 +390,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Event Description</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Event Description <span className='text-red-500'>*</span></label>
                 <textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
@@ -345,7 +409,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number <span className='text-red-500'>*</span></label>
                 <input
                   value={phoneNumber}
                   onChange={e => setPhoneNumber(e.target.value)}
@@ -356,7 +420,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Email <span className='text-red-500'>*</span></label>
                 <input
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -378,7 +442,7 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Street *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Street <span className='text-red-500'>*</span></label>
                   <input
                     value={streetAddress}
                     onChange={e => setStreetAddress(e.target.value)}
@@ -390,39 +454,55 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Province *</label>
-                    <select
-                      value={selectedProvinceId}
-                      onChange={e => setSelectedProvinceId(Number(e.target.value) || '')}
-                      className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white"
-                    >
-                      <option value="">Select Province</option>
-                      {provinces.map(p => (
-                        <option key={p.code} value={p.code}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Province <span className='text-red-500'>*</span></label>
+                    <Select<Option>
+                      options={provinceOptions}
+                      value={provinceOptions.find(opt => opt.value === selectedProvinceId) || null}
+                      onChange={(option: SingleValue<Option>) => 
+                        setSelectedProvinceId(option?.value ?? '')
+                      }
+                      isSearchable={true}
+                      placeholder="Select Province"
+                      className="basic-select"
+                      classNamePrefix="select"
+                      isClearable={true}
+                      styles={{
+                        control: (provided: any) => ({
+                          ...provided,
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.375rem',
+                          minHeight: '2.5rem',
+                          fontSize: '0.875rem',
+                        }),
+                      }}
+                    />
                     <FieldError name="selectedProvinceId" />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Ward *</label>
-                    <select
-                      value={selectedWardId}
-                      onChange={e => setSelectedWardId(Number(e.target.value) || '')}
-                      className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      disabled={!selectedProvinceId}
-                    >
-                      <option value="">Select Ward</option>
-                      {wards
-                        .filter(w => w.province_code === selectedProvinceId)
-                        .map(w => (
-                          <option key={w.code} value={w.code}>
-                            {w.name}
-                          </option>
-                        ))}
-                    </select>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Ward <span className='text-red-500'>*</span></label>
+                    <Select<Option>
+                      options={wardOptions}
+                      value={wardOptions.find(opt => opt.value === selectedWardId) || null}
+                      onChange={(option: SingleValue<Option>) => 
+                        setSelectedWardId(option?.value ?? '')
+                      }
+                      isSearchable={true}
+                      placeholder="Select Ward"
+                      isDisabled={!selectedProvinceId || wardOptions.length === 0}
+                      className="basic-select"
+                      classNamePrefix="select"
+                      isClearable={true}
+                      styles={{
+                        control: (provided: any) => ({
+                          ...provided,
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.375rem',
+                          minHeight: '2.5rem',
+                          fontSize: '0.875rem',
+                        }),
+                      }}
+                    />
                     <FieldError name="selectedWardId" />
                   </div>
                 </div>
@@ -437,10 +517,11 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
 
               <div className="space-y-6">
                 <div className="flex flex-col">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Event Date *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Event Date <span className='text-red-500'>*</span></label>
                   <DatePicker
                     selected={eventDate ? new Date(eventDate) : null}
                     onChange={(d) => setEventDate(d ? d.toISOString().slice(0, 10) : '')}
+                    minDate={minSelectableDate}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white"
                     dateFormat="dd-MM-yyyy"
                     placeholderText="Select date"
@@ -475,6 +556,16 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
         )}
 
         <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6">
+          <button
+            onClick={async () => {
+              const id = await handleSaveDraft()
+              if (id) onBack()
+            }}
+            className="px-6 py-3 rounded-xl bg-gray-600 text-white hover:bg-gray-700 text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+          >
+            Save as Draft
+          </button>
+
           <button
             onClick={handleNextStepClick}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"

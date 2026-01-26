@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { getActivityTypeByEAIdAsync } from '../../../apis/activitytype.api'
 import { getAllProvincesAsync, getAllWardsAsync } from '../../../apis/address.api'
 import { customerCreateRentalAsync, customerUpdateRentalAsync, getRentalByIdAsync } from '../../../apis/rental.customer.api'
@@ -11,6 +11,7 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { useParams } from 'react-router-dom'
 import { getProfile } from '../../../apis/auth.api'
+import Select, { type SingleValue } from 'react-select'
 
 interface ActivityType {
   id: number
@@ -39,6 +40,11 @@ interface Wards {
   name: string
   code: number
   province_code: number
+}
+
+interface Option {
+  value: number
+  label: string
 }
 
 interface CreateRentalRequestContentProps {
@@ -74,45 +80,58 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
 
-const validateStreetAddress = (value: string): string | null => {
-  const raw = value.trim();
-  if (!raw) return 'Street & House Number is required.';
+  const provinceOptions: Option[] = provinces.map(p => ({ value: p.code, label: p.name }))
 
-  // Require comma separator: "houseNo, street"
-  const commaIndex = raw.indexOf(',');
-  if (commaIndex === -1) return 'Address must follow format: "number, Street name".';
+  const wardOptions: Option[] = wards
+    .filter(w => w.province_code === selectedProvinceId)
+    .map(w => ({ value: w.code, label: w.name }))
 
-  const num = raw.slice(0, commaIndex).trim();
-  const street = raw.slice(commaIndex + 1).trim();
+  const minSelectableDate = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // Normalize to start of day
+    const minDate = new Date(today)
+    minDate.setDate(today.getDate() + 7)
+    return minDate
+  }, [])
 
-  if (!num) return 'House number is required.';
+  const validateStreetAddress = (value: string): string | null => {
+    const raw = value.trim();
+    if (!raw) return 'Street & House Number is required.';
 
-  /**
-   * ✅ VN house number patterns:
-   * - 26
-   * - 26A
-   * - 26/1
-   * - 26/1A
-   * - 26/1/2/3
-   * - 26A/1/2B
-   *
-   * Rule: starts with digits, optional letters, then zero or more "/ segment"
-   * where segment = digits + optional letters
-   */
-  const vnHouseNoRegex = /^\d+[A-Za-z]*?(?:\/\d+[A-Za-z]*?)*$/;
+    // Require comma separator: "houseNo, street"
+    const commaIndex = raw.indexOf(',');
+    if (commaIndex === -1) return 'Address must follow format: "number, Street name".';
 
-  if (!vnHouseNoRegex.test(num)) {
-    return 'House number format is invalid. Examples: 26A, 26/1, 26/1/2/3.';
-  }
+    const num = raw.slice(0, commaIndex).trim();
+    const street = raw.slice(commaIndex + 1).trim();
 
-  if (!street) return 'Street name is required.';
+    if (!num) return 'House number is required.';
 
-  // Street name cannot be numbers only (allow: "123 Street", but not "123")
-  if (/^\d+$/.test(street)) return 'Street name cannot be numbers only.';
+    /**
+     * ✅ VN house number patterns:
+     * - 26
+     * - 26A
+     * - 26/1
+     * - 26/1A
+     * - 26/1/2/3
+     * - 26A/1/2B
+     *
+     * Rule: starts with digits, optional letters, then zero or more "/ segment"
+     * where segment = digits + optional letters
+     */
+    const vnHouseNoRegex = /^\d+[A-Za-z]*?(?:\/\d+[A-Za-z]*?)*$/;
 
-  return null;
-};
+    if (!vnHouseNoRegex.test(num)) {
+      return 'House number format is invalid. Examples: 26A, 26/1, 26/1/2/3.';
+    }
 
+    if (!street) return 'Street name is required.';
+
+    // Street name cannot be numbers only (allow: "123 Street", but not "123")
+    if (/^\d+$/.test(street)) return 'Street name cannot be numbers only.';
+
+    return null;
+  };
 
   const parseAddress = (addr?: string) => {
     if (!addr) return { street: '', wardName: '' }
@@ -156,6 +175,14 @@ const validateStreetAddress = (value: string): string | null => {
     if (!eventDate) fe.eventDate = ['Event Date is required.']
     if (!startTime) fe.startTime = ['Start Time is required.']
     if (!endTime) fe.endTime = ['End Time is required.']
+
+    if (eventDate) {
+      const selectedDate = new Date(eventDate)
+      selectedDate.setHours(0, 0, 0, 0)
+      if (selectedDate < minSelectableDate) {
+        fe.eventDate = ['Event Date must be more than 6 days in the future.']
+      }
+    }
 
     setFieldErrors(fe)
     return Object.keys(fe).length === 0
@@ -244,31 +271,6 @@ const validateStreetAddress = (value: string): string | null => {
     })()
   }, [])
 
-  // AUTO FILL CONTACT INFO FROM PROFILE (create mode only)
-useEffect(() => {
-  if (!user?.accountId) return
-  if (profileLoaded) return
-  if (rentalId) return // ✅ edit mode: lấy theo rental, không lấy profile
-
-  ;(async () => {
-    try {
-      const p = await getProfile()
-
-      // ✅ chỉ set nếu field đang trống (không ghi đè khi user đã nhập)
-      setPhoneNumber(prev => (prev?.trim() ? prev : (p.phoneNumber ?? '')))
-      setEmail(prev => (prev?.trim() ? prev : (p.email ?? '')))
-
-      // (Tuỳ chọn) Nếu muốn auto-fill địa chỉ vào ô Street luôn:
-      // setStreetAddress(prev => (prev?.trim() ? prev : (p.address ?? '')))
-
-      setProfileLoaded(true)
-    } catch (e) {
-      console.error('Failed to load profile:', e)
-      setProfileLoaded(true) // tránh gọi lại liên tục
-    }
-  })()
-}, [user?.accountId, profileLoaded, rentalId])
-
   useEffect(() => {
     ;(async () => {
       setProvinces(await getAllProvincesAsync())
@@ -276,20 +278,46 @@ useEffect(() => {
   }, [])
 
   useEffect(() => {
-    if (!selectedProvinceId) {
-      setWards([])
-      return setSelectedWardId('')
-    }
-
     ;(async () => {
       const res = await getAllWardsAsync()
       setWards(res)
     })()
+  }, [])
+
+  useEffect(() => {
+    if (!selectedProvinceId) {
+      setSelectedWardId('')
+    }
   }, [selectedProvinceId])
+
+  // AUTO FILL CONTACT INFO FROM PROFILE (create mode only)
+  useEffect(() => {
+    if (!user?.accountId) return
+    if (profileLoaded) return
+    if (rentalId) return // ✅ edit mode: lấy theo rental, không lấy profile
+
+    ;(async () => {
+      try {
+        const p = await getProfile()
+
+        // ✅ chỉ set nếu field đang trống (không ghi đè khi user đã nhập)
+        setPhoneNumber(prev => (prev?.trim() ? prev : (p.phoneNumber ?? '')))
+        setEmail(prev => (prev?.trim() ? prev : (p.email ?? '')))
+
+        // (Tuỳ chọn) Nếu muốn auto-fill địa chỉ vào ô Street luôn:
+        // setStreetAddress(prev => (prev?.trim() ? prev : (p.address ?? '')))
+
+        setProfileLoaded(true)
+      } catch (e) {
+        console.error('Failed to load profile:', e)
+        setProfileLoaded(true) // tránh gọi lại liên tục
+      }
+    })()
+  }, [user?.accountId, profileLoaded, rentalId])
 
   // LOAD EXISTING RENTAL (edit mode)
   useEffect(() => {
-    if (!rentalId || provinces.length === 0) return
+    if (!rentalId || provinces.length === 0 || wards.length === 0) return
 
     ;(async () => {
       try {
@@ -313,11 +341,8 @@ useEffect(() => {
 
         setSelectedProvinceId(province.code)
 
-        const allWards = await getAllWardsAsync()
-        setWards(allWards)
-
         if (wardName) {
-          const matchedWard = allWards.find(
+          const matchedWard = wards.find(
             (w: Wards) => w.province_code === province.code && w.name === wardName
           )
           if (matchedWard) {
@@ -328,7 +353,7 @@ useEffect(() => {
         console.error('Failed to load rental by id', e)
       }
     })()
-  }, [rentalId, provinces])
+  }, [rentalId, provinces, wards])
 
   // RENDER UI
   return (
@@ -354,11 +379,12 @@ useEffect(() => {
 
         {/* Event Name */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-1">Event Name *</label>
+          <label className="text-sm font-medium text-gray-700 mb-1">Event Name <span className='text-red-500'>*</span></label>
           <input
             type="text"
             value={eventName}
             onChange={e => setEventName(e.target.value)}
+            placeholder="Enter your event name"
             className="w-full border rounded-md px-4 py-2.5 text-sm focus:ring-purple-500"
           />
           <FieldError name="eventName" />
@@ -367,7 +393,7 @@ useEffect(() => {
         {/* Activity Type (packages) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-1">Activity Type *</label>
+            <label className="text-sm font-medium text-gray-700 mb-1">Activity Type <span className='text-red-500'>*</span></label>
             <select
               value={selectedTypeId}
               onChange={e => setSelectedTypeId(Number(e.target.value) || '')}
@@ -386,10 +412,11 @@ useEffect(() => {
 
         {/* Description */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-1">Event Description</label>
+          <label className="text-sm font-medium text-gray-700 mb-1">Event Description <span className='text-red-500'>*</span></label>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
+            placeholder="Describe your event in detail..."
             className="w-full border rounded-md px-4 py-2.5 text-sm min-h-[80px]"
           />
         </div>
@@ -404,20 +431,23 @@ useEffect(() => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+            <label className="text-sm font-medium text-gray-700 mb-1">Phone Number <span className='text-red-500'>*</span></label>
             <input
               value={phoneNumber}
               onChange={e => setPhoneNumber(e.target.value)}
+              placeholder="Enter your phone number"
               className="w-full border rounded-md px-4 py-2.5 text-sm"
             />
             <FieldError name="phoneNumber" />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-1">Email *</label>
+            <label className="text-sm font-medium text-gray-700 mb-1">Email <span className='text-red-500'>*</span></label>
             <input
               value={email}
               onChange={e => setEmail(e.target.value)}
+              placeholder="Enter your email address"
+              type="email"
               className="w-full border rounded-md px-4 py-2.5 text-sm"
             />
             <FieldError name="email" />
@@ -434,10 +464,11 @@ useEffect(() => {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-1">Street *</label>
+            <label className="text-sm font-medium text-gray-700 mb-1">Street <span className='text-red-500'>*</span></label>
             <input
               value={streetAddress}
               onChange={e => setStreetAddress(e.target.value)}
+              placeholder="e.g., 123, Main Street"
               className="w-full border rounded-md px-4 py-2.5 text-sm"
             />
             <FieldError name="streetAddress" />
@@ -445,39 +476,55 @@ useEffect(() => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1">Province *</label>
-              <select
-                value={selectedProvinceId}
-                onChange={e => setSelectedProvinceId(Number(e.target.value) || '')}
-                className="w-full border rounded-md px-4 py-2.5 text-sm"
-              >
-                <option value="">Select Province</option>
-                {provinces.map(p => (
-                  <option key={p.code} value={p.code}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              <label className="text-sm font-medium text-gray-700 mb-1">Province <span className='text-red-500'>*</span></label>
+              <Select<Option>
+                options={provinceOptions}
+                value={provinceOptions.find(opt => opt.value === selectedProvinceId) || null}
+                onChange={(option: SingleValue<Option>) => 
+                  setSelectedProvinceId(option?.value ?? '')
+                }
+                isSearchable={true}
+                placeholder="Select Province"
+                className="basic-select"
+                classNamePrefix="select"
+                isClearable={true}
+                styles={{
+                  control: (provided: any) => ({
+                    ...provided,
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    minHeight: '2.5rem',
+                    fontSize: '0.875rem',
+                  }),
+                }}
+              />
               <FieldError name="selectedProvinceId" />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1">Ward *</label>
-              <select
-                value={selectedWardId}
-                onChange={e => setSelectedWardId(Number(e.target.value) || '')}
-                className="w-full border rounded-md px-4 py-2.5 text-sm"
-                disabled={!selectedProvinceId}
-              >
-                <option value="">Select Ward</option>
-                {wards
-                  .filter(w => w.province_code === selectedProvinceId)
-                  .map(w => (
-                    <option key={w.code} value={w.code}>
-                      {w.name}
-                    </option>
-                  ))}
-              </select>
+              <label className="text-sm font-medium text-gray-700 mb-1">Ward <span className='text-red-500'>*</span></label>
+              <Select<Option>
+                options={wardOptions}
+                value={wardOptions.find(opt => opt.value === selectedWardId) || null}
+                onChange={(option: SingleValue<Option>) => 
+                  setSelectedWardId(option?.value ?? '')
+                }
+                isSearchable={true}
+                placeholder="Select Ward"
+                isDisabled={!selectedProvinceId || wardOptions.length === 0}
+                className="basic-select"
+                classNamePrefix="select"
+                isClearable={true}
+                styles={{
+                  control: (provided: any) => ({
+                    ...provided,
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    minHeight: '2.5rem',
+                    fontSize: '0.875rem',
+                  }),
+                }}
+              />
               <FieldError name="selectedWardId" />
             </div>
           </div>
@@ -491,11 +538,13 @@ useEffect(() => {
           </div>
 
           <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-1">Event Date *</label>
+            <label className="text-sm font-medium text-gray-700 mb-1">Event Date <span className='text-red-500'>*</span></label>
 
             <DatePicker
               selected={eventDate ? new Date(eventDate) : null}
               onChange={d => setEventDate(d ? d.toISOString().slice(0, 10) : '')}
+              minDate={minSelectableDate}
+              placeholderText="Select event date"
               className="w-full border rounded-md px-4 py-2.5 text-sm"
               dateFormat="dd-MM-yyyy"
             />
