@@ -29,3 +29,7 @@ export const getAllAccounts = async (): Promise<AccountResponse[]> => {
   const response = await http.get<PaginatedResponse<AccountResponse>>(`Admin/accounts?page=1&pageSize=10`)
   return response.data.items
 }
+
+export const updateAccountStatus = async (accountId: number, status: string): Promise<void> => {
+  await http.put(`Admin/accounts/${accountId}/status`, { status })
+}

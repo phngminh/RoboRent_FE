@@ -174,7 +174,7 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
         <div className='flex-1 overflow-y-auto overflow-x-visible pr-1 pl-1 -mt-8'>
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
-              <Label htmlFor='templateCode'>Template Code</Label>
+              <Label htmlFor='templateCode'>Template Code <span className='text-red-500'>*</span></Label>
               <Input
                 id='templateCode'
                 name='templateCode'
@@ -186,7 +186,7 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
               {errors.templateCode && <ErrorMessage message={errors.templateCode} />}
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='title'>Title</Label>
+              <Label htmlFor='title'>Title <span className='text-red-500'>*</span></Label>
               <Input
                 id='title'
                 name='title'
@@ -211,7 +211,7 @@ const CreateContractTemplate: React.FC<CreateContractTemplateProps> = ({ open, o
             </div>
             {!withBody && (
               <div className='space-y-2'>
-                <Label htmlFor='body'>Body</Label>
+                <Label htmlFor='body'>Body <span className='text-red-500'>*</span></Label>
                 <div
                   className={cn(errors.body && 'border-destructive p-1')}
                   style={{

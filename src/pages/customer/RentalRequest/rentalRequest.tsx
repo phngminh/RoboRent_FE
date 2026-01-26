@@ -553,7 +553,8 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                       && drafts.some(d => d.status === 'PendingCustomerSignature' 
                                       || d.status === 'ChangeRequested'
                                       || d.status === 'Active')
-                    const canReport = drafts.length > 0 && drafts.some(d => d.status === 'Active')
+                    const isPendingSignature = drafts.some(d => d.status === 'PendingCustomerSignature')
+                    const canReport = request.status === 'Completed'
 
                     return (
                       <TableRow key={request.id} className='hover:bg-gray-50'>
@@ -612,7 +613,7 @@ const RentalRequestsContent: React.FC<RentalRequestsContentProps> = ({ onCreate,
                                 className='flex items-center space-x-1 bg-orange-100 text-orange-800 hover:bg-orange-200 px-2 py-1 rounded whitespace-nowrap'
                               >
                                 <Eye size={14} />
-                                <span>View Contract</span>
+                                <span>{isPendingSignature ? 'Review Contract' : 'View Contract'}</span>
                               </button>
                             )}
 

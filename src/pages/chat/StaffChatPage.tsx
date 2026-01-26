@@ -228,7 +228,7 @@ const loadRentalDetails = async () => {
   const createQuoteDisabledReason =
     !allowedQuoteStatuses.includes(rentalStatus)
       ? `Rental status must be "Received" or "RejectedPriceQuote" to create quote (current: ${rentalStatus})`
-      : 'Maximum 3 quotes reached or active quote exists'
+      : 'Cannot create quote (active quote exists)'
 
   // Send Contract button - only after demo accepted
   const isSendContractDisabled = rentalStatus !== 'AcceptedDemo'
@@ -247,7 +247,7 @@ const loadRentalDetails = async () => {
       case 'RejectedPriceQuote':
         return { icon: '💰', message: 'Tạo báo giá cho khách hàng', color: 'blue' }
       case 'AcceptedPriceQuote':
-        return { icon: '📅', message: 'Quote approved! Bước tiếp:', linkText: 'Xếp lịch', linkUrl: '/staff/robot-group', color: 'green' }
+        return { icon: '📅', message: 'Quote approved! Bước tiếp:', linkText: 'Xếp lịch', linkUrl: '#open-schedule-modal', color: 'green' }
       case 'Scheduled':
         return { icon: '🎬', message: 'Đã xếp lịch! Bước tiếp: Gửi video Demo', color: 'purple' }
       case 'PendingDemo':
@@ -829,7 +829,13 @@ const loadRentalDetails = async () => {
                 {statusGuidance.message}
                 {statusGuidance.linkText && statusGuidance.linkUrl && (
                   <span
-                    onClick={() => navigate(statusGuidance.linkUrl!)}
+                    onClick={() => {
+                      if (statusGuidance.linkUrl === '#open-schedule-modal') {
+                        setShowGroupScheduleModal(true)
+                      } else {
+                        navigate(statusGuidance.linkUrl!)
+                      }
+                    }}
                     className="ml-1 underline cursor-pointer hover:opacity-80"
                   >
                     {statusGuidance.linkText}
@@ -934,17 +940,8 @@ const loadRentalDetails = async () => {
             <div className="p-6 bg-white border-b border-gray-200">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Rental Information</h2>
 
-              {/* Schedule Button - ONLY show when AcceptedPriceQuote */}
-              {rentalStatus === 'AcceptedPriceQuote' && (
-                <button
-                  onClick={() => navigate('/staff/robot-group')}
-                  className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                >
-                  <Calendar size={18} />
-                  Go to Schedule
-                </button>
-              )}
-
+              {/* Schedule Button - REMOVED per user request */}
+              
               {!rentalInfo ? (
                 <p className="text-gray-500 text-sm">Loading...</p>
               ) : (
@@ -1065,7 +1062,7 @@ const loadRentalDetails = async () => {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-900">Quote History</h3>
                 <span className="text-xs text-gray-500">
-                  {3 - (quotesData?.totalQuotes || 0)} quote{(3 - (quotesData?.totalQuotes || 0)) !== 1 ? 's' : ''} remaining
+                  Total: {quotesData?.totalQuotes || 0} quotes
                 </span>
               </div>
 

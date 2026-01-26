@@ -9,7 +9,7 @@ class Http {
   constructor() {
     this.instance = axios.create({
       baseURL: `${import.meta.env.VITE_API_URL}`,
-      timeout: 10000,
+      timeout: 60000,
       headers: {
         'Content-Type': 'application/json'
       }

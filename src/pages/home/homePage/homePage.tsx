@@ -3,6 +3,7 @@ import { Calendar, Monitor, Sparkles, X, Zap } from 'lucide-react'
 import HowItWorks from './howItWorks'
 import emailImg from  '../../../assets/email.png'
 import loginImg from  '../../../assets/login_img.png'
+import disableImg from  '../../../assets/disable.png'
 import Layout from '../../../components/layout'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
@@ -14,6 +15,7 @@ export default function Home() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const [showDisabledModal, setShowDisabledModal] = useState(false)
   const [requireLoginModal, setRequireLoginModal] = useState(false)
 
   useEffect(() => {
@@ -21,6 +23,12 @@ export default function Home() {
     if (flag === 'true') {
       setShowVerifyModal(true)
       localStorage.removeItem('showVerifyModal')
+    }
+
+    const flagDisable = localStorage.getItem('showDisabledModal')
+    if (flagDisable === 'true') {
+      setShowDisabledModal(true)
+      localStorage.removeItem('showDisabledModal')
     }
   }, [])
 
@@ -191,6 +199,45 @@ export default function Home() {
                 We’ve sent a verification link to your email to complete your registration for 
                 <span className='font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent'> RoboRent</span>
                 . If you don’t see the email, please check your spam folder.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {showDisabledModal && (
+          <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-300'>
+            <div className='bg-gray-900 p-8 rounded-xl shadow-2xl text-center max-w-2xl mx-4 relative border-2 border-emerald-600'>
+              <button
+                onClick={() => setShowDisabledModal(false)}
+                className='absolute top-4 right-4 text-emerald-400 hover:text-emerald-300 transition-colors'
+                aria-label='Close'
+              >
+                <X size={24} />
+              </button>
+
+              <div className='mb-2 flex justify-center'>
+                <img
+                  src={disableImg}
+                  alt='Account suspended'
+                  className='w-[28rem] h-[14rem]'
+                  loading='eager'
+                />
+              </div>
+
+              <h2 className='text-3xl font-bold font-orbitron mb-2 text-red-500'>
+                Your Account is Suspended!
+              </h2>
+              
+              <p className='text-gray-300 mb-6 leading-relaxed text-lg px-10'>
+                Please contact our support team at{' '}
+                <a
+                  href='mailto:roborentsep490@gmail.com'
+                  className='font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent underline'
+                >
+                  roborentsep490@gmail.com
+                </a>{' '}
+                for any questions, technical issues, or assistance with your account.
+                Our team is available to help you and will respond as soon as possible.
               </p>
             </div>
           </div>

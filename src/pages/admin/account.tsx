@@ -5,7 +5,8 @@ import { Input } from '../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Button } from '../../components/ui/button'
 import { Search, Unlock, Lock } from 'lucide-react'
-import { getAllAccounts, type AccountResponse } from '../../apis/account.api'
+import { toast } from 'react-toastify'
+import { getAllAccounts, type AccountResponse, updateAccountStatus } from '../../apis/account.api'
 
 const AccountManagement: React.FC = () => {
   const [accounts, setAccounts] = useState<AccountResponse[]>([])
@@ -79,14 +80,26 @@ const AccountManagement: React.FC = () => {
     }
   }
 
-  const handleEnable = (id: number) => {
-    console.log('Enable account', id)
-    setAccounts(accounts.map(acc => acc.accountId === id ? {...acc, status: 'Active'} : acc))
+  const handleEnable = async (id: number) => {
+    try {
+      await updateAccountStatus(id, 'Active')
+      toast.success('Account enabled successfully')
+      await fetchAccounts()
+    } catch (err) {
+      toast.error('Failed to enable account')
+      console.error('Failed to enable account', err)
+    }
   }
 
-  const handleDisable = (id: number) => {
-    console.log('Disable account', id)
-    setAccounts(accounts.map(acc => acc.accountId === id ? {...acc, status: 'Disabled'} : acc))
+  const handleDisable = async (id: number) => {
+    try {
+      await updateAccountStatus(id, 'Disabled')
+      toast.success('Account disabled successfully')
+      await fetchAccounts()
+    } catch (err) {
+      toast.error('Failed to disable account')
+      console.error('Failed to disable account', err)
+    }
   }
 
   const handlePageChange = (page: number) => {
