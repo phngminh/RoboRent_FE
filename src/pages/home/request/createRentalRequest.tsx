@@ -49,11 +49,10 @@ interface Option {
 }
 
 interface CreateRentalRequestContentProps {
-  onBack: () => void
   onNextStep: (rentalId: number, activityTypeId: number) => void
 }
 
-const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({ onBack, onNextStep }) => {
+const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({ onNextStep }) => {
   const { user } = useAuth()
   const [errors, setErrors] = useState<string[]>([])
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string[] }>({})
@@ -338,14 +337,6 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
     <Layout>
       <div className="fixed inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 -z-10" />
       <div className="max-w-5xl mx-auto my-20 relative z-10 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 w-full min-h-screen bg-white">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
-        >
-          <ArrowLeft size={18} />
-          Back
-        </button>
-
         <h2 className="text-3xl font-bold text-center mb-8 text-gray-800 bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
           {rentalId ? 'Edit Rental Request' : 'Create Your Rental Request'}
         </h2>
@@ -556,16 +547,6 @@ const CreateRentalRequestContent: React.FC<CreateRentalRequestContentProps> = ({
         )}
 
         <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6">
-          <button
-            onClick={async () => {
-              const id = await handleSaveDraft()
-              if (id) onBack()
-            }}
-            className="px-6 py-3 rounded-xl bg-gray-600 text-white hover:bg-gray-700 text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-          >
-            Save as Draft
-          </button>
-
           <button
             onClick={handleNextStepClick}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
